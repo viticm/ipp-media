@@ -1,0 +1,454 @@
+<html>
+<head>
+<title>
+Intel&reg; Integrated Performance Primitives MPEG-2 Encoder  
+</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<style>
+<!-- p.MsoNormal, li.MsoNormal {mso-style-parent:""; margin-bottom:.0001pt; font-size:12.0pt; font-family:"Times New Roman"; color:black; margin-left:0in; margin-right:0in; margin-top:0in} h1 {margin-right:0in; margin-left:0in; font-size:24.0pt; font-family:"Times New Roman"; color:black; font-weight:bold} h2 {margin-right:0in; margin-left:0in; font-size:18.0pt; font-family:"Times New Roman"; color:black; font-weight:bold} h5 {margin-right:0in; margin-left:0in; font-size:10.0pt; font-family:"Times New Roman"; color:black; font-weight:bold} a:link {color:blue; text-decoration:underline; } a:visited {color:blue; text-decoration:underline; } p {margin-right:0in; margin-left:0in; font-size:12.0pt; font-family:"Times New Roman"; color:black} ul {margin-bottom:0in;} -->
+</style>
+<!--[if gte mso 10]>
+<style>
+table.MsoNormalTable {mso-style-parent:""; font-size:10.0pt; font-family:"Times New Roman"; }  
+</style>
+<![endif]-->
+</head>
+<body bgcolor="white" lang="RU" link="blue" vlink="blue">
+<div class="Section1">
+<h1 align="center" style='TEXT-ALIGN:center'>
+<i>
+<span lang="EN-US">
+Intel  
+<sup>
+&reg;  
+</sup>
+Integrated Performance Primitives  
+<br>
+MPEG-2 Encoder  
+</span>
+</i>
+<span lang="EN-US">
+</span>
+</h1>
+<h5>
+<span lang="EN-US">
+<a href="#Overview">
+Overview  
+</a>
+<br>
+<a href="#Package_Contents">
+Package Contents  
+</a>
+<br>
+<a href="#Known_Limitations">
+Known Limitations  
+</a>
+<br>
+&nbsp;  
+</span>
+</h5>
+<h2>
+<a name="Overview">
+</a>
+<span lang="EN-US">
+Overview  
+</span>
+</h2>
+<p class="MsoNormal">
+<span lang="EN-US">
+This sample demonstrates how to use the Intel  
+<sup>
+&reg;  
+</sup>
+Integrated Performance Primitives (Intel  
+<sup>
+&reg;  
+</sup>
+IPP) to create a MPEG-2 encoder. Currently MPEG2 encoder supports Simple, Main and High profiles without enhancement layers.&nbsp;  
+</span>
+</p>
+<p>
+<span lang="EN-US">
+Additional information on this software as well as other Intel software performance products is available at  
+<a href="http://developer.intel.com/software/products/">
+http://developer.intel.com/software/products/  
+</a>
+.  
+</span>
+</p>
+<h2>
+<a name="Package_Contents">
+</a>
+<span lang="EN-US">
+Package Contents  
+</span>
+</h2>
+<p class="MsoNormal">
+<span lang="EN-US">
+The  
+<b>
+Intel  
+<sup>
+&reg;  
+</sup>
+IPP MPEG-2 Encoder  
+</b>
+package contains the following files:  
+</span>
+</p>
+<u1:p>
+</u1:p>
+<table class="MsoNormalTable" border="1" cellpadding="0" style='WIDTH:602px; '>
+<tr>
+<td width="594" colspan="2" bgcolor="#C0C0C0">
+<p class="MsoNormal">
+<b>
+<span lang="EN-US">
+.\  
+</span>
+ipp-samples\audio-video-codecs\codec\  
+<span lang="EN-US">
+mpeg2_enc\  
+</span>
+</b>
+<span lang="EN-US">
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td width="286">
+<p class="MsoNormal">
+<span lang="EN-US">
+readme.htm  
+</span>
+</p>
+</td>
+<td width="306">
+<p class="MsoNormal">
+<span lang="EN-US">
+This file  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td width="594" colspan="2" bgcolor="#C0C0C0">
+<p class="MsoNormal">
+<b>
+<span lang="EN-US">
+.\  
+</span>
+ipp-samples\audio-video-codecs\codec\  
+<span lang="EN-US">
+mpeg2_enc\include\  
+</span>
+</b>
+</p>
+</td>
+</tr>
+<tr>
+<td width="286">
+<p class="MsoNormal">
+<span lang="DE">
+umc_mpeg2_video_encoder.h  
+</span>
+</p>
+</td>
+<td width="306">
+<p class="MsoNormal">
+<span lang="EN-US">
+MPEG2 encoder UMC interface  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td width="286">
+<p class="MsoNormal">
+<span lang="EN-US">
+umc_mpeg2_enc.h  
+</span>
+</p>
+</td>
+<td width="306">
+<p class="MsoNormal">
+<span lang="EN-US">
+MPEG2 encoder internal header file  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td width="286">
+<p class="MsoNormal">
+<span lang="EN-US">
+umc_mpeg2_enc_defs.h  
+</span>
+</p>
+</td>
+<td width="306">
+<p class="MsoNormal">
+<span lang="EN-US">
+MPEG2 definitions file  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td width="286">
+<p class="MsoNormal">
+<span lang="EN-US">
+umc_mpeg2_enc_  
+</span>
+<span class="SpellE">
+<span lang="EN-US">
+me.h  
+</span>
+</span>
+</p>
+</td>
+<td width="306">
+<p class="MsoNormal">
+<span lang="EN-US">
+MPEG2 motion estimation definitions  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td width="594" colspan="2" bgcolor="#C0C0C0">
+<p class="MsoNormal">
+<b>
+<span lang="EN-US">
+.\  
+</span>
+ipp-samples\audio-video-codecs\codec\  
+<span lang="EN-US">
+mpeg2_enc\src\  
+</span>
+</b>
+<span lang="EN-US">
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td width="286">
+<p class="MsoNormal">
+<span class="SpellE">
+<span lang="EN-US">
+umc_mpeg2_video_encoder.cpp  
+</span>
+</span>
+</p>
+</td>
+<td width="306">
+<p class="MsoNormal">
+<span lang="EN-US">
+MPEG2 encoder UMC interface implementation  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td width="286">
+<p class="MsoNormal">
+<span lang="EN-US">
+umc_mpeg2_enc.cpp  
+</span>
+</p>
+</td>
+<td width="306">
+<p class="MsoNormal">
+<span lang="EN-US">
+MPEG2 encoder main source file  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td width="286">
+<p class="MsoNormal">
+<span lang="EN-US">
+umc_mpeg2_enc  
+</span>
+<span class="SpellE">
+<span lang="EN-US">
+_b.cpp  
+</span>
+</span>
+</p>
+</td>
+<td width="306">
+<p class="MsoNormal">
+<span lang="EN-US">
+MPEG2 B-frames processing  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td width="286">
+<p class="MsoNormal">
+<span lang="EN-US">
+umc_mpeg2_enc  
+</span>
+<span class="SpellE">
+<span lang="EN-US">
+_i.cpp  
+</span>
+</span>
+</p>
+</td>
+<td width="306">
+<p class="MsoNormal">
+<span lang="EN-US">
+MPEG2 I-frames processing  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td width="286">
+<p class="MsoNormal">
+<span lang="EN-US">
+umc_mpeg2_enc  
+</span>
+<span class="SpellE">
+<span lang="EN-US">
+_p.cpp  
+</span>
+</span>
+</p>
+</td>
+<td width="306">
+<p class="MsoNormal">
+<span lang="EN-US">
+MPEG2 P-frames processing  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td width="286">
+<p class="MsoNormal">
+<span lang="EN-US">
+umc_mpeg2_enc_params.cpp  
+</span>
+</p>
+</td>
+<td width="306">
+<p class="MsoNormal">
+<span lang="EN-US">
+MPEG2 encoding parameters processing  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td width="286">
+<p class="MsoNormal">
+<span lang="EN-US">
+umc_mpeg2_enc  
+</span>
+<span class="SpellE">
+<span lang="EN-US">
+_rc.cpp  
+</span>
+</span>
+</p>
+</td>
+<td width="306">
+<p class="MsoNormal">
+<span lang="EN-US">
+MPEG2 rate control methods  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td width="286">
+<p class="MsoNormal">
+<span lang="EN-US">
+umc_mpeg2_enc_  
+</span>
+<span class="SpellE">
+<span lang="EN-US">
+me.cpp  
+</span>
+</span>
+</p>
+</td>
+<td width="306">
+<p class="MsoNormal">
+<span lang="EN-US">
+MPEG2 motion estimation functions  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td width="286">
+<p class="MsoNormal">
+<span lang="EN-US">
+umc_mpeg2_enc_  
+</span>
+<span class="SpellE">
+<span lang="EN-US">
+put.cpp  
+</span>
+</span>
+</p>
+</td>
+<td width="306">
+<p class="MsoNormal">
+<span lang="EN-US">
+MPEG2 bit stream creation  
+</span>
+</p>
+</td>
+</tr>
+</table>
+<h2>
+<a name="Known_Limitations">
+</a>
+<span lang="EN-US">
+Known Limitations  
+</span>
+</h2>
+<p class="MsoNormal">
+<span lang="EN-US">
+The encoder supports the standard ISO/IEC 13818-2 with certain restrictions in the current version:  
+</span>
+</p>
+<u1:p>
+</u1:p>
+<ul type="disc">
+<li class="MsoNormal">
+<span lang="EN-US">
+Dual-prime prediction is not used in motion estimation  
+</span>
+<li class="MsoNormal">
+<span lang="EN-US">
+VBV control sometimes allows buffer overflow  
+</span>
+<li class="MsoNormal">
+<span lang="EN-US">
+Scalability is not supported  
+</span>
+<li class="MsoNormal">
+<span lang="EN-US">
+ISO/IEC 11172-2 (MPEG 1) output is not supported.  
+</span>
+</li>
+</ul>
+<p>
+<span lang="EN-US" style='FONT-SIZE:7.5pt;'>
+<br>
+Copyright &copy; 2002-2008 Intel Corporation. All rights reserved.  
+</span>
+</p>
+</div>
+</body>
+</html>

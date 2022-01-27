@@ -1,0 +1,238 @@
+<HTML>
+<HEAD>
+<TITLE>
+Intel&reg; Integrated Performance Primitives H.261 Encoder  
+</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+</HEAD>
+<BODY TEXT="#000000" BGCOLOR="#ffffff">
+<CENTER>
+<h1>
+<B>
+<I>
+Intel  
+<SUP>
+&reg;  
+</SUP>
+Integrated Performance Primitives  
+<br>
+H.261 Encoder  
+</I>
+</B>
+</h1>
+</CENTER>
+<h5>
+<A HREF="#Overview">
+Overview  
+</A>
+<BR>
+<A HREF="#Package_Contents">
+Package Contents  
+</A>
+<BR>
+<A HREF="#Known_Limitations">
+Known Limitations  
+</A>
+<BR>
+<BR>
+</h5>
+<h2>
+<a NAME="Overview">
+</a>
+Overview  
+</h2>
+This sample demonstrates how to use the Intel  
+<sup>
+&reg;  
+</sup>
+Integrated Performance Primitives (Intel  
+<sup>
+&reg;  
+</sup>
+IPP) to create an H.261 encoder. Currently H.261 encoder supports the ITU-T Recommendation H.261 (03/93) with the exception of switched multipoint operation, forward error correction, and still image transmission.  
+<P>
+Additional information on this software as well as other Intel software performance products is available at  
+<A HREF="http://developer.intel.com/software/products/">
+http://developer.intel.com/software/products/  
+</A>
+.  
+<h2>
+<a NAME="Package_Contents">
+</a>
+Package Contents  
+</h2>
+<p class="MsoNormal">
+The  
+<b>
+Intel  
+<sup>
+&reg;  
+</sup>
+IPP H.261 Encoder  
+</b>
+package contains the following files:  
+</p>
+<table border="1" cellPadding="0" width="599">
+<tbody>
+<tr>
+<td bgColor="#c0c0c0" colSpan="2" width="589">
+<b>
+.\ipp-samples\audio-video-codecs\codec\h261_enc\  
+</b>
+</td>
+</tr>
+<tr>
+<td width="254">
+<p class="MsoNormal">
+readme.htm  
+</p>
+</td>
+<td width="329">
+<p class="MsoNormal">
+This file  
+</p>
+</td>
+</tr>
+<tr>
+<td bgColor="#c0c0c0" colSpan="2" width="589">
+<b>
+.\ipp-samples\audio-video-codecs\codec\h261_enc\include\  
+</b>
+</td>
+</tr>
+<TR>
+<TD width="295">
+h261_enc_bitstream.hpp  
+</TD>
+<TD width="294">
+H.261&nbsp;encoder internal header file  
+</TD>
+</TR>
+<tr>
+<td width="295">
+h261_enc.hpp  
+</td>
+<td width="294">
+H.261 encoder header file  
+</td>
+</tr>
+<tr>
+<td width="295">
+umc_h261_video_encoder.h  
+</td>
+<td width="294">
+H.261 encoder UMC interface  
+</td>
+</tr>
+<tr>
+<td bgColor="#c0c0c0" colSpan="2" width="589">
+<b>
+.\ipp-samples\audio-video-codecs\codec\h261_enc\src\  
+</b>
+</td>
+</tr>
+<tr>
+<td width="254" height="21">
+<P class="MsoNormal">
+h261_enc_tables.cpp  
+</P>
+</td>
+<td width="329" height="21">
+<P class="MsoNormal">
+H.261 encoder tables  
+</P>
+</td>
+</tr>
+<TR>
+<TD width="254">
+h261_enc_frame.cpp  
+</TD>
+<TD width="329">
+<P class="MsoNormal">
+H.261&nbsp;frames processing  
+</P>
+</TD>
+</TR>
+<TR>
+<TD width="254">
+h261_enc_headers.cpp  
+</TD>
+<TD width="329">
+<P class="MsoNormal">
+H.261&nbsp;headers encoding  
+</P>
+</TD>
+</TR>
+<TR>
+<TD width="254">
+<P class="MsoNormal">
+h261_enc_bitstream.cpp  
+</P>
+</TD>
+<TD width="329">
+<P class="MsoNormal">
+H.261&nbsp;bitstream routines  
+</P>
+</TD>
+</TR>
+<TR>
+<TD width="254">
+h261_enc_misc.cpp  
+</TD>
+<TD width="329">
+<P class="MsoNormal">
+H.261&nbsp;encoding auxilary routines  
+</P>
+</TD>
+</TR>
+<tr>
+<td width="254">
+<p class="MsoNormal">
+umc_h261_video_encoder.cpp  
+</p>
+</td>
+<td width="329">
+<p class="MsoNormal">
+H.261 encoder UMC interface implementation  
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h2>
+<a NAME="Known_Limitations">
+</a>
+Known Limitations  
+</h2>
+<p class="MsoNormal">
+<font size="3">
+The encoder supports the standard ITU-T Recommendation H.261 (03/93) with certain restrictions. Only the following features are supported in the current version:  
+<o:p>
+</o:p>
+</font>
+</p>
+<ul type="disc">
+<li class="MsoNormal">
+<font size="3">
+I-Frames  
+<o:p>
+</o:p>
+</font>
+<li class="MsoNormal">
+<font size="3">
+P-Frames  
+<o:p>
+</o:p>
+</font>
+<li class="MsoNormal">
+Loop Filter  
+</li>
+</ul>
+<font size="-2">
+<P>
+<br>
+Copyright &copy; 2002-2008 Intel Corporation. All rights reserved.  
+</font>
+</P>
+</BODY>
+</HTML>

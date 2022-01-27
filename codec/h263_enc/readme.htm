@@ -1,0 +1,314 @@
+<HTML XMLNS:O>
+<HEAD>
+<TITLE>
+Intel&reg; Integrated Performance Primitives H.263 Encoder  
+</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+</HEAD>
+<BODY TEXT="#000000" BGCOLOR="#ffffff">
+<CENTER>
+<h1>
+<B>
+<I>
+Intel  
+<SUP>
+&reg;  
+</SUP>
+Integrated Performance Primitives  
+<br>
+H.263&nbsp;Encoder  
+</I>
+</B>
+</h1>
+</CENTER>
+<h5>
+<A HREF="#Overview">
+Overview  
+</A>
+<BR>
+<A HREF="#Package_Contents">
+Package Contents  
+</A>
+<BR>
+<A HREF="#Known_Limitations">
+Known Limitations  
+</A>
+<BR>
+<BR>
+</h5>
+<h2>
+<a NAME="Overview">
+</a>
+Overview  
+</h2>
+<P>
+This sample demonstrates how to use the Intel  
+<sup>
+&reg;  
+</sup>
+Integrated Performance Primitives (Intel  
+<sup>
+&reg;  
+</sup>
+IPP) to create an&nbsp;H.263 encoder. Currently H.263 decoder supports baseline profile plus Annexes D, F,&nbsp;I&nbsp; of the ITU-T Recommendation H.263 (01/05).  
+</P>
+<P>
+Additional information on this software as well as other Intel software performance products is available at  
+<A HREF="http://developer.intel.com/software/products/">
+http://developer.intel.com/software/products/  
+</A>
+.  
+</P>
+<h2>
+<a NAME="Package_Contents">
+</a>
+Package Contents  
+</h2>
+<p class="MsoNormal">
+The  
+<b>
+Intel  
+<sup>
+&reg;  
+</sup>
+IPP&nbsp;H.263 Encoder  
+</b>
+package contains the following files:  
+<span style="FONT-SIZE: 10pt">
+<o:p>
+</o:p>
+</span>
+</p>
+<table border="1" cellPadding="0" width="599">
+<tbody>
+<tr>
+<td bgColor="#c0c0c0" colSpan="2" width="589">
+<b>
+.\ipp-samples\audio-video-codecs\codec\h263_enc\  
+</b>
+</td>
+</tr>
+<tr>
+<td width="254">
+<p class="MsoNormal">
+readme.htm  
+</p>
+</td>
+<td width="329">
+<p class="MsoNormal">
+This file  
+</p>
+</td>
+</tr>
+<tr>
+<td bgColor="#c0c0c0" colSpan="2" width="589">
+<b>
+.\ipp-samples\audio-video-codecs\codec\h263_enc\include\  
+</b>
+</td>
+</tr>
+<tr>
+<td width="295">
+h263_enc_bitstream.hpp  
+</td>
+<td width="294">
+H.263&nbsp;encoder internal header file  
+</td>
+</tr>
+<tr>
+<td width="295">
+h263_enc.hpp  
+</td>
+<td width="294">
+H.263&nbsp;encoder header file  
+</td>
+</tr>
+<tr>
+<td width="295">
+umc_h263_video_encoder.h  
+</td>
+<td width="294">
+H.263&nbsp;encoder UMC interface  
+</td>
+</tr>
+<tr>
+<td bgColor="#c0c0c0" colSpan="2" width="589">
+<b>
+.\ipp-samples\audio-video-codecs\codec\h263_enc\src\  
+</b>
+</td>
+</tr>
+<tr>
+<td width="254" height="22">
+<p class="MsoNormal">
+h263_enc_tables.cpp  
+</p>
+</td>
+<td width="329" height="22">
+<p class="MsoNormal">
+H.263 encoder tables  
+</p>
+</td>
+</tr>
+<tr>
+<td width="254">
+<p class="MsoNormal">
+h263_enc_frame.cpp  
+</p>
+</td>
+<td width="329">
+<p class="MsoNormal">
+H.263&nbsp;frames processing  
+</p>
+</td>
+</tr>
+<TR>
+<td width="254" height="23">
+<p class="MsoNormal">
+h263_enc_headers.cpp  
+</p>
+</td>
+<td width="329" height="23">
+<p class="MsoNormal">
+H.263&nbsp;headers encoding  
+</p>
+</td>
+</TR>
+<tr>
+<td width="254">
+<p class="MsoNormal">
+h263_enc_bitstream.cpp  
+</p>
+</td>
+<td width="329">
+<p class="MsoNormal">
+H.263&nbsp;bitstream routines  
+</p>
+</td>
+</tr>
+<tr>
+<td width="254">
+<p class="MsoNormal">
+h263_enc_misc.cpp  
+</p>
+</td>
+<td width="329">
+<p class="MsoNormal">
+H.263&nbsp;encoding auxilary routines  
+</p>
+</td>
+</tr>
+<tr>
+<td width="254">
+<p class="MsoNormal">
+umc_h263_video_encoder.cpp  
+</p>
+</td>
+<td width="329">
+<p class="MsoNormal">
+H.263&nbsp;encoder UMC interface implementation  
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h2>
+<a NAME="Description">
+</a>
+Description  
+</h2>
+<p class="MsoNormal">
+<font size="3">
+Apart from&nbsp;the UMC::VideoEncoder the&nbsp;H.263 encoder provides additional methods for RFC2190 packetization and MSE calculation  
+<o:p>
+</o:p>
+</font>
+</p>
+<ul type="disc">
+<li class="MsoNormal">
+<font size="3">
+int GetFrameMacroBlockPerRow() - returns the number of MBs per row  
+<o:p>
+</o:p>
+</font>
+<li class="MsoNormal">
+<font size="3">
+int GetFrameMacroBlockPerCol() - returns the number of MBs per column  
+<o:p>
+</o:p>
+</font>
+<li class="MsoNormal">
+<font size="3">
+Ipp8u* GetFrameQuant() - returns the pointer to the internal array with quant for each MB in the frame  
+<o:p>
+</o:p>
+</font>
+<li class="MsoNormal">
+<font size="3">
+IppMotionVector* GetFrameMVpred() - returns the pointer to the internal array with MV predictors for each MB in the frame  
+<o:p>
+</o:p>
+</font>
+<li class="MsoNormal">
+<font size="3">
+Ipp32u* GetFrameMBpos() - returns the pointer to the internal array with bit position for each MB in the frame  
+<o:p>
+</o:p>
+</font>
+<li class="MsoNormal">
+<font size="3">
+void GetFrameMSE(Ipp64s *y, Ipp64s *u, Ipp64s *v) - returns MSE for the frame for Y, U and V components  
+<o:p>
+</o:p>
+</font>
+</li>
+</ul>
+<h2>
+<a NAME="Known_Limitations">
+</a>
+Known Limitations  
+</h2>
+<font size="-2">
+<P class="MsoNormal">
+<FONT size="3">
+The decoder supports the standard ITU-T Recommendation H.263 (01/05) with certain restrictions. Only the following features are supported in the current version:  
+<O:P>
+</O:P>
+</FONT>
+</P>
+<FONT size="3">
+<P class="MsoNormal">
+<UL type="disc">
+<LI class="MsoNormal">
+I-Frames  
+<O:P>
+</O:P>
+<LI class="MsoNormal">
+P-Frames  
+<O:P>
+</O:P>
+<LI class="MsoNormal">
+Unrestricted MV (Annex D)  
+<LI class="MsoNormal">
+Advanced prediction with 4MV and OBMC (Annex F)  
+<LI class="MsoNormal">
+Advanced Intra Prediction  
+<O:P>
+(Annex I)  
+</O:P>
+<LI class="MsoNormal">
+Standardized&nbsp;H.263 picture formats,&nbsp;CIF&nbsp;  
+<O:P>
+picture clock frequency  
+</O:P>
+</LI>
+</UL>
+</P>
+</FONT>
+<P>
+<br>
+Copyright &copy; 2002-2008 Intel Corporation. All rights reserved.  
+</font>
+</P>
+</BODY>
+</HTML>

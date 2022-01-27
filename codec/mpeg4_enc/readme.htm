@@ -1,0 +1,1770 @@
+<HTML>
+<HEAD>
+<TITLE>
+Intel&reg; Integrated Performance Primitives MPEG-4 Encoder  
+</TITLE>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+</HEAD>
+<BODY TEXT="#000000" BGCOLOR="#ffffff">
+<CENTER>
+<h1>
+<B>
+<I>
+Intel  
+<SUP>
+&reg;  
+</SUP>
+Integrated Performance Primitives  
+<br>
+MPEG-4 Encoder  
+</I>
+</B>
+</h1>
+</CENTER>
+<h5>
+<A HREF="#Overview">
+Overview  
+</A>
+<BR>
+<A HREF="#Package_Contents">
+Package Contents  
+</A>
+<BR>
+<A HREF="#Threading Capabilities">
+Threading Capabilities  
+</A>
+<BR>
+<A HREF="#Parameter file description">
+Parameter file description  
+</A>
+<BR>
+<A HREF="#Known_Limitations">
+Known Limitations  
+</A>
+<BR>
+<BR>
+</h5>
+<h2>
+<a NAME="Overview">
+</a>
+Overview  
+</h2>
+This sample demonstrates how to use the Intel  
+<sup>
+&reg;  
+</sup>
+Integrated Performance Primitives (Intel  
+<sup>
+&reg;  
+</sup>
+IPP) to create a MPEG-4 encoder. It takes advantage of Hyper-Threading Technology (HT Technology) and Dual-Core Technology found in the latest Intel  
+<sup>
+&reg;  
+</sup>
+processors. Currently MPEG4 encoder suppports Simple and Advanced Simple profiles.&nbsp;  
+<P>
+Additional information on this software as well as other Intel software performance products is available at  
+<A HREF="http://developer.intel.com/software/products/">
+http://developer.intel.com/software/products/  
+</A>
+.  
+<h2>
+<a NAME="Package_Contents">
+</a>
+Package Contents  
+</h2>
+<p class="MsoNormal">
+The  
+<b>
+Intel  
+<sup>
+&reg;  
+</sup>
+IPP MPEG-4 Encoder  
+</b>
+package contains the following files:  
+<span style="FONT-SIZE: 10pt">
+<o:p>
+</o:p>
+</span>
+</p>
+<table border="1" cellPadding="0" width="640">
+<tbody>
+<tr>
+<td bgColor="#c0c0c0" colSpan="2" width="589">
+<b>
+.\ipp_sample\audio-video-codecs\codec\mpeg4_enc\  
+</b>
+</td>
+</tr>
+<tr>
+<td width="254">
+<p class="MsoNormal">
+readme.htm  
+</p>
+</td>
+<td width="329">
+<p class="MsoNormal">
+This file  
+</p>
+</td>
+</tr>
+<tr>
+<td bgColor="#c0c0c0" colSpan="2" width="589">
+<b>
+.\ipp_sample\audio-video-codec\codecs\mpeg4_enc\include\  
+</b>
+</td>
+</tr>
+<tr>
+<td width="295">
+mp4_enc_bitstream.hpp  
+</td>
+<td width="294">
+MPEG4 encoder internal header file  
+</td>
+</tr>
+<tr>
+<td width="295">
+mp4_enc.hpp  
+</td>
+<td width="294">
+MPEG4 encoder header file  
+</td>
+</tr>
+<tr>
+<td width="295">
+umc_mpeg4_video_encoder.h  
+</td>
+<td width="294">
+MPEG4 encoder UMC interface  
+</td>
+</tr>
+<tr>
+<td bgColor="#c0c0c0" colSpan="2" width="589">
+<b>
+.\ipp_sample\audio-video-codecs\codec\mpeg4_enc\src\  
+</b>
+</td>
+</tr>
+<tr>
+<td width="254">
+<p class="MsoNormal">
+mp4_enc_tables.cpp  
+</p>
+</td>
+<td width="329">
+<p class="MsoNormal">
+MPEG4 encoder tables  
+</p>
+</td>
+</tr>
+<tr>
+<td width="254">
+<p class="MsoNormal">
+mp4_enc_vop.cpp  
+</p>
+</td>
+<td width="329">
+<p class="MsoNormal">
+MPEG4 frames processing  
+</p>
+</td>
+</tr>
+<TR>
+<td width="254">
+<p class="MsoNormal">
+mp4_enc_headers.cpp  
+</p>
+</td>
+<td width="329">
+<p class="MsoNormal">
+MPEG4 headers encoding  
+</p>
+</td>
+</TR>
+<tr>
+<td width="254">
+<p class="MsoNormal">
+mp4_enc_bitstream.cpp  
+</p>
+</td>
+<td width="329">
+<p class="MsoNormal">
+MPEG4 bitstream routines  
+</p>
+</td>
+</tr>
+<tr>
+<td width="254">
+<p class="MsoNormal">
+mp4_enc_misc.cpp  
+</p>
+</td>
+<td width="329">
+<p class="MsoNormal">
+MPEG4 encoding auxilary routines  
+</p>
+</td>
+</tr>
+<tr>
+<td width="254">
+<p class="MsoNormal">
+mp4_enc_me.cpp  
+</p>
+</td>
+<td width="329">
+<p class="MsoNormal">
+MPEG4 encoding motion estimation routines  
+</p>
+</td>
+</tr>
+<tr>
+<td width="254">
+<p class="MsoNormal">
+mp4_enc_gme.cpp  
+</p>
+</td>
+<td width="329">
+<p class="MsoNormal">
+MPEG4 encoding global motion estimation routines  
+</p>
+</td>
+</tr>
+<tr>
+<td width="254">
+<p class="MsoNormal">
+umc_mpeg4_video_encoder.cpp  
+</p>
+</td>
+<td width="329">
+<p class="MsoNormal">
+MPEG4 encoder UMC interface implementation  
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<h2>
+<a NAME="Description">
+</a>
+Description  
+</h2>
+<p class="MsoNormal">
+<font size="3">
+Additionally to the UMC::VideoEncoder methods the MPEG-4 encoder provides additional methods for RFC2190 packetization  
+<o:p>
+</o:p>
+</font>
+</p>
+<ul type="disc">
+<li class="MsoNormal">
+<font size="3">
+int GetFrameMacroBlockPerRow() - returns the number of MB per row  
+<o:p>
+</o:p>
+</font>
+<li class="MsoNormal">
+<font size="3">
+int GetFrameMacroBlockPerCol() - returns the number of MB per column  
+<o:p>
+</o:p>
+</font>
+<li class="MsoNormal">
+<font size="3">
+Ipp8u* GetFrameQuant() - returns the pointer to the internal array with quant for each MB in the frame  
+<o:p>
+</o:p>
+</font>
+<li class="MsoNormal">
+<font size="3">
+IppMotionVector* GetFrameMVpred() - returns the pointer to the internal array with MV predictors for each MB in the frame  
+<o:p>
+</o:p>
+</font>
+<li class="MsoNormal">
+<font size="3">
+Ipp32u* GetFrameMBpos() - returns the pointer to the internal array with bit position for each MB in the frame  
+<o:p>
+</o:p>
+</font>
+</ul>
+<h2>
+<a NAME="Threading Capabilities">
+</a>
+Threading Capabilities  
+</h2>
+<p class="MsoNormal">
+<font size="3">
+The MPEG-4 Encoder creates threads if it is compiled by compiler which supports the OpenMP(tm). The _OPENMP macro must be defined during compilation. The number of threads is controlled via numThreads value of VideoEncoderParam during initialization stage. Synchronization is done by internal OpenMP(tm) mechanism  
+<h2>
+<a NAME="Parameter file description">
+</a>
+Parameter file description  
+</h2>
+<p class="MsoNormal">
+<font size="3">
+UMC::MPEG4EncoderParams class has method ReadParamFile. Using it the parameters can be read from text file. The structure of parameter file is the next  
+</p>
+<table class=MsoNormalTable border=1 cellpadding=0>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<b>
+<span lang=EN-US>
+Line number  
+</span>
+</b>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<b>
+<span lang=EN-US>
+Type  
+</span>
+</b>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<b>
+<span lang=EN-US>
+Range  
+</span>
+</b>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<b>
+<span lang=EN-US>
+Description  
+</span>
+</b>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+1  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+string  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+&nbsp;  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+Reserved  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+2  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+string  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+&nbsp;  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+The name of source YUV file  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+3  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+1 - 8191  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+Width of source  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+4  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+1 - 8191  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+Height of source  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+5  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+&gt;= 1  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+Number of frames  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+6  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+&gt;= 1  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+Time Resolution  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+7  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+&gt;= 1  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+Time Increment (FrameRate = TimeResolution / TimeIncrement)  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+8  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+0, 1  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+Quant Type (0 - H263, 1 - the first quantization method). See 6.3.3 of [1] for details  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+9  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+1 - 31  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+Quantization parameter for I-VOPs (it is used for RateControlMethod = 0)  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+10  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+1 &#8211; 31  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+Quantization parameter for P-VOPs (it is used for RateControlMethod = 0)  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+11  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+1 &#8211; 31  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+Quantization parameter for B-VOPs (it is used for RateControlMethod = 0)  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+12  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+string  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+&nbsp;  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+name of intra quant matrix file for QuantType = 1 (&quot;-&quot; means default matrix)  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+13  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+string  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+&nbsp;  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+name of inter quant matrix file for QuantType = 1 (&quot;-&quot; means default matrix)  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+14  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+0, 1  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+if it is != 0 then the short_video_header stream will be generated (see 6.3.3 of [1])  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+15  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+&gt;= 1  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+It defines the maximal distance between I-VOPs  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+16  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+&gt;= 0  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+Number of successive B-VOPs (0 means encoding without B-VOPs)  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+17  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+&gt;= 0  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+The width of search rectangle in pixels for ME process in P-VOPs  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+18  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+&gt;= 0  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+The height of search rectangle in pixels for ME process in P-VOPs  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+19  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+&gt;= 0  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+The width of search rectangle in pixels for ME process in B-VOPs (forward direction)  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+20  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+&gt;= 0  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+The height of search rectangle in pixels for ME process in B-VOPs (forward direction)  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+21  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+&gt;= 0  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+The width of search rectangle in pixels for ME process in B-VOPs (backward direction)  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+22  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+&gt;= 0  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+The height of search rectangle in pixels for ME process in B-VOPs (backward direction)  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+23  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+0, 1, 16, 17, 32, 33, 48, 49  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+Motion Estimation algorithm: 0 - full search, 1 - fast search (+16 &#8211; fast &frac12; ME, +32 - ChromaME)  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+24  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+1, 2, 4  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+Motion Estimation accuracy: 1 - full pel, 2 - half pel, 4 - quarter pel  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+25  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+0, 1  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+If it is set to 0 then the one MV per macroblock will be used else 4 MVs per macroblock will be used  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+26  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+0, 1  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+If it is set to 0 then OBMC will be used. See 6.3.3 of [1] for details  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+27  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+0, 1  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+If it is !=0 then rounding control will be changed from frame to frame. See 7.6.2 of [1] for details  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+28  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+0, 1  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+If it is set to 1 then encoder will reconstruct B-VOPs  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+29  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+0, 1, 2  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+The Rate Control Method. 0 &#8211; ConstQuality with fixed quants; 1 &#8211; Frame Level AVBR; 2 &#8211; Macroblock Level CBR  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+30  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+&gt; 0  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+It defines the target bit rate (bits per second) for RateControlMethod != 0  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+31  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+&gt;= 0  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+This values defines the threshold of scene changing in %. If current VOP is coded as P-VOP but the scene is changed more than SceneChangeThreshold then VOP will be coded as I-VOP  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+32  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+0, 1  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+If it is !=0 then Group of Video Object Plane Header will be inserted before each I-VOP. See 6.2.4 of [1] for details  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+33  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+0, 1  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+If it is !=0 then VideoObjectLayer Header will be repeated before each I-VOP. See 6.2.3 [1] for details  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+34  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+0, 1  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+If it is !=0 then GOB resync markers will be inserted in case of short_video_header. If  short_video_header = 0 then frame will be divided on video packets with min length VideoPacketLenght and resync markers will be inserted. See 6.2.5 of [1] for details  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+35  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+&gt; 0  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+The minimal length of video packet in bits  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+36  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+0, 1  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+If set to non zero then data partititoned stream will be generated. See 6.3.3 of [1] for details  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+37  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+0, 1  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+It is used only then data_partitioned != 0. If it is != 0 then RVLC will be used for DCT coefficients coding. See 6.3.3 of [1] for details  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+38  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+0, 1  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+If it is !=0 then interlaced stream will be generated  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+39  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+0, 1  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+This is a 1-bit flag which when set to &#8220;1&#8221; indicates that the top field (i.e., the field containing the top line) of reconstructed VOP is the first field to be displayed  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+40  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+0, 1  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+This is a 1-bit flag which when set to &#8220;1&#8221; indicates the use of alternate vertical scan for interlaced VOPs  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+41  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+0, 1, 2  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+In interlaced mode means - 0 &#8211; field only ME; 1 &#8211; frame only ME; 2 - field+frame ME  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+42  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+0, 1, 2  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+It defines the using of sprites. 0 &#8211; none, 1 &#8211; basic sprites, 2 &#8211; GMC (S-VOPs). See 6.3.3 of [1] for details  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+43  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+0 &#8211; 3  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+The number of warping points in case than sprite_enable != 0. See 6.3.3 of [1] for details  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+44  
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+int  
+</span>
+</p>
+</td>
+<td width=177 valign=top style='width:132.8pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+0 &#8211; 3  
+</span>
+</p>
+</td>
+<td width=933 valign=top style='width:699.75pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US>
+The accuracy of warping in case than sprite_enable != 0. See 6.3.3 of [1] for details  
+</span>
+</p>
+</td>
+</tr>
+</table>
+<I>
+Note: encoder ignores field "Number of frames" from par-file. The application should control the number of encoded frames.  
+</I>
+<h2>
+<a NAME="Known_Limitations">
+</a>
+Known Limitations  
+</h2>
+<p class="MsoNormal">
+<font size="3">
+The encoder supports the standard ISO/IEC 14496-2 with certain restrictions. Only the following features are supported in the current version:  
+<o:p>
+</o:p>
+</font>
+</p>
+<ul type="disc">
+<li class="MsoNormal">
+<font size="3">
+I-VOP  
+<o:p>
+</o:p>
+</font>
+<li class="MsoNormal">
+<font size="3">
+P-VOP  
+<o:p>
+</o:p>
+</font>
+<li class="MsoNormal">
+<font size="3">
+B-VOP  
+</font>
+<li class="MsoNormal">
+S-VOP  
+<li class="MsoNormal">
+<font size="3">
+AC/DC Prediction  
+<o:p>
+</o:p>
+</font>
+<li class="MsoNormal">
+<font size="3">
+4MV  
+<o:p>
+</o:p>
+</font>
+<li class="MsoNormal">
+<font size="3">
+Un-restricted MV  
+<o:p>
+</o:p>
+</font>
+<li class="MsoNormal">
+<font size="3">
+P-VOP with OBMC  
+<o:p>
+</o:p>
+</font>
+<li class="MsoNormal">
+<font size="3">
+Quantisation Method 1,2  
+<o:p>
+</o:p>
+</font>
+<li class="MsoNormal">
+<font size="3">
+Videopackets  
+<o:p>
+</o:p>
+</font>
+<li class="MsoNormal">
+<font size="3">
+Short video header  
+<o:p>
+</o:p>
+</font>
+<li class="MsoNormal">
+<font size="3">
+Data partitioning  
+</font>
+<li class="MsoNormal">
+Reversible VLC  
+<li class="MsoNormal">
+Interlacing  
+<li class="MsoNormal">
+Basic sprites  
+<li class="MsoNormal">
+Quarter-Pixel Motion Estimation  
+<li class="MsoNormal">
+Global Motion Estimation (Number of Warping Points 0 an 1)  
+<li class="MsoNormal">
+VBR and CBR Control  
+</li>
+</ul>
+<font size="-2">
+<P>
+<br>
+Copyright &copy; 2002-2008 Intel Corporation. All rights reserved.  
+</font>
+</P>
+</BODY>
+</HTML>

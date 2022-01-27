@@ -1,0 +1,1393 @@
+<HTML>
+<HEAD>
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+<TITLE>
+Intel&reg; Integrated Performance Primitives H.264 Encoder Sample  
+</TITLE>
+<style>
+<!-- li.MsoNormal {mso-style-parent:""; margin-bottom:.0001pt; font-size:12.0pt; font-family:"Times New Roman"; color:black; margin-left:0in; margin-right:0in; margin-top:0in} -->
+</style>
+</HEAD>
+<BODY TEXT="#000000" BGCOLOR="#FFFFFF">
+<CENTER>
+<h1>
+<B>
+<I>
+Intel  
+<SUP>
+&reg;  
+</SUP>
+Integrated Performance Primitives  
+<br>
+H.264 Encoder  
+</I>
+</B>
+</h1>
+</CENTER>
+<h5>
+<A HREF="#Overview">
+Overview  
+</A>
+<BR>
+<A HREF="#Package_Contents">
+Package Contents  
+</A>
+<BR>
+<A HREF="#Threading Capabilities">
+Threading Capabilities  
+</A>
+<BR>
+<A HREF="#Parameter file description">
+Parameter file description  
+</A>
+<BR>
+<A HREF="#Known_Limitations">
+Known Limitations  
+</A>
+<BR>
+<BR>
+</h5>
+<h2>
+<a NAME="Overview">
+</a>
+Overview  
+</h2>
+This sample illustrates how to use the Intel  
+<sup>
+&reg;  
+</sup>
+Integrated Performance Primitives (Intel  
+<sup>
+&reg;  
+</sup>
+IPP) signal processing, image processing and video coding functions to implement a H.264 encoder.  
+<P>
+Additional information on this software as well as other Intel software performance products is available at  
+<A HREF="http://developer.intel.com/software/products/">
+http://developer.intel.com/software/products/  
+</A>
+.  
+<h2>
+<a NAME="Package_Contents">
+</a>
+Package Contents  
+</h2>
+<p class="MsoNormal">
+The  
+<b>
+Intel  
+<sup>
+&reg;  
+</sup>
+IPP H.264 encoder  
+</b>
+package contains the following files:  
+<span style="FONT-SIZE: 10pt">
+<o:p>
+</o:p>
+</span>
+</p>
+<table border="1" cellPadding="0" width="681">
+<tbody>
+<tr>
+<td bgColor="#c0c0c0" colSpan="2" style="padding: 0.75pt" width="671">
+<b>
+.\ipp-samples\audio-video-codecs\codec\h264_enc\  
+</b>
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+<p class="MsoNormal">
+readme.htm  
+</p>
+</td>
+<td style="padding: 0.75pt" width="382">
+<p class="MsoNormal">
+This file  
+</p>
+</td>
+</tr>
+<tr>
+<td bgColor="#c0c0c0" colSpan="2" style="padding: 0.75pt" width="671">
+<b>
+.\ipp-samples\audio-video-codecs\codec\h264_enc\include\  
+</b>
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="295">
+umc_base_bitstream.h  
+</td>
+<td style="padding: 0.75pt" width="382" rowspan="17">
+Header file containing definitions of the encoder  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="295">
+umc_h264_to_ipp.h  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="295">
+umc_h264_avbr.h  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="295">
+umc_h264_bme.h  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="295">
+umc_h264_bs.h  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="295">
+umc_h264_core_enc.h  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="295">
+umc_h264_config.h  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="295">
+umc_h264_deblocking.h  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="295">
+umc_h264_deblocking_tools.h  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="295">
+umc_h264_defs.h  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="295">
+umc_h264_npf.h  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="295">
+umc_h264_pub.h  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="295">
+umc_h264_enc_cpb.h  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="295">
+umc_h264_me_new.h  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="295">
+umc_h264_tables.h  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="295">
+umc_h264_video_encoder.h  
+</td>
+</tr>
+<tr>
+<td bgColor="#c0c0c0" colSpan="2" style="padding: 0.75pt" width="671">
+<b>
+.\ipp-samples\audio-video-codecs\codec\h264_enc\src\  
+</b>
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+<p class="MsoNormal">
+umc_base_bitstream.cpp  
+</p>
+</td>
+<td style="padding: 0.75pt" width="382" rowspan="23">
+<p class="MsoNormal">
+Source file containing  
+<span lang="EN-US">
+implementation of the encoder  
+</span>
+</p>
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+<p class="MsoNormal">
+umc_h264_aic.cpp  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+<p class="MsoNormal">
+umc_h264_avbr.cpp  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+<p class="MsoNormal">
+umc_h264_base.cpp  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+<p class="MsoNormal">
+umc_h264_bs.cpp  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+<p class="MsoNormal">
+umc_h264_core_enc.cpp  
+</p>
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+<p class="MsoNormal">
+umc_h264_deblocking.cpp  
+</p>
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+umc_h264_deblocking_mbaff.cpp  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+umc_h264_deblocking_tools.cpp  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+umc_h264_enc_cpb.cpp  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+umc_h264_enc_info.cpp  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+umc_h264_ermb.cpp  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+umc_h264_expand.cpp  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+umc_h264_sad.cpp  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+umc_h264_gen_enc.cpp  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+umc_h264_mc.cpp  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+umc_h264_me.cpp  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+umc_h264_me_new.cpp  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+umc_h264_npf.cpp  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+umc_h264_pack.cpp  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+<p class="MsoNormal">
+umc_h264_pub.cpp  
+</p>
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+umc_h264_tables.cpp  
+</td>
+</tr>
+<tr>
+<td style="padding: 0.75pt" width="254">
+umc_h264_video_encoder.cpp  
+</td>
+</tr>
+</tbody>
+</table>
+<h2>
+<a NAME="Threading Capabilities">
+</a>
+Threading Capabilities  
+</h2>
+<p class="MsoNormal">
+<font size="3">
+The H.264-4 Encoder creates threads if it is compiled by compiler which supports the OpenMP(tm). The _OPENMP macro must be defined during compilation. The number of threads is controlled via numThreads value of VideoEncoderParam during initialization stage. Synchronization is done by internal OpenMP(tm) mechanism  
+<h2>
+<a NAME="Parameter file description">
+</a>
+Parameter file description  
+</h2>
+<p class="MsoNormal">
+<font size="3">
+UMC::H264EncoderParams class has method ReadParamFile. Using it the parameters can be read from text file. The structure of parameter file is the next  
+</p>
+<table class=MsoNormalTable border=1 cellpadding=0 style='mso-cellspacing:1.5pt; mso-padding-alt:0in 5.4pt 0in 5.4pt'>
+<tr style='mso-yfti-irow:0;mso-yfti-firstrow:yes'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<b>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+Line number  
+<o:p>
+</o:p>
+</span>
+</b>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<b>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+Type  
+</span>
+</b>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<b>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+Range  
+</span>
+</b>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<b>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+Description  
+</span>
+</b>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:1'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+1  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+string  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+<o:p>
+&nbsp;  
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+Reserved  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:2'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+2  
+</span>
+<span lang=EN-US style='mso-ansi-language: EN-US'>
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+string  
+</span>
+<span lang=EN-US style='mso-ansi-language: EN-US'>
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+<o:p>
+&nbsp;  
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+The name of source YUV file  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:3'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+3  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+int  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+&gt;= 1  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+Number of frames to encode  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:4'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+4  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+3 int  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+1; &gt;= 1; &gt;= 0  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+1;  
+<span style='mso-spacerun:yes'>
+   
+</span>
+Number of frames in between I frames; IDR interval  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:5'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+5  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+2 int  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+&gt;= 0; 0  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+Number of B frames between I (or P) and next P; 0  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:6'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+6  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+3 int  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+1 &#8211; 16; 1; &gt;= 0  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+Number of reference frames; 1;  
+<span style='mso-spacerun:yes'>
+   
+</span>
+Number of slices (if it set to 0 then encoder will set this number automatically correspond to number of threads)  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:7'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+7  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+2 int  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+77, 100; &gt;= 0  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+profile_idc; level_idc (set 0 for automatic selection)  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:8'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+8  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+int  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+&gt;= 1  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+Width of source  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:9'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+9  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+int  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+&gt;= 1  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+Height of source  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:10'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+10  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+int  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+0 - 8  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+Frame Rate Code (0 &#8211; 30fps, 1 &#8211; 15fps, 2 &#8211; 24fps, 3 &#8211; 25fps, 4 &#8211; 30fps, 5 &#8211; 30fps, 6 &#8211; 50fps, 7 &#8211; 60fps, 8 &#8211; 60fps)  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:11'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+11  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+3 int  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+0 &#8211; 1; 8 &#8211; 12; 8 &#8211; 12  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+chroma_format_idc (0 - monochrom, 1 - 420);  
+<span style='mso-spacerun:yes'>
+   
+</span>
+bit_depth_luma; bit_depth_chroma  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:12'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+12  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+5 int  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+0 &#8211; 3; 8 &#8211; 12; 0 &#8211; 1;  
+</span>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+0 &#8211; 2^(bit_depth_aux + 9) -1  
+<span style='mso-bidi-font-weight:bold'>
+;  
+</span>
+0 &#8211; 2^(bit_depth_aux + 9) -1  
+<span style='mso-bidi-font-weight:bold'>
+<o:p>
+</o:p>
+</span>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+aux_format_idc; bit_depth_aux; alpha_incr_flag; alpha_opaque_value; alpha_transparent_value  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:13'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+13  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+5 int  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+0 &#8211; 2; 0 &#8211; 51; 0 &#8211; 51; 0 &#8211; 51; &gt;= 1  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+Rate Control method (0 - quant_codes, 1 - CBR, 2 &#8211; VBR); start qp values for I, P, B slices for Rate Control method 0; bitrate (bits per second) for Rate Control method 1 and 2  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:14'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+14  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+4 int  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+1 &#8211; 6; 0 &#8211; 2; &gt;= 1; &gt;= 1  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+Motion Estimation method; subblock split (0 &#8211; none, 1 &#8211; 8x8, 2 &#8211; 4x4); ME search region width; ME search region height  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:15'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+15  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+3 int  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+0; 0; 0  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+Reserved  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:16'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+16  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+2 int  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+0 &#8211; 1; 0 &#8211; 1  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+direct type (0 - temporal 1 - spatial); direct_inference_flag  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:17'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+17  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+3 int  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+0 &#8211; 2; -12 &#8211; 12; -12 &#8211; 12  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+disable_deblocking_idc (1 &#8211; off, 0 &#8211; on, 2 &#8211; on without crossing slice boundaries); deblocking_filter_alpha; deblocking_filter_beta  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:18'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+18  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+3 int  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+0 &#8211; 1; 0 &#8211; 1; 0 &#8211; 1  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+transform_8x8_mode (0 &#8211; off, 1 &#8211; on); scaling matrices (0 - use standard, 1 - use default scaling matrices for 8x8 quantization); qpprime_y_zero_transform_bypass_flag  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:19'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+19  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+int  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+&gt;= 1  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+Reserved (must be the same as Width of source)  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:20'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+20  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+int  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+&gt;= 1  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+Reserved (must be the same as Height of source)  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:21'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+21  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+2 int  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+0 &#8211; 1; 0 &#8211; 2  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+entropy coding mode (0  
+<span style='mso-bidi-font-weight:bold'>
+&#8211;  
+</span>
+cavlc, 1  
+<span style='mso-bidi-font-weight:bold'>
+&#8211;  
+</span>
+cabac); cabac_init_idc  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:22'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+22  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+int  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+0 &#8211; 1  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+picture coding type (0 - only FRM, 1 - only FLD )  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+<tr style='mso-yfti-irow:23;mso-yfti-lastrow:yes'>
+<td valign=top style='padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+23  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=64 valign=top style='width:48.0pt;padding:0in 5.4pt 0in 5.4pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US; mso-bidi-font-weight:bold'>
+string  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+<td width=303 valign=top style='width:227.3pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+&#8220;0 sample.log&#8221;  
+<span style='mso-bidi-font-weight:bold'>
+<o:p>
+</o:p>
+</span>
+</span>
+</p>
+</td>
+<td width=807 valign=top style='width:605.25pt;padding:.75pt .75pt .75pt .75pt'>
+<p class=MsoNormal>
+<span lang=EN-US style='mso-ansi-language:EN-US'>
+Reserved  
+<o:p>
+</o:p>
+</span>
+</p>
+</td>
+</tr>
+</table>
+<h2>
+<a NAME="Known_Limitations">
+</a>
+Known Limitations  
+</h2>
+<ul type="disc">
+<li class="MsoNormal">
+<span lang="EN-US">
+Encoder produce only JM9.2 compatible streams  
+</span>
+</li>
+<li class="MsoNormal">
+SI and SP slice types are not supported.  
+</li>
+<li class="MsoNormal">
+Slice Data Partitioning is not supported.  
+</li>
+<li class="MsoNormal">
+- Annex A - Enforcement of Profile and Level Restrictions is not supported.  
+</li>
+<li class="MsoNormal">
+- Annex C - Full conformance with HRD (Hypothetical Reference Decoder) is not supported.  
+</li>
+<li class="MsoNormal">
+- Annex D - SEI (Supplemental Enhancement Information) is not supported.  
+</li>
+<li class="MsoNormal">
+- Annex E - VUI (Video Usability Information) is not supported.  
+</li>
+<li class="MsoNormal">
+Long Term Reference frames are not supported.  
+</li>
+<li class="MsoNormal">
+FMO (flexible macroblock ordering) is not supported.  
+</li>
+<li class="MsoNormal">
+ASO (arbitrary slice order) is not supported.  
+</li>
+<li class="MsoNormal">
+Weighted prediction is not supported.  
+</li>
+<li class="MsoNormal">
+The encoder only supports slices with MBs in raster order. All slices are the same size (in MBs) with any remainder going to the final slice. The maximum number of slices is the number of MB rows (one slice per row of 16x16 MBs).  
+</li>
+<li class="MsoNormal">
+Encoder does not support frame resizing. Thus input and output frame sizes should be the same.  
+</li>
+<li>
+Custom and default scale matrices are not supported. Standard scaling matrices are always used.  
+</li>
+<li>
+Transform 8x8 can be used for inter coding only.  
+</li>
+<li>
+The encoder assumes that input VideoData object contains frame in YUV420 (I420 according to FOURCC.org) format.  
+</li>
+</ul>
+<P>
+&nbsp;  
+</font>
+</font>
+<span>
+<div class="Section1">
+<div class="Section1">
+<font size=-2>
+Copyright &copy; 2002-2008 Intel Corporation. All rights reserved.  
+</font>
+</BODY>
+</HTML>
