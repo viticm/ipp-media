@@ -11,6 +11,7 @@
 #if !defined( __FUNCTIONS_COMMON_H__ )
 #define __FUNCTIONS_COMMON_H__
 
+#include "ippdefs.h"
 #include "ippvc90legacy.h"
 #include "vm_types.h"
 

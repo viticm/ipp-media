@@ -19,7 +19,7 @@
 
 #include "ippcore.h"
 #include "ipps.h"
-#include "ippvc.h"
+#include "ippvc90legacy.h"
 
 using namespace UMC;
 

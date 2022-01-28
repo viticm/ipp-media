@@ -14,7 +14,7 @@
 #include "umc_h264_to_ipp.h"
 #include "umc_h264_bme.h"
 
-#include "ippvc.h"
+#include "ippvc90legacy.h" //#include "ippvc.h"
 
 Ipp32u SAT8x8D(const Ipp8u *pSrc1, Ipp32s src1Step, const Ipp8u *pSrc2, Ipp32s src2Step)
 {

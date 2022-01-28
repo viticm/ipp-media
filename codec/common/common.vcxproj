@@ -41,10 +41,22 @@
     <ClInclude Include="include\functions_common.h" />
     <ClInclude Include="include\mp4cmn_config.h" />
     <ClInclude Include="include\mp4cmn_pce.h" />
+    <ClInclude Include="include\umc_filter_anaglyph.h" />
+    <ClInclude Include="include\umc_filter_color_conversion.h" />
+    <ClInclude Include="include\umc_filter_deinterlace.h" />
+    <ClInclude Include="include\umc_filter_depth_conversion.h" />
+    <ClInclude Include="include\umc_filter_resize.h" />
+    <ClInclude Include="include\umc_video_processing.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\bstream.c" />
     <ClCompile Include="src\functions_cc.c" />
+    <ClCompile Include="src\umc_filter_anaglyph.cpp" />
+    <ClCompile Include="src\umc_filter_color_conversion.cpp" />
+    <ClCompile Include="src\umc_filter_deinterlace.cpp" />
+    <ClCompile Include="src\umc_filter_depth_conversion.cpp" />
+    <ClCompile Include="src\umc_filter_resize.cpp" />
+    <ClCompile Include="src\umc_video_processing.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -181,7 +193,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>include;$(IPPROOT)\..\em64t\include;..\..\core\umc\include;..\..\core\vm\include;..\..\core\vm_plus\include;..\..\codec\common\include;..\..\codec\aac_dec\include;..\..\dependencies\IPP;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;$(IPPROOT)\..\em64t\include;..\..\core\umc\include;..\..\core\vm\include;..\..\core\vm_plus\include;..\..\codec\common\include;..\..\dependencies\IPP;..\..\io\umc_io\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;NDEBUG;_LIB;IPP_W32DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
