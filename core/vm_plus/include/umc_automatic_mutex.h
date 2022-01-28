@@ -4,7 +4,7 @@
 //  This software is supplied under the terms of a license  agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in  accordance  with the terms of that agreement.
-//    Copyright (c) 2003-2006 Intel Corporation. All Rights Reserved.
+//    Copyright (c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 //
 */
@@ -12,73 +12,51 @@
 #ifndef __UMC_AUTOMATIC_MUTEX_H__
 #define __UMC_AUTOMATIC_MUTEX_H__
 
-#include "vm_mutex.h"
+#include "umc_mutex.h"
 
 namespace UMC
 {
 
-#pragma pack(1)
-
 class AutomaticMutex
 {
 public:
-    // Constructor
-    AutomaticMutex(vm_mutex &mutex)
+    AutomaticMutex(Mutex &mutex)
     {
-        if (vm_mutex_is_valid(&mutex))
-        {
-            m_pMutex = &mutex;
-
-            // lock mutex
-            vm_mutex_lock(m_pMutex);
-            m_bLocked = true;
-        }
-        else
-        {
-            m_pMutex = NULL;
-            m_bLocked = false;
-        }
+        m_pMutex   = &mutex;
+        m_iCounter = 0;
+        Lock();
     }
-
-    // Destructor
-    ~AutomaticMutex(void)
+    virtual ~AutomaticMutex(void)
     {
         Unlock();
     }
 
-    // lock mutex again
-    void Lock(void)
+    void Lock()
     {
-        if (m_pMutex)
-        {
-            if ((vm_mutex_is_valid(m_pMutex)) && (false == m_bLocked))
-            {
-                vm_mutex_lock(m_pMutex);
-                m_bLocked = true;
-            }
-        }
+        m_pMutex->Lock();
+        m_iCounter++;
     }
 
-    // Unlock mutex
-    void Unlock(void)
+    void Unlock()
     {
-        if (m_pMutex)
+        if(m_iCounter)
         {
-            if ((vm_mutex_is_valid(m_pMutex)) && (m_bLocked))
-            {
-                vm_mutex_unlock(m_pMutex);
-                m_bLocked = false;
-            }
+            m_iCounter--;
+            m_pMutex->Unlock();
         }
     }
 
 protected:
-    vm_mutex *m_pMutex;                                         // (vm_mutex *) pointer to using mutex
-    bool m_bLocked;                                             // (bool) mutex is own locked
+    Mutex  *m_pMutex;
+    Ipp32u  m_iCounter;
+
+private:
+    AutomaticMutex & operator = (AutomaticMutex &)
+    {
+        return *this;
+    }
 };
 
-#pragma pack()
+}
 
-} // end namespace UMC
-
-#endif // __UMC_AUTOMATIC_MUTEX_H__
+#endif

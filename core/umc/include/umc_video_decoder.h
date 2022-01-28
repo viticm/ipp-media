@@ -4,7 +4,7 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//       Copyright(c) 2003-2007 Intel Corporation. All Rights Reserved.
+//       Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
@@ -14,64 +14,78 @@
 #include "umc_structures.h"
 #include "umc_video_data.h"
 #include "umc_base_codec.h"
-#include "umc_base_color_space_converter.h"
 
 namespace UMC
 {
 
-class VideoAccelerator;
+enum // decoding flags
+{
+    // Init() must only check whether stream is supported
+    // (looking to specified video header)
+    // and not allocate any resources
+    FLAG_VDEC_CHECK_ONLY      = 0x00000002,
+
+    //receiving this flag decoder must output decompressed data
+    //in proper display order, otherwise it will output decompressed data
+    //in decoding order, application is responsible to reorder frames to
+    //before displaying
+    FLAG_VDEC_REORDER         = 0x00000004,
+
+    //next flag describes endian related properties of input data
+    //when set, means that coded data should be accessed by 4-reading operations
+    //for little-endian systems it means that each 4 bytes are swapped
+    //i.e [0]<->[3], [1]<->[2]
+    //for big-endian systems swapping is not required
+    FLAG_VDEC_4BYTE_ACCESS    = 0x00000100
+};
 
 class VideoDecoderParams : public BaseCodecParams
 {
+public:
     DYNAMIC_CAST_DECL(VideoDecoderParams, BaseCodecParams)
 
-public:
-    // Default constructor
-    VideoDecoderParams();
-    // Destructor
-    virtual ~VideoDecoderParams();
+    VideoDecoderParams(void)
+    {
+        m_iTrickModes       = UMC_TRICK_MODES_NO;
+        m_fPlaybackRate     = 1;
+        m_pPostProcessor    = NULL;
+    }
 
-    VideoStreamInfo         info;                           // (VideoStreamInfo) compressed video info
-    Ipp32u                  lFlags;                         // (Ipp32u) decoding flag(s)
-    Ipp32u                  lTrickModesFlag;                // (Ipp32u) trick modes
-
-    Ipp64f                  dPlaybackRate;
-
-    BaseCodec               *pPostProcessing;               // (BaseCodec*) pointer to post processing
-
-    VideoAccelerator        *pVideoAccelerator;             // pointer to video accelerator
+    BaseCodec      *m_pPostProcessor;   // pointer to post processor
+    VideoStreamInfo m_info;             // compressed video info
+    Ipp32u          m_iTrickModes;      // trick modes
+    Ipp64f          m_fPlaybackRate;
 };
 
-/******************************************************************************/
-
-class VideoDecoder : public BaseCodec
+class VideoDecoder: public BaseCodec
 {
+public:
     DYNAMIC_CAST_DECL(VideoDecoder, BaseCodec)
 
-public:
-    VideoDecoder(void) :
-        m_PostProcessing(NULL),
-        m_allocatedPostProcessing(NULL)
-    {}
-
-    // Destructor
-    virtual ~VideoDecoder(void);
-
-    // BaseCodec methods
-    // Get codec working (initialization) parameter(s)
-    virtual Status GetInfo(BaseCodecParams *info);
-    // Set new working parameter(s)
-    virtual Status SetParams(BaseCodecParams *params);
+    VideoDecoder(void)
+    {
+        m_pPostProcessor    = NULL;
+    }
+    virtual ~VideoDecoder(void) {}
 
     // Additional methods
     // Reset skip frame counter
-    virtual Status ResetSkipCount() = 0;
+    virtual Status ResetSkipCount(void) = 0;
+
     // Increment skip frame counter
     virtual Status SkipVideoFrame(Ipp32s) = 0;
+
     // Get skip frame counter statistic
-    virtual Ipp32u GetNumOfSkippedFrames() = 0;
+    virtual Ipp32u GetNumOfSkippedFrames(void) = 0;
+
     // Preview last decoded frame
-    virtual Status PreviewLastFrame(VideoData *out, BaseCodec *pPostProcessing = NULL);
+    virtual Status PreviewLastFrame(VideoData* out)
+    {
+        if(!m_pPostProcessor)
+            return UMC_ERR_NULL_PTR;
+
+        return m_pPostProcessor->GetFrame(&m_lastDecodedFrame, out);
+    }
 
     // returns closed capture data
     virtual Status GetUserData(MediaData* /*pCC*/)
@@ -80,13 +94,14 @@ public:
     }
 
 protected:
+    VideoData        m_lastDecodedFrame;  // last decoded frame
+    BaseCodec       *m_pPostProcessor;    // pointer to post processing
 
-    VideoStreamInfo         m_ClipInfo;                         // (VideoStreamInfo) clip info
-    VideoData               m_LastDecodedFrame;                 // (VideoData) last decoded frame
-    BaseCodec               *m_PostProcessing;                  // (BaseCodec*) pointer to post processing
-    BaseCodec               *m_allocatedPostProcessing;         // (BaseCodec*) pointer to default post processing allocated by decoder
+private:
+    const VideoDecoder& operator=(const VideoDecoder&) { return *this; }
+    VideoDecoder(const VideoDecoder&) {}
 };
 
-} // end namespace UMC
+}
 
-#endif // __UMC_VIDEO_DECODER_H__
+#endif

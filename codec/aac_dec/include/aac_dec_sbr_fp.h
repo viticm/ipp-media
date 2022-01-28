@@ -12,7 +12,7 @@
 #define __AACDEC_SBR_FP_H__
 
 /* IPP */
-#include "ippac.h"
+#include "ippac90legacy.h" //#include "ippac.h"
 #include "ipps.h"
 #include "align.h"
 /* AAC */

@@ -20,13 +20,13 @@
     <ClCompile Include="src\umc_mmap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\umc_mutex.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\umc_pendulum.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\umc_semaphore.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\umc_string.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\umc_sys_info.cpp">
@@ -40,7 +40,13 @@
     <ClInclude Include="include\umc_automatic_mutex.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\umc_dynamic_cast.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="include\umc_event.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\umc_list.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\umc_malloc.h">
@@ -56,6 +62,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\umc_semaphore.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\umc_string.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\umc_sys_info.h">

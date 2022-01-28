@@ -13,7 +13,7 @@
 #include "umc_video_data.h"
 #include "ippi.h"
 #include "ippcc.h"
-#include "ippvc.h"
+#include "ippvc90legacy.h" //#include "ippvc.h"
 
 using namespace UMC;
 

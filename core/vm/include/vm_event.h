@@ -4,7 +4,7 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//       Copyright(c) 2003-2006 Intel Corporation. All Rights Reserved.
+//       Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
@@ -14,9 +14,8 @@
 #include "vm_types.h"
 
 #ifdef __cplusplus
-extern "C"
-{
-#endif /* __cplusplus */
+extern "C" {
+#endif
 
 /* Invalidate an event */
 void vm_event_set_invalid(vm_event *event);
@@ -45,6 +44,6 @@ void vm_event_destroy(vm_event *event);
 
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
+#endif
 
-#endif /* __VM_EVENT_H__ */
+#endif

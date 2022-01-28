@@ -40,10 +40,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\mp4_enc.hpp">
+    <ClInclude Include="include\mp4_enc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\mp4_enc_bitstream.hpp">
+    <ClInclude Include="include\mp4_enc_bitstream.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\umc_mpeg4_video_encoder.h">

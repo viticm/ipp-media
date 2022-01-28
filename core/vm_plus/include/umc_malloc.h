@@ -5,7 +5,7 @@
 //  This software is supplied under the terms of a license  agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in  accordance  with the terms of that agreement.
-//        Copyright (c) 2005-2007 Intel Corporation. All Rights Reserved.
+//        Copyright (c) 2005-2012 Intel Corporation. All Rights Reserved.
 //
 //
 */
@@ -16,7 +16,7 @@
 //#define VM_MALLOC             // define this macro to use "vm memory allocation" instead of regular
 #define VM_MALLOC_STATISTIC   // define this macro to turn on memory tracing into the c:/malloc.csv file
 
-#if defined(VM_MALLOC)
+#if defined VM_MALLOC
 
 #include <stdlib.h>     // declare native malloc functions to avoid redefinition it by vm_malloc
 #include <malloc.h>     // declare native malloc functions to avoid redefinition it by vm_malloc
@@ -117,11 +117,11 @@ void vm_malloc_measure(Ipp32u start, vm_args_malloc);
     #define vm_malloc_finish_measure    vm_malloc_measure(0, vm_args_info);
 #endif //VM_MALLOC_OWN
 
-#else //VM_MALLOC
+#else
 
 #define vm_malloc_start_measure
 #define vm_malloc_finish_measure
 
-#endif //VM_MALLOC
+#endif
 
-#endif //__UMC_MALLOC_H__
+#endif

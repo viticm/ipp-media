@@ -14,7 +14,7 @@
 
 #include<math.h>
 #include "ipps.h"
-#include "ippac.h"
+#include "ippac90legacy.h" //#include "ippac.h"
 #include "sbr_settings.h"
 #include "sbr_dec_struct.h"
 

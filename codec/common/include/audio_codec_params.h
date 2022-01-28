@@ -4,12 +4,25 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//          Copyright(c) 2005-2007 Intel Corporation. All Rights Reserved.
+//          Copyright(c) 2005-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
 #ifndef __AUDIO_CODEC_PARAMS_H__
 #define __AUDIO_CODEC_PARAMS_H__
+
+#include "ippdefs.h"
+
+enum UMC_MP3StereoMode
+{
+    UMC_MPA_MONO,
+    UMC_MPA_LR_STEREO,
+    UMC_MPA_MS_STEREO,
+    UMC_MPA_JOINT_STEREO
+};
+
+#define UMC_MPAENC_CBR 0
+#define UMC_MPAENC_ABR 1
 
 typedef enum
 {

@@ -34,6 +34,22 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\umc_file_reader.h" />
+    <ClInclude Include="include\umc_file_writer.h" />
+    <ClInclude Include="include\umc_memory_reader.h" />
+    <ClInclude Include="include\umc_memory_writer.h" />
+    <ClInclude Include="include\umc_parser_cfg.h" />
+    <ClInclude Include="include\umc_parser_cmd.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\umc_file_reader.cpp" />
+    <ClCompile Include="src\umc_file_writer.cpp" />
+    <ClCompile Include="src\umc_memory_reader.cpp" />
+    <ClCompile Include="src\umc_memory_writer.cpp" />
+    <ClCompile Include="src\umc_parser_cfg.cpp" />
+    <ClCompile Include="src\umc_parser_cmd.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <ProjectGuid>{8BA23C0C-D2D7-4A5A-B8F9-BA5CA19CBAB7}</ProjectGuid>
@@ -263,16 +279,6 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="src\umc_file_reader.cpp" />
-    <ClCompile Include="src\umc_file_writer.cpp" />
-    <ClCompile Include="src\umc_fio_reader.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="include\umc_file_reader.h" />
-    <ClInclude Include="include\umc_file_writer.h" />
-    <ClInclude Include="include\umc_fio_reader.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -34,3 +34,8 @@
 # VS
 .vs
 .vs/*
+.log
+.tlog
+.pdb
+_bin/*
+bin/*

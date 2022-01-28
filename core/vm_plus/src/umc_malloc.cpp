@@ -5,7 +5,7 @@
 //  This software is supplied under the terms of a license  agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in  accordance  with the terms of that agreement.
-//        Copyright (c) 2005-2007 Intel Corporation. All Rights Reserved.
+//        Copyright (c) 2005-2012 Intel Corporation. All Rights Reserved.
 //
 //
 */
@@ -13,14 +13,13 @@
 #define VM_MALLOC_OWN
 #include "umc_malloc.h"
 
-#if defined(VM_MALLOC)
-
+#if defined VM_MALLOC
 #include <string.h>
 #include <stdio.h>
 
 #define vm_args const char* lpcFileName, Ipp32u iStringNumber
 
-#ifdef _WIN32_WCE
+#if defined _WIN32_WCE
     #define OutputDir _T("\\Hard Disk2\\umc_malloc")
 #else
     #define OutputDir "C:"
@@ -31,11 +30,11 @@ TCHAR g_OutputFileName[256] = _T("");
 class VM_MallocItem
 {
 public:
-    void*           m_lpv;
-    Ipp32s          m_size;
+    void*       m_lpv;
+    Ipp32s      m_size;
     char        m_lpcBinaryName[MAX_PATH];
     const char* m_lpcFileName;
-    Ipp32u          m_iStringNumber;
+    Ipp32u      m_iStringNumber;
 
     void Init(void* lpv, Ipp32s size, TCHAR* cBinaryName, vm_args)
     {
@@ -322,4 +321,4 @@ void operator delete[](void *lpv, vm_args)
     vm_free(lpv);
 }
 
-#endif //VM_MALLOC
+#endif

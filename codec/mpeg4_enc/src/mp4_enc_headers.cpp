@@ -4,39 +4,39 @@
 //  This software is supplied under the terms of a license agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in accordance with the terms of that agreement.
-//        Copyright (c) 2003-2007 Intel Corporation. All Rights Reserved.
+//        Copyright (c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
-//  Description:    class ippVideoEncoderMPEG4 (put headers to bitstream)
+//  Description:    class VideoEncoderMPEG4 (put headers to bitstream)
 //
 */
 
-#include "umc_defs.h"
+#include "umc_config.h"
+#ifdef UMC_ENABLE_MPEG4_VIDEO_ENCODER
 
-#if defined (UMC_ENABLE_MPEG4_VIDEO_ENCODER)
-
-#include "mp4_enc.hpp"
 #include <stdio.h>
+
+#include "mp4_enc.h"
 
 namespace MPEG4_ENC
 {
 
-inline void ippVideoEncoderMPEG4::EncodeStartCode(Ipp8u sc)
+inline void VideoEncoderMPEG4::EncodeStartCode(Ipp8u sc)
 {
     cBS.PutBits(256 + sc, 32);
 }
 
-void ippVideoEncoderMPEG4::EncodeZeroBitsAlign()
+void VideoEncoderMPEG4::EncodeZeroBitsAlign()
 {
     if (cBS.mBitOff != 0)
         cBS.PutBits(0, 8 - cBS.mBitOff);
 }
 
-void ippVideoEncoderMPEG4::EncodeStuffingBitsAlign()
+void VideoEncoderMPEG4::EncodeStuffingBitsAlign()
 {
     cBS.PutBits(0xFF >> (cBS.mBitOff + 1), 8 - cBS.mBitOff);
 }
 
-void ippVideoEncoderMPEG4::EncodeVideoPacketHeader(ippBitStream &cBS, Ipp32s mbn, Ipp32s quant)
+void VideoEncoderMPEG4::EncodeVideoPacketHeader(BitStream &cBS, Ipp32s mbn, Ipp32s quant)
 {
     Ipp32s   rml;
 
@@ -53,7 +53,7 @@ void ippVideoEncoderMPEG4::EncodeVideoPacketHeader(ippBitStream &cBS, Ipp32s mbn
     cBS.PutZeroBit();
 }
 
-void ippVideoEncoderMPEG4::EncodeGOBHeader(ippBitStream &cBS, Ipp32s gob_number, Ipp32s quant)
+void VideoEncoderMPEG4::EncodeGOBHeader(BitStream &cBS, Ipp32s gob_number, Ipp32s quant)
 {
     cBS.PutBits(1, 17);
     cBS.PutBits(gob_number, 5);
@@ -61,7 +61,7 @@ void ippVideoEncoderMPEG4::EncodeGOBHeader(ippBitStream &cBS, Ipp32s gob_number,
     cBS.PutBits(quant, 5);
 }
 
-void ippVideoEncoderMPEG4::EncodeVOS_Header()
+void VideoEncoderMPEG4::EncodeVOS_Header()
 {
     if (!VOL.short_video_header) {
         EncodeStartCode(MP4_VISUAL_OBJECT_SEQUENCE_SC);
@@ -71,7 +71,7 @@ void ippVideoEncoderMPEG4::EncodeVOS_Header()
     }
 }
 
-void ippVideoEncoderMPEG4::EncodeVO_Header()
+void VideoEncoderMPEG4::EncodeVO_Header()
 {
     EncodeStartCode(MP4_VISUAL_OBJECT_SC);
     cBS.PutBits(VO.is_visual_object_identifier, 1);
@@ -100,7 +100,7 @@ void ippVideoEncoderMPEG4::EncodeVO_Header()
         EncodeStartCode(MP4_VIDEO_OBJECT_MIN_SC + 2);
 }
 
-void ippVideoEncoderMPEG4::EncodeVOL_Header()
+void VideoEncoderMPEG4::EncodeVOL_Header()
 {
     EncodeStartCode(MP4_VIDEO_OBJECT_LAYER_MIN_SC + 2);
     cBS.PutBits(VOL.random_accessible_vol, 1);
@@ -262,14 +262,11 @@ void ippVideoEncoderMPEG4::EncodeVOL_Header()
     }
     EncodeStuffingBitsAlign();
     EncodeStartCode(MP4_USER_DATA_SC);
-    const IppLibraryVersion *ippVer = ippvcGetLibVersion();
-    Ipp8s ippStr[1024];
-    sprintf((char *)ippStr, " Intel(R) MPEG-4 encoder based on Intel(R) IPP %s[%d.%d.%d.%d]",
-            ippVer->Version, ippVer->major, ippVer->minor, ippVer->majorBuild, ippVer->build);
-    cBS.PutStr(ippStr);
+//    Ipp8s ippStr[1024];
+//    cBS.PutStr(ippStr);
 }
 
-void ippVideoEncoderMPEG4::EncodeGOV_Header()
+void VideoEncoderMPEG4::EncodeGOV_Header()
 {
     Ipp32s  sec, min, hour;
 
@@ -288,7 +285,7 @@ void ippVideoEncoderMPEG4::EncodeGOV_Header()
     //f user_data
 }
 
-void ippVideoEncoderMPEG4::EncodeVOP_Header()
+void VideoEncoderMPEG4::EncodeVOP_Header()
 {
     EncodeStartCode(MP4_VIDEO_OBJECT_PLANE_SC);
     cBS.PutBits(VOP.vop_coding_type, 2);
@@ -430,7 +427,7 @@ void ippVideoEncoderMPEG4::EncodeVOP_Header()
     }
 }
 
-void ippVideoEncoderMPEG4::EncodeVOPSH_Header()
+void VideoEncoderMPEG4::EncodeVOPSH_Header()
 {
     cBS.PutBits(32, 22);
     cBS.PutBits(VOP.temporal_reference, 8);
@@ -447,12 +444,12 @@ void ippVideoEncoderMPEG4::EncodeVOPSH_Header()
     cBS.PutZeroBit();  //f pei
 }
 
-Ipp32s ippVideoEncoderMPEG4::EncodeHeader()
+Ipp32s VideoEncoderMPEG4::EncodeHeader()
 {
     if (!mIsInit)
         return MP4_STS_ERR_NOTINIT;
     if (!VOL.short_video_header) {
-        Ipp8u *sPtr = cBS.GetBitPtr();
+//        Ipp8u *sPtr = cBS.GetBitPtr();
         EncodeVOS_Header();
         EncodeVO_Header();
         EncodeVOL_Header();

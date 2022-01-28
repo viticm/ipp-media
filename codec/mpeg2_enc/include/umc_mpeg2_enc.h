@@ -15,7 +15,7 @@
 #define __UMC_MPEG2_ENC_H
 
 #include <limits.h>
-#include "ippvc.h"
+#include "ippvc90legacy.h" //#include "ippvc.h"
 #include "vm_debug.h"
 #include "umc_memory_allocator.h"
 #include "umc_video_processing.h"

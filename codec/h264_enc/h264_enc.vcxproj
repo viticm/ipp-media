@@ -34,6 +34,39 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\umc_base_bitstream.h" />
+    <ClInclude Include="include\umc_h264_avbr.h" />
+    <ClInclude Include="include\umc_h264_bme.h" />
+    <ClInclude Include="include\umc_h264_bs.h" />
+    <ClInclude Include="include\umc_h264_config.h" />
+    <ClInclude Include="include\umc_h264_core_enc.h" />
+    <ClInclude Include="include\umc_h264_deblocking.h" />
+    <ClInclude Include="include\umc_h264_deblocking_tools.h" />
+    <ClInclude Include="include\umc_h264_defs.h" />
+    <ClInclude Include="include\umc_h264_enc_cpb.h" />
+    <ClInclude Include="include\umc_h264_tables.h" />
+    <ClInclude Include="include\umc_h264_to_ipp.h" />
+    <ClInclude Include="include\umc_h264_video_encoder.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\umc_base_bitstream.cpp" />
+    <ClCompile Include="src\umc_h264_aic.cpp" />
+    <ClCompile Include="src\umc_h264_avbr.cpp" />
+    <ClCompile Include="src\umc_h264_bs.cpp" />
+    <ClCompile Include="src\umc_h264_core_enc.cpp" />
+    <ClCompile Include="src\umc_h264_deblocking.cpp" />
+    <ClCompile Include="src\umc_h264_deblocking_mbaff.cpp" />
+    <ClCompile Include="src\umc_h264_deblocking_tools.cpp" />
+    <ClCompile Include="src\umc_h264_enc_cpb.cpp" />
+    <ClCompile Include="src\umc_h264_ermb.cpp" />
+    <ClCompile Include="src\umc_h264_mc.cpp" />
+    <ClCompile Include="src\umc_h264_me.cpp" />
+    <ClCompile Include="src\umc_h264_pack.cpp" />
+    <ClCompile Include="src\umc_h264_sad.cpp" />
+    <ClCompile Include="src\umc_h264_tables.cpp" />
+    <ClCompile Include="src\umc_h264_video_encoder.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <ProjectGuid>{35EBE815-8982-4D93-A7D2-FB9F3CFE2E86}</ProjectGuid>
@@ -169,8 +202,8 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>include;$(IPPROOT)\..\em64t\include;..\..\core\umc\include;..\..\core\vm\include;..\..\core\vm_plus\include;..\..\codec\common\include;..\..\codec\color_space_converter\include;..\..\dependencies\IPP;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>WIN64;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>include;$(IPPROOT)\..\em64t\include;..\..\core\umc\include;..\..\core\vm\include;..\..\core\vm_plus\include;..\..\codec\common\include;..\..\codec\color_space_converter\include;..\..\dependencies\IPP;..\..\io\umc_io\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN64;NDEBUG;_LIB;IPP_W32DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
@@ -263,64 +296,6 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="src\umc_base_bitstream.cpp" />
-    <ClCompile Include="src\umc_h264_aic.cpp" />
-    <ClCompile Include="src\umc_h264_avbr.cpp" />
-    <ClCompile Include="src\umc_h264_bs.cpp" />
-    <ClCompile Include="src\umc_h264_core_enc.cpp" />
-    <ClCompile Include="src\umc_h264_deblocking.cpp" />
-    <ClCompile Include="src\umc_h264_deblocking_mbaff.cpp" />
-    <ClCompile Include="src\umc_h264_deblocking_tools.cpp" />
-    <ClCompile Include="src\umc_h264_enc_cpb.cpp" />
-    <ClCompile Include="src\umc_h264_ermb.cpp" />
-    <ClCompile Include="src\umc_h264_gen_enc.cpp" />
-    <ClCompile Include="src\umc_h264_mc.cpp" />
-    <ClCompile Include="src\umc_h264_me.cpp" />
-    <ClCompile Include="src\umc_h264_npf.cpp" />
-    <ClCompile Include="src\umc_h264_pack.cpp" />
-    <ClCompile Include="src\umc_h264_sad.cpp" />
-    <ClCompile Include="src\umc_h264_tables.cpp" />
-    <ClCompile Include="src\umc_h264_video_encoder.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="include\umc_base_bitstream.h" />
-    <ClInclude Include="include\umc_base_bitstream_tmpl.cpp.h" />
-    <ClInclude Include="include\umc_base_bitstream_tmpl.h" />
-    <ClInclude Include="include\umc_h264_aic_tmpl.cpp.h" />
-    <ClInclude Include="include\umc_h264_avbr.h" />
-    <ClInclude Include="include\umc_h264_bme.h" />
-    <ClInclude Include="include\umc_h264_bs.h" />
-    <ClInclude Include="include\umc_h264_bs_tmpl.cpp.h" />
-    <ClInclude Include="include\umc_h264_bs_tmpl.h" />
-    <ClInclude Include="include\umc_h264_config.h" />
-    <ClInclude Include="include\umc_h264_core_enc.h" />
-    <ClInclude Include="include\umc_h264_core_enc_tmpl.cpp.h" />
-    <ClInclude Include="include\umc_h264_core_enc_tmpl.h" />
-    <ClInclude Include="include\umc_h264_deblocking.h" />
-    <ClInclude Include="include\umc_h264_deblocking_mbaff_tmpl.cpp.h" />
-    <ClInclude Include="include\umc_h264_deblocking_tmpl.cpp.h" />
-    <ClInclude Include="include\umc_h264_deblocking_tmpl.h" />
-    <ClInclude Include="include\umc_h264_deblocking_tools.h" />
-    <ClInclude Include="include\umc_h264_deblocking_tools_tmpl.cpp.h" />
-    <ClInclude Include="include\umc_h264_deblocking_tools_tmpl.h" />
-    <ClInclude Include="include\umc_h264_defs.h" />
-    <ClInclude Include="include\umc_h264_defs_tmpl.h" />
-    <ClInclude Include="include\umc_h264_enc_cpb.h" />
-    <ClInclude Include="include\umc_h264_enc_cpb_tmpl.cpp.h" />
-    <ClInclude Include="include\umc_h264_enc_cpb_tmpl.h" />
-    <ClInclude Include="include\umc_h264_ermb_tmpl.cpp.h" />
-    <ClInclude Include="include\umc_h264_gen_enc_tmpl.cpp.h" />
-    <ClInclude Include="include\umc_h264_mc_tmpl.cpp.h" />
-    <ClInclude Include="include\umc_h264_me_tmpl.cpp.h" />
-    <ClInclude Include="include\umc_h264_npf.h" />
-    <ClInclude Include="include\umc_h264_pack_tmpl.cpp.h" />
-    <ClInclude Include="include\umc_h264_tables.h" />
-    <ClInclude Include="include\umc_h264_to_ipp.h" />
-    <ClInclude Include="include\umc_h264_video_encoder.h" />
-    <ClInclude Include="include\umc_h264_video_encoder_tmpl.cpp.h" />
-    <ClInclude Include="include\umc_h264_wrappers.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

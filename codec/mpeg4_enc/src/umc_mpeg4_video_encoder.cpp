@@ -4,13 +4,12 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//          Copyright(c) 2003-2008 Intel Corporation. All Rights Reserved.
+//          Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
-#include "umc_defs.h"
-
-#if defined (UMC_ENABLE_MPEG4_VIDEO_ENCODER)
+#include "umc_config.h"
+#ifdef UMC_ENABLE_MPEG4_VIDEO_ENCODER
 
 #include "umc_mpeg4_video_encoder.h"
 #include "umc_video_data.h"
@@ -21,7 +20,7 @@ namespace UMC
 {
 
 MPEG4EncoderParams::MPEG4EncoderParams() {
-    ippsZero_8u((Ipp8u*)(&m_Param), sizeof(m_Param));
+    ippsSet_8u(0, (Ipp8u*)(&m_Param), sizeof(m_Param));
     m_Param.quantIVOP = 4;
     m_Param.quantPVOP = 4;
     m_Param.quantBVOP = 6;
@@ -122,91 +121,91 @@ Status MPEG4VideoEncoder::SetParams(BaseCodecParams* baseParams)
     if (bParam == NULL)
         return UMC_ERR_UNSUPPORTED;
     // only BitRate and FrameRate could be changed
-    if (bParam->info.bitrate == m_Param.info.bitrate && bParam->info.framerate == m_Param.info.framerate)
+    if (bParam->m_info.iBitrate == m_Param.m_info.iBitrate && bParam->m_info.fFramerate == m_Param.m_info.fFramerate)
         return UMC_ERR_UNSUPPORTED;
-    m_Param.info.bitrate = bParam->info.bitrate;
-    m_Param.info.framerate = bParam->info.framerate;
-    mp4enc->ResetRC(m_Param.info.bitrate, m_Param.info.framerate);
+    m_Param.m_info.iBitrate = bParam->m_info.iBitrate;
+    m_Param.m_info.fFramerate = bParam->m_info.fFramerate;
+    mp4enc->ResetRC(m_Param.m_info.iBitrate, m_Param.m_info.fFramerate);
     return UMC_OK;
     //return UMC_ERR_NOT_IMPLEMENTED;
 }
 
 Status MPEG4VideoEncoder::Init(BaseCodecParams* init)
 {
-    MPEG4EncoderParams *pParam = DynamicCast<MPEG4EncoderParams>(init);
-    VideoEncoderParams *vParam = DynamicCast<VideoEncoderParams>(init);
+    MPEG4EncoderParams *pParam = DynamicCast<MPEG4EncoderParams, BaseCodecParams>(init);
+    VideoEncoderParams *vParam = DynamicCast<VideoEncoderParams, BaseCodecParams>(init);
 
     if (vParam == NULL && pParam == NULL)
         return UMC_ERR_NULL_PTR;
     if (m_IsInit)
         Close();
-    mp4enc = new MPEG4_ENC::ippVideoEncoderMPEG4;
+    mp4enc = new MPEG4_ENC::VideoEncoderMPEG4;
     if (!mp4enc)
         return UMC_ERR_ALLOC;
     if (pParam == NULL) {
         // default params are in constructor
-        m_Param.m_Param.Width = vParam->info.clip_info.width;
-        m_Param.m_Param.Height = vParam->info.clip_info.height;
-        if (vParam->info.bitrate <= 0) {
+        m_Param.m_Param.Width = vParam->m_info.videoInfo.m_iWidth;
+        m_Param.m_Param.Height = vParam->m_info.videoInfo.m_iHeight;
+        if (vParam->m_info.iBitrate <= 0) {
             m_Param.m_Param.RateControl = 0;
             m_Param.m_Param.BitRate = 0;
         } else {
             m_Param.m_Param.RateControl = 1;
-            m_Param.m_Param.BitRate = vParam->info.bitrate;
+            m_Param.m_Param.BitRate = vParam->m_info.iBitrate;
         }
-        m_Param.info.framerate = vParam->info.framerate;
-        if (vParam->info.framerate > 0 && (vParam->info.framerate == (Ipp32s)vParam->info.framerate)) {
-            m_Param.m_Param.TimeResolution = (Ipp32s)vParam->info.framerate;
+        m_Param.m_info.fFramerate = vParam->m_info.fFramerate;
+        if (vParam->m_info.fFramerate > 0 && (vParam->m_info.fFramerate == (Ipp32s)vParam->m_info.fFramerate)) {
+            m_Param.m_Param.TimeResolution = (Ipp32s)vParam->m_info.fFramerate;
             m_Param.m_Param.TimeIncrement = 1;
         } else {
-            if (vParam->info.framerate >= 23.976 && vParam->info.framerate < 24) {
+            if (vParam->m_info.fFramerate >= 23.976 && vParam->m_info.fFramerate < 24) {
                 m_Param.m_Param.TimeResolution = 24000;
                 m_Param.m_Param.TimeIncrement = 1001;
-            } else if (vParam->info.framerate >= 29.97 && vParam->info.framerate < 30) {
+            } else if (vParam->m_info.fFramerate >= 29.97 && vParam->m_info.fFramerate < 30) {
                 m_Param.m_Param.TimeResolution = 30000;
                 m_Param.m_Param.TimeIncrement = 1001;
             } else {
                 m_Param.m_Param.TimeResolution = 30;
                 m_Param.m_Param.TimeIncrement = 1;
-                m_Param.info.framerate = 30;
+                m_Param.m_info.fFramerate = 30;
             }
         }
-        m_Param.info.clip_info.width = vParam->info.clip_info.width;
-        m_Param.info.clip_info.height = vParam->info.clip_info.height;
+        m_Param.m_info.videoInfo.m_iWidth = vParam->m_info.videoInfo.m_iWidth;
+        m_Param.m_info.videoInfo.m_iHeight = vParam->m_info.videoInfo.m_iHeight;
         //m_Param.numFramesToEncode = vParam->numFramesToEncode;
-        m_Param.info.bitrate = vParam->info.bitrate;
+        m_Param.m_info.iBitrate = vParam->m_info.iBitrate;
     } else {
         m_Param = *pParam;
         // override MPEG-4 params if base params are valid
-        if (m_Param.info.clip_info.width && m_Param.info.clip_info.height) {
-            m_Param.m_Param.Width = m_Param.info.clip_info.width;
-            m_Param.m_Param.Height = m_Param.info.clip_info.height;
+        if (m_Param.m_info.videoInfo.m_iWidth && m_Param.m_info.videoInfo.m_iHeight) {
+            m_Param.m_Param.Width = m_Param.m_info.videoInfo.m_iWidth;
+            m_Param.m_Param.Height = m_Param.m_info.videoInfo.m_iHeight;
         }
-        if (m_Param.info.framerate > 0) {
-            if (m_Param.info.framerate == (Ipp32s)m_Param.info.framerate) {
-                m_Param.m_Param.TimeResolution = (Ipp32s)m_Param.info.framerate;
+        if (m_Param.m_info.fFramerate > 0) {
+            if (m_Param.m_info.fFramerate == (Ipp32s)m_Param.m_info.fFramerate) {
+                m_Param.m_Param.TimeResolution = (Ipp32s)m_Param.m_info.fFramerate;
                 m_Param.m_Param.TimeIncrement = 1;
             } else {
-                if (m_Param.info.framerate >= 23.976 && m_Param.info.framerate < 24) {
+                if (m_Param.m_info.fFramerate >= 23.976 && m_Param.m_info.fFramerate < 24) {
                     m_Param.m_Param.TimeResolution = 24000;
                     m_Param.m_Param.TimeIncrement = 1001;
-                } else if (m_Param.info.framerate >= 29.97 && m_Param.info.framerate < 30) {
+                } else if (m_Param.m_info.fFramerate >= 29.97 && m_Param.m_info.fFramerate < 30) {
                     m_Param.m_Param.TimeResolution = 30000;
                     m_Param.m_Param.TimeIncrement = 1001;
                 }
             }
         } else
-            m_Param.info.framerate = m_Param.m_Param.TimeResolution / m_Param.m_Param.TimeIncrement;
-        if (m_Param.info.bitrate > 0) {
+            m_Param.m_info.fFramerate = m_Param.m_Param.TimeResolution / m_Param.m_Param.TimeIncrement;
+        if (m_Param.m_info.iBitrate > 0) {
             if (m_Param.m_Param.RateControl == 0)
                 m_Param.m_Param.RateControl = 1;
-            m_Param.m_Param.BitRate = m_Param.info.bitrate;
+            m_Param.m_Param.BitRate = m_Param.m_info.iBitrate;
         }
     }
-    m_Param.m_Param.numThreads = vParam->numThreads;
-    m_Param.m_Param.profile_and_level = (Ipp8u)((vParam->profile << 4) + (vParam->level & 15));
-    m_Param.m_Param.aspect_ratio_width = (Ipp8u)m_Param.info.aspect_ratio_width;
-    m_Param.m_Param.aspect_ratio_height = (Ipp8u)m_Param.info.aspect_ratio_height;
+    m_Param.m_Param.numThreads = vParam->m_iThreads;
+    m_Param.m_Param.profile_and_level = (Ipp8u)((vParam->m_info.iProfile << 4) + (vParam->m_info.iLevel & 15));
+    m_Param.m_Param.aspect_ratio_width = (Ipp8u)m_Param.m_info.videoInfo.m_iSAWidth;
+    m_Param.m_Param.aspect_ratio_height = (Ipp8u)m_Param.m_info.videoInfo.m_iSAHeight;
     Ipp32s  mp4status = mp4enc->Init(&m_Param.m_Param);
     if (mp4status == MPEG4_ENC::MP4_STS_ERR_PARAM)
         return UMC_ERR_INIT;
@@ -220,7 +219,7 @@ Status MPEG4VideoEncoder::Init(BaseCodecParams* init)
     }
     bTimePos = 0;
     gTime = 0.0;
-    iTime = 1.0 / vParam->info.framerate;
+    iTime = 1.0 / vParam->m_info.fFramerate;
     // create default memory allocator if not exist
     Status status = BaseCodec::Init(init);
     if (status != UMC_OK)
@@ -228,20 +227,20 @@ Status MPEG4VideoEncoder::Init(BaseCodecParams* init)
     status = AllocateBuffers();
     if (status != UMC_OK)
         return status;
-    m_Param.m_SuggestedOutputSize = m_Param.info.clip_info.width * m_Param.info.clip_info.height;
+    m_Param.m_iSuggestedOutputSize = m_Param.m_info.videoInfo.m_iWidth * m_Param.m_info.videoInfo.m_iHeight;
     m_IsInit = true;
     return UMC_OK;
 }
 
 Status MPEG4VideoEncoder::GetInfo(BaseCodecParams* baseParams)
 {
-    MPEG4EncoderParams* mp4Params = DynamicCast<MPEG4EncoderParams>(baseParams);
-    VideoEncoderParams *encParams = DynamicCast<VideoEncoderParams>(baseParams);
+    MPEG4EncoderParams* mp4Params = DynamicCast<MPEG4EncoderParams, BaseCodecParams>(baseParams);
+    VideoEncoderParams *encParams = DynamicCast<VideoEncoderParams, BaseCodecParams>(baseParams);
 
     if (!m_IsInit)
         return UMC_ERR_NOT_INITIALIZED;
-    m_Param.info.stream_type = MPEG4_VIDEO;
-    m_Param.qualityMeasure = 100 - m_Param.m_Param.quantPVOP * 100 / 33;
+    m_Param.m_info.streamType = MPEG4_VIDEO;
+    m_Param.m_iQuality = 100 - m_Param.m_Param.quantPVOP * 100 / 33;
     if (mp4Params) {
         *mp4Params = m_Param;
     } else if (encParams) {
@@ -272,10 +271,10 @@ Status MPEG4VideoEncoder::GetFrame(MediaData* pIn, MediaData* pOut)
 {
     if (!m_IsInit)
         return UMC_ERR_NOT_INITIALIZED;
-    VideoData* pVideoDataIn = DynamicCast<VideoData> (pIn);
+    VideoData* pVideoDataIn = DynamicCast<VideoData, MediaData> (pIn);
     if (!pOut)
         return UMC_ERR_NULL_PTR;
-    mp4enc->InitBuffer((Ipp8u*)pOut->GetDataPointer() + pOut->GetDataSize(), (Ipp8u*)pOut->GetBufferPointer() - (Ipp8u*)pOut->GetDataPointer() + pOut->GetBufferSize() - pOut->GetDataSize());
+    mp4enc->InitBuffer((Ipp8u*)pOut->GetDataPointer() + pOut->GetDataSize(), (Ipp32s)((Ipp8u*)pOut->GetBufferPointer() - (Ipp8u*)pOut->GetDataPointer() + pOut->GetBufferSize() - pOut->GetDataSize()));
     if (m_FrameCount == 0)
         mp4enc->EncodeHeader();
     LockBuffers();
@@ -286,24 +285,24 @@ Status MPEG4VideoEncoder::GetFrame(MediaData* pIn, MediaData* pOut)
         Ipp32s    stepL, stepC;
 
         mp4enc->GetCurrentFrameInfo(&pY, &pU, &pV, &stepL, &stepC);
-        roi.width = m_Param.info.clip_info.width;
-        roi.height = m_Param.info.clip_info.height;
-        ippiCopy_8u_C1R((Ipp8u*)pVideoDataIn->GetPlanePointer(0), pVideoDataIn->GetPlanePitch(0), pY, stepL, roi);
+        roi.width = m_Param.m_info.videoInfo.m_iWidth;
+        roi.height = m_Param.m_info.videoInfo.m_iHeight;
+        ippiCopy_8u_C1R((Ipp8u*)pVideoDataIn->GetPlaneDataPtr(0), (int)pVideoDataIn->GetPlanePitch(0), pY, stepL, roi);
         roi.width >>= 1;
         roi.height >>= 1;
-        ippiCopy_8u_C1R((Ipp8u*)pVideoDataIn->GetPlanePointer(1), pVideoDataIn->GetPlanePitch(1), pU, stepC, roi);
-        ippiCopy_8u_C1R((Ipp8u*)pVideoDataIn->GetPlanePointer(2), pVideoDataIn->GetPlanePitch(2), pV, stepC, roi);
+        ippiCopy_8u_C1R((Ipp8u*)pVideoDataIn->GetPlaneDataPtr(1), (int)pVideoDataIn->GetPlanePitch(1), pU, stepC, roi);
+        ippiCopy_8u_C1R((Ipp8u*)pVideoDataIn->GetPlaneDataPtr(2), (int)pVideoDataIn->GetPlanePitch(2), pV, stepC, roi);
     }
     Ipp32s  sts = mp4enc->EncodeFrame(pIn == NULL);
     Ipp64f  pts = gTime;
     if (pIn) {
         pIn->SetDataSize(0);
-        if (pIn->GetTime() >= 0)
-            pts = pIn->GetTime();
+        if (pIn->m_fPTSStart >= 0)
+            pts = pIn->m_fPTSStart;
     }
     if (sts == MPEG4_ENC::MP4_STS_BUFFERED) {
         //pOut->SetDataSize(0);
-        pOut->SetTime(-1.0);
+        pOut->m_fPTSStart = -1;
         if (pIn) {
             bTime[bTimePos] = pts;
             bTimePos ++;
@@ -315,9 +314,9 @@ Status MPEG4VideoEncoder::GetFrame(MediaData* pIn, MediaData* pOut)
             m_FrameCount ++;
         pOut->SetDataSize(mp4enc->GetBufferFullness() + pOut->GetDataSize());
         if (mp4enc->GetFrameType() != MPEG4_ENC::MP4_VOP_TYPE_B) {
-            pOut->SetTime(pts);
+            pOut->m_fPTSStart = pts;
         } else {
-            pOut->SetTime(bTime[bTimePos]);
+            pOut->m_fPTSStart = bTime[bTimePos];
             bTime[bTimePos] = pts;
             bTimePos ++;
             if (bTimePos >= m_Param.m_Param.BVOPdist)
@@ -325,16 +324,16 @@ Status MPEG4VideoEncoder::GetFrame(MediaData* pIn, MediaData* pOut)
         }
         switch (mp4enc->GetFrameType()) {
           case MPEG4_ENC::MP4_VOP_TYPE_I:
-            pOut->SetFrameType(I_PICTURE);
+            pOut->m_frameType = I_PICTURE;
             break;
           case MPEG4_ENC::MP4_VOP_TYPE_P:
-            pOut->SetFrameType(P_PICTURE);
+            pOut->m_frameType = P_PICTURE;
             break;
           case MPEG4_ENC::MP4_VOP_TYPE_B:
-            pOut->SetFrameType(B_PICTURE);
+            pOut->m_frameType = B_PICTURE;
             break;
           default:
-            pOut->SetFrameType(NONE_PICTURE);
+            pOut->m_frameType = NONE_PICTURE;
             break;
         }
     }
@@ -345,77 +344,78 @@ Status MPEG4VideoEncoder::GetFrame(MediaData* pIn, MediaData* pOut)
     //return UMC_OK;
 }
 
-VideoEncoder* CreateMPEG4Encoder()
+Status MPEG4EncoderParams::ReadParams(ParserCfg *par)
 {
-    MPEG4VideoEncoder* ptr = new MPEG4VideoEncoder;
-    return ptr;
-}
+    DString   sIntraQMatrixFileName, sNonIntraQMatrixFileName;
+    vm_file  *InputFile;
+    Ipp32s    iSpriteRect[4];
+    Ipp32s    iNumFramesToEncode;
+    Ipp32s    i, j, k;
 
-Status MPEG4EncoderParams::ReadParamFile(const vm_char *FileName)
-{
-    vm_file *InputFile;
-    vm_char str[STR_LEN+1], IntraQMatrixFileName[STR_LEN+1], NonIntraQMatrixFileName[STR_LEN+1];
-    Ipp32s   i, j, k, numFramesToEncode;
+    UMC_CHECK(par, UMC_ERR_NULL_PTR);
+    if(!par->GetNumOfkeys())
+        return UMC_ERR_NOT_INITIALIZED;
 
-    InputFile = vm_file_open(FileName, VM_STRING("rt"));
-    if (!InputFile) {
-        vm_debug_trace1(VM_DEBUG_INFO,__VM_STRING("Error: Couldn't open file '%s'\n"), FileName);
-        return UMC_ERR_FAILED;
-    }
-    vm_file_gets(str, STR_LEN, InputFile);
-    vm_file_gets(str, STR_LEN, InputFile); //vm_string_sscanf(str, VM_STRING("%s"), SrcFileName);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.Width);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.Height);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &numFramesToEncode);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.TimeResolution);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.TimeIncrement);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.quant_type);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.quantIVOP);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.quantPVOP);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.quantBVOP);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%s"), IntraQMatrixFileName);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%s"), NonIntraQMatrixFileName);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.short_video_header);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.IVOPdist);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.BVOPdist);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.PVOPsearchWidth);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.PVOPsearchHeight);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.BVOPsearchWidthForw);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.BVOPsearchHeightForw);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.BVOPsearchWidthBack);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.BVOPsearchHeightBack);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.MEalgorithm);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.MEaccuracy);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.ME4mv);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.obmc_disable);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.RoundingControl);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.calcPSNR);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.RateControl);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.BitRate);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.SceneChangeThreshold);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.insertGOV);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.repeatHeaders);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.resync);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.VideoPacketLenght);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.data_partitioned);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.reversible_vlc);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.interlaced);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.top_field_first);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.alternate_vertical_scan_flag);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.interlacedME);
-    vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.sprite_enable);
+    par->GetParam(VM_STRING("iTimeResolution"),          &m_Param.TimeResolution,  1);
+    par->GetParam(VM_STRING("iTimeIncrement"),           &m_Param.TimeIncrement,  1);
+    par->GetParam(VM_STRING("iQuantType"),               &m_Param.quant_type,  1);
+    par->GetParam(VM_STRING("iQuantIVOP"),               &m_Param.quantIVOP,  1);
+    par->GetParam(VM_STRING("iQuantPVOP"),               &m_Param.quantPVOP,  1);
+    par->GetParam(VM_STRING("iQuantBVOP"),               &m_Param.quantBVOP,  1);
+    par->GetParam(VM_STRING("sIntraQMatrixFileName"),    &sIntraQMatrixFileName,  1);
+    par->GetParam(VM_STRING("sNonIntraQMatrixFileName"), &sNonIntraQMatrixFileName,  1);
+    par->GetParam(VM_STRING("bShortVideoHeader"),        &m_Param.short_video_header,  1);
+    par->GetParam(VM_STRING("iIVOPdist"),                &m_Param.IVOPdist,  1);
+    par->GetParam(VM_STRING("iBVOPdist"),                &m_Param.BVOPdist,  1);
+    par->GetParam(VM_STRING("iPVOPsearchWidth"),         &m_Param.PVOPsearchWidth,  1);
+    par->GetParam(VM_STRING("iPVOPsearchHeight"),        &m_Param.PVOPsearchHeight,  1);
+    par->GetParam(VM_STRING("iBVOPsearchWidthForw"),     &m_Param.BVOPsearchWidthForw,  1);
+    par->GetParam(VM_STRING("iBVOPsearchHeightForw"),    &m_Param.BVOPsearchHeightForw,  1);
+    par->GetParam(VM_STRING("iBVOPsearchWidthBack"),     &m_Param.BVOPsearchWidthBack,  1);
+    par->GetParam(VM_STRING("iBVOPsearchHeightBack"),    &m_Param.BVOPsearchHeightBack,  1);
+    par->GetParam(VM_STRING("iMEAlgorithm"),             &m_Param.MEalgorithm,  1);
+    par->GetParam(VM_STRING("iMEAccuracy"),              &m_Param.MEaccuracy,  1);
+    par->GetParam(VM_STRING("iME4mv"),                   &m_Param.ME4mv,  1);
+    par->GetParam(VM_STRING("bOBMCDisable"),             &m_Param.obmc_disable,  1);
+    par->GetParam(VM_STRING("bRoundingControl"),         &m_Param.RoundingControl,  1);
+    par->GetParam(VM_STRING("bCalcPSNR"),                &m_Param.calcPSNR,  1);
+    par->GetParam(VM_STRING("iRateControl"),             &m_Param.RateControl,  1);
+    par->GetParam(VM_STRING("iSceneChangeThreshold"),    &m_Param.SceneChangeThreshold,  1);
+    par->GetParam(VM_STRING("bInsertGOV"),               &m_Param.insertGOV,  1);
+    par->GetParam(VM_STRING("bRepeatHeaders"),           &m_Param.repeatHeaders,  1);
+    par->GetParam(VM_STRING("bResync"),                  &m_Param.resync,  1);
+    par->GetParam(VM_STRING("iVideoPacketLenght"),       &m_Param.VideoPacketLenght,  1);
+    par->GetParam(VM_STRING("iDataPartitioned"),         &m_Param.data_partitioned,  1);
+    par->GetParam(VM_STRING("iReversibleVLC"),           &m_Param.reversible_vlc,  1);
+    par->GetParam(VM_STRING("bInterlaced"),              &m_Param.interlaced,  1);
+    par->GetParam(VM_STRING("bTopFieldFirst"),           &m_Param.top_field_first,  1);
+    par->GetParam(VM_STRING("bAlternateVerticalScan"),   &m_Param.alternate_vertical_scan_flag,  1);
+    par->GetParam(VM_STRING("iInterlacedME"),            &m_Param.interlacedME,  1);
+    par->GetParam(VM_STRING("iSpriteEnable"),            &m_Param.sprite_enable,  1);
+
+    m_Param.BitRate = m_info.iBitrate;
+    if(!m_Param.RateControl)
+        m_info.iBitrate = 0;
+
     if (m_Param.sprite_enable) {
-        vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.no_of_sprite_warping_points);
-        vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.sprite_warping_accuracy);
+        par->GetParam(VM_STRING("bNoOfSpriteWarping"),       &m_Param.no_of_sprite_warping_points,  1);
+        par->GetParam(VM_STRING("bSpriteWarpingAccuracy"),   &m_Param.sprite_warping_accuracy,  1);
     }
+
     if (m_Param.sprite_enable == IPPVC_SPRITE_STATIC) {
-        vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d"), &m_Param.sprite_brightness_change);
-        vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d %d"), &m_Param.sprite_left_coordinate, &m_Param.sprite_top_coordinate);
-        vm_file_gets(str, STR_LEN, InputFile); vm_string_sscanf(str, VM_STRING("%d %d"), &m_Param.sprite_width, &m_Param.sprite_height);
-        if (numFramesToEncode < 1)
-            numFramesToEncode = 1;
+        par->GetParam(VM_STRING("iFramesLimit"),             &iNumFramesToEncode,  1);
+        par->GetParam(VM_STRING("iSpriteBrightnessChange"),  &m_Param.sprite_brightness_change,  1);
+        par->GetParam(VM_STRING("iSpriteRect"),              &iSpriteRect[0],  4);
+        m_Param.sprite_left_coordinate = iSpriteRect[0];
+        m_Param.sprite_top_coordinate = iSpriteRect[1];
+        m_Param.sprite_width = iSpriteRect[2];
+        m_Param.sprite_height = iSpriteRect[3];
+
+        if (iNumFramesToEncode < 1)
+            iNumFramesToEncode = 1;
         if (m_Param.no_of_sprite_warping_points < 0 || m_Param.no_of_sprite_warping_points > 3)
             m_Param.no_of_sprite_warping_points = 0;
+        /*
         if (m_Param.no_of_sprite_warping_points > 0) {
             m_Param.warping_mv_code_du = new Ipp32s [m_Param.no_of_sprite_warping_points * numFramesToEncode];
             m_Param.warping_mv_code_dv = new Ipp32s [m_Param.no_of_sprite_warping_points * numFramesToEncode];
@@ -429,17 +429,15 @@ Status MPEG4EncoderParams::ReadParamFile(const vm_char *FileName)
                     vm_file_fscanf(InputFile, VM_STRING("%d"), &m_Param.brightness_change_factor[i]);
             }
         }
+        */
     }
-    vm_file_fclose(InputFile);
+
     // read quant matrix
-    m_Param.load_intra_quant_mat = 0;
-    m_Param.load_intra_quant_mat_len = 0;
-    if (IntraQMatrixFileName[0] != '-' ) {
-        InputFile = vm_file_open(IntraQMatrixFileName, VM_STRING("rt"));
-        if (!InputFile) {
-            vm_debug_trace1(VM_DEBUG_INFO,__VM_STRING("Error: Couldn't open quant matrix file '%s'\n"), IntraQMatrixFileName);
+    if(sIntraQMatrixFileName.Size()) {
+        InputFile = vm_file_open((vm_char*)sIntraQMatrixFileName, VM_STRING("rt"));
+        if (!InputFile)
             return UMC_ERR_FAILED;
-        } else {
+        else {
             m_Param.load_intra_quant_mat = 1;
             for (i = 0; i < 64; i++) {
                 k = vm_file_fscanf(InputFile, VM_STRING("%d"), &j);
@@ -456,14 +454,12 @@ Status MPEG4EncoderParams::ReadParamFile(const vm_char *FileName)
         vm_file_fclose(InputFile);
         m_Param.quant_type = 1;
     }
-    m_Param.load_nonintra_quant_mat = 0;
-    m_Param.load_nonintra_quant_mat_len = 0;
-    if (NonIntraQMatrixFileName[0] != '-' ) {
-        InputFile = vm_file_open(NonIntraQMatrixFileName, VM_STRING("rt"));
-        if (!InputFile) {
-            vm_debug_trace1(VM_DEBUG_INFO,__VM_STRING("Error: Couldn't open quant matrix file '%s'\n"), NonIntraQMatrixFileName);
+
+    if(sNonIntraQMatrixFileName.Size()) {
+        InputFile = vm_file_open((vm_char*)sNonIntraQMatrixFileName, VM_STRING("rt"));
+        if (!InputFile)
             return UMC_ERR_FAILED;
-        } else {
+        else {
             m_Param.load_nonintra_quant_mat = 1;
             for (i = 0; i < 64; i++) {
                 k = vm_file_fscanf(InputFile, VM_STRING("%d"), &j);
@@ -480,17 +476,12 @@ Status MPEG4EncoderParams::ReadParamFile(const vm_char *FileName)
         vm_file_fclose(InputFile);
         m_Param.quant_type = 1;
     }
-    m_Param.bsBuffer = (Ipp8u*)1;
-    m_Param.bsBuffSize = 1; // encoder will not allocate buffer
-    m_Param.padType = 0; // set 1 for QuickTime(tm) and 2 for DivX (tm) v. >= 5
-    info.clip_info.width = m_Param.Width;
-    info.clip_info.height = m_Param.Height;
+
     if (m_Param.sprite_enable == IPPVC_SPRITE_STATIC) {
-        info.clip_info.width = m_Param.sprite_width;
-        info.clip_info.height = m_Param.sprite_height;
+        m_info.videoInfo.m_iWidth = m_Param.sprite_width;
+        m_info.videoInfo.m_iHeight = m_Param.sprite_height;
     }
-    info.framerate = (Ipp64f)m_Param.TimeResolution / m_Param.TimeIncrement;
-    info.bitrate = (m_Param.RateControl > 0) ? m_Param.BitRate : 0;
+
     return UMC_OK;
 }
 

@@ -4,19 +4,20 @@
 //  This software is supplied under the terms of a license agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in accordance with the terms of that agreement.
-//        Copyright (c) 2003-2007 Intel Corporation. All Rights Reserved.
+//        Copyright (c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
-//  Description:    class ippVideoEncoderMPEG4 (tables)
+//  Description:    class VideoEncoderMPEG4 (tables)
 //
 */
 
-#include "umc_defs.h"
+#include "umc_config.h"
+#ifdef UMC_ENABLE_MPEG4_VIDEO_ENCODER
 
-#if defined (UMC_ENABLE_MPEG4_VIDEO_ENCODER)
+#include "mp4_enc.h"
 
-#include "mp4_enc.hpp"
-
+#if defined(_MSC_VER)
 #pragma warning(disable : 279)      // controlling expression is constant
+#endif
 
 namespace MPEG4_ENC
 {

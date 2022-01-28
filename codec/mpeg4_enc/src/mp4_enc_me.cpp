@@ -4,13 +4,13 @@
 //  This software is supplied under the terms of a license agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in accordance with the terms of that agreement.
-//        Copyright (c) 2003-2007 Intel Corporation. All Rights Reserved.
+//        Copyright (c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
-//  Description:    class ippVideoEncoderMPEG4 (motion estimation)
+//  Description:    class VideoEncoderMPEG4 (motion estimation)
 //
 //  References:
 //    Fast ME algorithm
-//        IEEE Transactions on image processing, vol. 9, ¹. 2, Feb 2000
+//        IEEE Transactions on image processing, vol. 9, No. 2, Feb 2000
 //        "A new Diamond Search Algorithm for Fast Block-Matching Motion Estimation"
 //        Shan Zhu and Kai-Kuang Ma
 //    Fast half-pel algorithm
@@ -18,11 +18,10 @@
 //        "Image And Video Compression Standarts"
 */
 
-#include "umc_defs.h"
+#include "umc_config.h"
+#ifdef UMC_ENABLE_MPEG4_VIDEO_ENCODER
 
-#if defined (UMC_ENABLE_MPEG4_VIDEO_ENCODER)
-
-#include "mp4_enc.hpp"
+#include "mp4_enc.h"
 
 namespace MPEG4_ENC
 {
@@ -905,7 +904,7 @@ void mp4_ME_SAD(mp4_Data_ME *meData)
     meData->numPred = numPred; \
 }
 
-void ippVideoEncoderMPEG4::ME_MacroBlock_PSH(mp4_Data_ME *meData, Ipp32s startRow, Ipp32s endRow)
+void VideoEncoderMPEG4::ME_MacroBlock_PSH(mp4_Data_ME *meData, Ipp32s startRow, Ipp32s endRow)
 {
     Ipp8u  *pYc, *pUc, *pVc, *pYf, *pUf, *pVf;
     Ipp32s quant, stepL, stepC, not_coded;
@@ -1009,7 +1008,7 @@ inline void mp4_MV_GetDiff(IppMotionVector *mvC, IppMotionVector *mvP, Ipp32s fM
     mvP->dy = (Ipp16s)mvDy;
 }
 
-void ippVideoEncoderMPEG4::ME_MacroBlock_P(mp4_Data_ME *meData, Ipp32s startRow, Ipp32s endRow)
+void VideoEncoderMPEG4::ME_MacroBlock_P(mp4_Data_ME *meData, Ipp32s startRow, Ipp32s endRow)
 {
     Ipp8u  *pYc, *pUc, *pVc, *pYf, *pUf, *pVf;
     Ipp32s  quant, stepL, stepC, bestSAD16x16, bestSAD16x8, bestSAD8x8, qpel, fcode, not_coded;
@@ -1413,7 +1412,7 @@ void ippVideoEncoderMPEG4::ME_MacroBlock_P(mp4_Data_ME *meData, Ipp32s startRow,
     }
 }
 
-void ippVideoEncoderMPEG4::ME_MacroBlock_S(mp4_Data_ME *meData, Ipp32s startRow, Ipp32s endRow)
+void VideoEncoderMPEG4::ME_MacroBlock_S(mp4_Data_ME *meData, Ipp32s startRow, Ipp32s endRow)
 {
     Ipp8u  *pYc, *pUc, *pVc, *pYf, *pUf, *pVf;
     Ipp32s quant, stepL, stepC, bestSAD16x16, bestSAD16x8, bestSAD8x8, bestSADGMC, qpel, fcode;
@@ -1844,7 +1843,7 @@ MBcurr->mcsel = 0;
         } \
     }
 
-void ippVideoEncoderMPEG4::ME_VOP()
+void VideoEncoderMPEG4::ME_VOP()
 {
     Ipp32s  i;
 
@@ -1950,7 +1949,7 @@ void ippVideoEncoderMPEG4::ME_VOP()
 }
 #endif // _OMP_KARABAS
 
-void ippVideoEncoderMPEG4::ME_Slice(mp4_Slice *slice)
+void VideoEncoderMPEG4::ME_Slice(mp4_Slice *slice)
 {
     mp4_Data_ME meData;
     Ipp32s      i, j, startRow;

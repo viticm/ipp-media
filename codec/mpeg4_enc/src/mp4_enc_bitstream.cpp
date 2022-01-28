@@ -4,25 +4,23 @@
 //  This software is supplied under the terms of a license agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in accordance with the terms of that agreement.
-//        Copyright (c) 2003-2007 Intel Corporation. All Rights Reserved.
+//        Copyright (c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 //  Description:    class ippVideoBitStream
 //
 */
 
-#include "umc_defs.h"
+#include "umc_config.h"
+#ifdef UMC_ENABLE_MPEG4_VIDEO_ENCODER
 
-#if defined (UMC_ENABLE_MPEG4_VIDEO_ENCODER)
-
-#include "mp4_enc_bitstream.hpp"
-#include "ippdefs.h"
+#include "mp4_enc_bitstream.h"
 
 #if /*(_WIN32_WCE == 500) && */(_MSC_VER == 1201)
 // INTERNAL COMPILER ERROR
 #pragma optimize ("g", off)
 #endif
 
-void ippBitStream::PutBits(Ipp32u val, Ipp32s n)
+void BitStream::PutBits(Ipp32u val, Ipp32s n)
 {
     val <<= 32 - n;
     if (mBitOff == 0) {
@@ -56,7 +54,7 @@ void ippBitStream::PutBits(Ipp32u val, Ipp32s n)
     mBitOff = (mBitOff + n) & 7;
 }
 
-void ippBitStream::PutBit(Ipp32u val)
+void BitStream::PutBit(Ipp32u val)
 {
     if (mBitOff == 0) {
         mPtr[0] = (Ipp8u)((val & 1) ? 0x80 : 0x00);

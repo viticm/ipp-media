@@ -4,7 +4,7 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//       Copyright(c) 2003-2006 Intel Corporation. All Rights Reserved.
+//       Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
@@ -15,9 +15,8 @@
 #include "vm_types.h"
 
 #ifdef __cplusplus
-extern "C"
-{
-#endif /* __cplusplus */
+extern "C" {
+#endif
 
 /* flags */
 enum
@@ -36,7 +35,7 @@ Ipp32s vm_mmap_is_valid(vm_mmap *handle);
 Ipp64u vm_mmap_create(vm_mmap *handle, vm_char *file, Ipp32s fileAttr);
 
 /* Obtain a view of the mapped file, return the page aligned offset & size */
-void *vm_mmap_set_view(vm_mmap *handle, Ipp64u *offset, Ipp64u *size);
+void *vm_mmap_set_view(vm_mmap *handle, Ipp64u *offset, size_t *size);
 
 /* Delete the mmap handle */
 void vm_mmap_close(vm_mmap *handle);
@@ -52,6 +51,6 @@ void vm_mmap_unmap(vm_mmap *handle);
 
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
+#endif
 
-#endif /* __VM_MMAP_H__ */
+#endif

@@ -14,7 +14,7 @@
 #ifndef __UMC_MPEG2_ENC_DEFS_H
 #define __UMC_MPEG2_ENC_DEFS_H
 
-#include "ippvc.h"
+#include "ippvc90legacy.h" //#include "ippvc.h"
 #include "vm_semaphore.h"
 #include "vm_event.h"
 #include "vm_thread.h"

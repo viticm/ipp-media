@@ -4,7 +4,7 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//       Copyright(c) 2003-2007 Intel Corporation. All Rights Reserved.
+//       Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
@@ -17,10 +17,10 @@
 
 namespace UMC
 {
+
 class Thread
 {
 public:
-    // Default constructor
     Thread(void);
     virtual ~Thread(void);
 
@@ -35,36 +35,32 @@ public:
     // Close thread object
     void Close(void);
 
-#if defined(_WIN32) || defined(_WIN64) || defined(_WIN32_WCE)
+#if defined WINDOWS
     // Set reaction on exception, if exception is caught(VM_THREADCATCHCRASH define)
     Status SetExceptionReaction(vm_thread_callback func);
 #endif
 
 protected:
-    vm_thread m_Thread;                                         // (vm_thread) handle to system thread
+    vm_thread m_Thread;                     // handle to system thread
 };
 
 inline
 bool Thread::IsValid(void)
 {
     return vm_thread_is_valid(&m_Thread) ? true : false;
-
-} // bool Thread::IsValid(void)
+}
 
 inline
 void Thread::Wait(void)
 {
     vm_thread_wait(&m_Thread);
-
-} // void Thread::Wait(void)
+}
 
 inline
 void Thread::Close(void)
 {
     vm_thread_close(&m_Thread);
+}
 
-} // void Thread::Close(void)
-
-} // namespace UMC
-
-#endif // __UMC_THREAD_H__
+}
+#endif

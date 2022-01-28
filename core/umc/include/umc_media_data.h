@@ -4,36 +4,42 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//          Copyright(c) 2003-2008 Intel Corporation. All Rights Reserved.
+//          Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
 #ifndef __UMC_MEDIA_DATA_H__
 #define __UMC_MEDIA_DATA_H__
 
-#include "umc_structures.h"
+#include "umc_defs.h"
 #include "umc_dynamic_cast.h"
 
 namespace UMC
 {
 
+enum MediaDataFlags
+{
+    MDF_NOT_FULL_FRAME = 0x0001,
+    MDF_NOT_FULL_UNIT  = 0x0002,
+    MDF_WAS_DISPLAYED  = 0x0004,
+};
+
 class MediaData
 {
+public:
     DYNAMIC_CAST_DECL_BASE(MediaData)
 
-public:
-
-    // Default constructor
-    MediaData(size_t length = 0);
-
-    // Destructor
+    MediaData();
     virtual ~MediaData();
+
+    // Allocate buffer
+    Status Alloc(size_t iLength);
 
     // Release object
     virtual Status Close(void);
 
-    // Allocate buffer
-    virtual Status Alloc(size_t length);
+    // Reset data position and information
+    virtual Status Reset(void);
 
     // Get an address of the beginning of the buffer.
     // This pointer could not be equal to the beginning of valid data.
@@ -44,86 +50,107 @@ public:
     virtual void* GetDataPointer(void)   { return m_pDataPointer; }
 
     // Return size of the buffer
-    virtual size_t GetBufferSize(void)   { return m_nBufferSize; }
+    virtual size_t GetBufferSize(void) const   { return m_iBufferSize; }
 
     // Return size of valid data in the buffer
-    virtual size_t GetDataSize(void)     { return m_nDataSize; }
+    virtual size_t GetDataSize(void) const     { return m_iDataSize; }
 
     // Set the pointer to a buffer allocated by an user.
     // The bytes variable defines the size of the buffer.
     // Size of valid data is set to zero
-    virtual Status SetBufferPointer(Ipp8u* ptr, size_t bytes);
+    virtual Status SetBufferPointer(Ipp8u* pBuffer, size_t iSize);
 
     // Set size of valid data in the buffer.
     // Valid data is supposed to be placed from the beginning of the buffer.
-    virtual Status SetDataSize(size_t bytes);
+    virtual Status SetDataSize(size_t iSize);
 
-    //  Move data pointer inside and decrease or increase data size
-    virtual Status MoveDataPointer(Ipp32s bytes);
+    // Move data pointer inside and decrease or increase data size
+    virtual Status MoveDataPointer(Ipp64s iBytes);
 
-    // return time stamp of media data
-    virtual Ipp64f GetTime(void)         { return m_pts_start; }
+    // Returns data pointer to buffer pointer and increases data size accordingly
+    virtual Status ResetDataPointer();
 
-    // return time stamp of media data, start and end
-    virtual Status GetTime(Ipp64f& start, Ipp64f& end);
-
-    //  Set time stamp of media data block;
-    virtual Status SetTime(Ipp64f start, Ipp64f end = 0);
-
-    // Set frame type
-    inline Status SetFrameType(FrameType ft);
-    // Get frame type
-    inline FrameType GetFrameType(void);
-
-    // Set Invalid state
-    inline void SetInvalid(Ipp32s isInvalid) { m_isInvalid = isInvalid; }
-    // Get Invalid state
-    inline Ipp32s GetInvalid(void)           { return m_isInvalid; }
-
-    //  Set data pointer to beginning of buffer and data size to zero
-    virtual Status Reset();
-
-    MediaData& operator=(MediaData&);
-
-    //  Move data to another MediaData
+    // Move data to another MediaData
     virtual Status MoveDataTo(MediaData* dst);
 
+    MediaData& operator=(const MediaData&);
+
+public:
+    FrameType  m_frameType;     // type of the frame
+    Ipp64f     m_fPTSStart;     // start media PTS
+    Ipp64f     m_fPTSEnd;       // finish media PTS
+    Ipp32u     m_iFlags;
+    Ipp32s     m_iInvalid;      // data is invalid when set
+
 protected:
-
-    Ipp64f m_pts_start;        // (Ipp64f) start media PTS
-    Ipp64f m_pts_end;          // (Ipp64f) finish media PTS
-    size_t m_nBufferSize;      // (size_t) size of buffer
-    size_t m_nDataSize;        // (size_t) quantity of data in buffer
-
     Ipp8u* m_pBufferPointer;
     Ipp8u* m_pDataPointer;
-
-    FrameType m_FrameType;     // type of the frame
-    Ipp32s    m_isInvalid;     // data is invalid when set
-
-    // Actually this variable should has type bool.
-    // But some compilers generate poor executable code.
-    // On count of this, we use type Ipp32u.
-    Ipp32u m_bMemoryAllocated; // (Ipp32u) is memory owned by object
+    size_t m_iBufferSize;      // size of buffer
+    size_t m_iDataSize;        // quantity of data in buffer
+    bool   m_bMemoryAllocated; // is memory owned by object
 };
 
-
-inline Status MediaData::SetFrameType(FrameType ft)
+class MediaDataEx : public MediaData
 {
-    // check error(s)
-    if ((ft < NONE_PICTURE) || (ft > D_PICTURE))
-        return UMC_ERR_INVALID_STREAM;
+public:
+    DYNAMIC_CAST_DECL(MediaDataEx, MediaData)
 
-    m_FrameType = ft;
+    class _MediaDataEx
+    {
+    public:
+        DYNAMIC_CAST_DECL_BASE(_MediaDataEx)
 
-    return UMC_OK;
-} // VideoData::SetFrameType()
+        Ipp32u count;
+        Ipp32u index;
+        Ipp64u bstrm_pos;
+        Ipp32u *offsets;
+        Ipp32u *values;
+        Ipp32u limit;
 
+        _MediaDataEx()
+        {
+            count = 0;
+            index = 0;
+            bstrm_pos = 0;
+            limit   = 2000;
+            offsets = (Ipp32u*)malloc(sizeof(Ipp32u)*limit);
+            values  = (Ipp32u*)malloc(sizeof(Ipp32u)*limit);
+        }
 
-inline FrameType MediaData::GetFrameType(void)
-{
-    return m_FrameType;
-} // VideoData::GetFrameType()
+        virtual ~_MediaDataEx()
+        {
+            if(offsets)
+            {
+                free(offsets);
+                offsets = 0;
+            }
+            if(values)
+            {
+                free(values);
+                values = 0;
+            }
+            limit   = 0;
+        }
+    };
+
+    MediaDataEx(void)
+    {
+        m_exData = NULL;
+    };
+
+    _MediaDataEx* GetExData(void)
+    {
+        return m_exData;
+    };
+
+    void SetExData(_MediaDataEx* pDataEx)
+    {
+        m_exData = pDataEx;
+    };
+
+protected:
+    _MediaDataEx* m_exData;
+};
 
 } // namespace UMC
 

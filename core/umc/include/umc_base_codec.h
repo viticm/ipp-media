@@ -4,7 +4,7 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//          Copyright(c) 2003-2007 Intel Corporation. All Rights Reserved.
+//          Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
@@ -13,53 +13,60 @@
 
 #include "umc_media_data.h"
 #include "umc_memory_allocator.h"
+#include "umc_parser_cfg.h"
 
 namespace UMC
 {
 
 class BaseCodecParams
 {
+public:
     DYNAMIC_CAST_DECL_BASE(BaseCodecParams)
 
-public:
-    // Default constructor
-    BaseCodecParams(void);
+    BaseCodecParams(void)
+    {
+        m_pData                 = NULL;
+        m_lpMemoryAllocator     = NULL;
 
-    // Destructor
-    virtual ~BaseCodecParams(void){}
+        m_iSuggestedOutputSize  = 0;
+        m_iSuggestedInputSize   = 0;
+        m_iFlags                = 0;
+        m_iThreads              = 0;
+        m_iFramesCounter        = 0;
+    }
+    virtual ~BaseCodecParams(void) {}
 
-    MediaData *m_pData;
-    MemoryAllocator *lpMemoryAllocator; // (MemoryAllocator *) pointer to memory allocator object
+    virtual Status ReadParams(ParserCfg*)
+    {
+        return UMC_ERR_NOT_IMPLEMENTED;
+    }
 
-    Ipp32u m_SuggestedInputSize;   //max suggested frame size of input stream
-    Ipp32u m_SuggestedOutputSize;  //max suggested frame size of output stream
+    MediaData       *m_pData;
+    MemoryAllocator *m_lpMemoryAllocator;       // pointer to memory allocator object
 
-    Ipp32s             numThreads; // maximum number of threads to use
-
-    Ipp32s  profile; // profile
-    Ipp32s  level;  // level
+    Ipp32u           m_iSuggestedInputSize;     // max suggested frame size of input stream
+    Ipp32u           m_iSuggestedOutputSize;    // max suggested frame size of output stream
+    Ipp32u           m_iFlags;                  // codec flags
+    Ipp32u           m_iThreads;                // maximum number of threads to use
+    Ipp32u           m_iFramesCounter;          // amount of processed frames
 };
 
 class BaseCodec
 {
+public:
     DYNAMIC_CAST_DECL_BASE(BaseCodec)
 
-public:
-    // Constructor
     BaseCodec(void);
-
-    // Destructor
     virtual ~BaseCodec(void);
 
-    // Initialize codec with specified parameter(s)
-    // Has to be called if MemoryAllocator interface is used
-    virtual Status Init(BaseCodecParams *init);
+    // Initialize codec with specified parameters
+    virtual Status Init(BaseCodecParams *pParams);
 
-    // Compress (decompress) next frame
-    virtual Status GetFrame(MediaData *in, MediaData *out) = 0;
+    // Try to get next processed frame
+    virtual Status GetFrame(MediaData *pDataIn, MediaData *pDataOut) = 0;
 
-    // Get codec working (initialization) parameter(s)
-    virtual Status GetInfo(BaseCodecParams *info) = 0;
+    // Get current parameters
+    virtual Status GetInfo(BaseCodecParams* info) = 0;
 
     // Close all codec resources
     virtual Status Close(void);
@@ -67,20 +74,20 @@ public:
     // Set codec to initial state
     virtual Status Reset(void) = 0;
 
-    // Set new working parameter(s)
-    virtual Status SetParams(BaseCodecParams *params)
+    // Set new working parameters
+    virtual Status SetParams(BaseCodecParams *pParams)
     {
-        if (NULL == params)
+        if(NULL == pParams)
             return UMC_ERR_NULL_PTR;
 
         return UMC_ERR_NOT_IMPLEMENTED;
     }
 
 protected:
-    MemoryAllocator *m_pMemoryAllocator; // (MemoryAllocator*) pointer to memory allocator
+    MemoryAllocator* m_pMemoryAllocator; // pointer to memory allocator
     bool             m_bOwnAllocator;    // True when default allocator is used
 };
 
-} // end namespace UMC
+}
 
-#endif /* __UMC_BASE_CODEC_H__ */
+#endif

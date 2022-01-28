@@ -4,25 +4,24 @@
 //  This software is supplied under the terms of a license agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in accordance with the terms of that agreement.
-//      Copyright (c) 2007 Intel Corporation. All Rights Reserved.
+//      Copyright (c) 2011-2012 Intel Corporation. All Rights Reserved.
 //
 //  Purpose
 //    bitrate control
 */
 
-#include "umc_defs.h"
-
-#if defined (UMC_ENABLE_MPEG4_VIDEO_ENCODER)
+#include "umc_config.h"
+#ifdef UMC_ENABLE_MPEG4_VIDEO_ENCODER
 
 #include <math.h>
-#include "mp4_enc.hpp"
+#include "mp4_enc.h"
 
 namespace MPEG4_ENC
 {
 
 MPEG4_RC::MPEG4_RC()
 {
-    ippsZero_8u((Ipp8u*)this, sizeof(MPEG4_RC));
+    ippsSet_8u(0, (Ipp8u*)this, sizeof(MPEG4_RC));
 }
 
 
@@ -215,7 +214,7 @@ void MPEG4_RC::SetQP(Ipp32s frameType, Ipp32s q)
 
 MPEG4_RC_MB::MPEG4_RC_MB()
 {
-    ippsZero_8u((Ipp8u*)this, sizeof(MPEG4_RC_MB));
+    ippsSet_8u(0, (Ipp8u*)this, sizeof(MPEG4_RC_MB));
 }
 
 

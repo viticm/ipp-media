@@ -4,154 +4,157 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//       Copyright(c) 2003-2008 Intel Corporation. All Rights Reserved.
+//       Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
-#include <string.h>
 #include "umc_splitter.h"
 
-namespace UMC
-{
+using namespace UMC;
 
-SplitterParams::SplitterParams()
-{
-   m_lFlags = 0;
-   m_pDataReader = NULL;
-   m_uiSelectedVideoPID = SELECT_ANY_VIDEO_PID;
-   m_uiSelectedAudioPID = SELECT_ANY_AUDIO_PID;
-   m_pMemoryAllocator = NULL;
-} // SplitterParams::SplitterParams()
 
-SplitterParams::~SplitterParams()
+Splitter::Splitter()
 {
-} // SplitterParams::~SplitterParams()
-
-SplitterInfo::SplitterInfo()
-{
-    m_splitter_flags = 0;
-    m_SystemType = UNDEF_STREAM;
-    m_nOfTracks = 0;
-    m_dRate = 1;
-    m_dDuration = -1.0;
-    m_ppTrackInfo = NULL;
-} // SplitterInfo::SplitterInfo()
-
-SplitterInfo::~SplitterInfo()
-{
-} // SplitterInfo::~SplitterInfo()
-
-Splitter::Splitter():
-  m_pDataReader(NULL)
-{
+    m_pDataReader = NULL;
 }
 
-SystemStreamType Splitter::GetStreamType(DataReader* dr)
+SystemStreamType Splitter::GetStreamType(DataReader *pDR)
 {
-    Ipp32u long_code;
-    Status umcSts = UMC_OK;
+    Status status = UMC_OK;
+    Ipp32u iLongCode;
 
-    if (NULL == dr)
+    if(!pDR)
         return UNDEF_STREAM;
     else
-        dr->Reset();
+        pDR->Reset();
 
-    umcSts = dr->Check32u(&long_code, 0);
-    if (UMC_OK != umcSts)
+    status = pDR->Check32u(&iLongCode, 0);
+    if (UMC_OK != status)
         return UNDEF_STREAM;
 
-    // it can be either avs or mpeg4 format
-    if (long_code == 0x000001B0)
+    // possibly jpeg
+    if((iLongCode&0xFF000000) == 0xFF000000)
     {
-        Ipp8u oneByte;
+        Ipp8u  iByte;
+        Ipp32u iOffset = 1;
+        do
+        {
+            status = pDR->Check8u(&iByte, iOffset);
+            if (UMC_OK != status)
+                return UNDEF_STREAM;
+            iOffset++;
+        } while(iByte == 0xff);
+
+        // check for StartOfImage marker
+        if(iByte == 0xd8)
+            return MJPEG_STREAM;
+    }
+
+    // it can be either avs or mpeg4 format
+    if(iLongCode == 0x000001B0)
+    {
+        Ipp8u iByte;
 
         // the header of avs standard is 18 bytes long.
         // the one of mpeg4 standard is only one byte long.
-        umcSts = dr->Check8u(&oneByte, 5);
-        if (UMC_OK != umcSts)
+        status = pDR->Check8u(&iByte, 5);
+        if(UMC_OK != status)
             return UNDEF_STREAM;
 
-        if (oneByte)
+        if(iByte)
             return AVS_PURE_VIDEO_STREAM;
     }
 
-    if (0x80000001 == long_code)
+    if(iLongCode == 0x80000001)
     {
-        Ipp8u oneByte;
+        Ipp8u iByte;
 
-        // it is known bug of avs reference encoder -
-        // it adds extra 0x080 byte at the beginning.
-        umcSts = dr->Check8u(&oneByte, 4);
-        if (UMC_OK != umcSts)
+        // it is known bug of avs reference encoder - it adds extra 0x080 byte at the beginning.
+        status = pDR->Check8u(&iByte, 4);
+        if(UMC_OK != status)
             return UNDEF_STREAM;
-        if (oneByte == 0x0B0)
-        {
+
+        if(iByte == 0x0B0)
             return AVS_PURE_VIDEO_STREAM;
-        }
     }
 
-    if (long_code == 0x0000010F || (long_code&0xFF) == 0xC5)
+    if((iLongCode & 0x1f) == 7 || (iLongCode == 0x00000001))
     {
+        Ipp32u iDWord;
+
+        status = pDR->Check32u(&iDWord, 4);
+
+        if(iDWord == 'moov')
+            return MP4_ATOM_STREAM;
+
+        return H264_PURE_VIDEO_STREAM;
+    }
+
+    if(iLongCode == 0x0000010F || (iLongCode&0xFF) == 0xC5)
         return VC1_PURE_VIDEO_STREAM;
-    }
 
-    if (long_code == 0x3026b275)
-    {
+    if(iLongCode == 0x3026b275)
         return ASF_STREAM;
-    }
 
-    if (long_code == 'RIFF') // RIFF
+    if(iLongCode == 'RIFF')
     {
-        umcSts = dr->Check32u(&long_code, 8);
-        if (long_code == 'AVI ')
-        {
-            //avi RIFF container
+        Ipp32u iDWord;
+
+        status = pDR->Check32u(&iDWord, 8);
+        if (iDWord == 'AVI ')
             return AVI_STREAM;
-        }
-    }
-    if (long_code == 0x464c5601) // "FLV 0x01"  FLV version1
-    {
-        return FLV_STREAM;
+        else if(iDWord == 'WAVE')
+            return WAVE_STREAM;
     }
 
-    umcSts = dr->Check32u(&long_code, 4);
-    if (UMC_OK != umcSts)
+    if(iLongCode == 0x464c5601) // "FLV 0x01"  FLV version1
+        return FLV_STREAM;
+
+    if(iLongCode == 'DKIF')
+    {
+        Ipp32u iDWord;
+
+        status = pDR->Check32u(&iDWord, 8);
+        if(iDWord == 'VP80' || iDWord == 'I420')
+            return IVF_STREAM;
+    }
+
+    if(iLongCode == 0x4f676753)
+        return OGG_STREAM;
+
+    // get next 4 bytes
+    status = pDR->Check32u(&iLongCode, 4);
+    if (UMC_OK != status)
         return UNDEF_STREAM;
 
-    if (long_code == 'ftyp')
+    if(iLongCode == 'moov')
+        return MP4_ATOM_STREAM;
+
+    if(iLongCode == 'ftyp')
     {
-        umcSts = dr->Check32u(&long_code,8);
-        if (UMC_OK != umcSts) return UNDEF_STREAM;
+        Ipp32u iDWord;
+
+        status = pDR->Check32u(&iDWord, 8);
+        if(UMC_OK != status)
+            return UNDEF_STREAM;
 
         // mp42
-        if (long_code == 'mp42' ||
-            long_code == 'mp41' ||
-            long_code == 'isom' ||
-            long_code == 'MSNV' ||
-            long_code == 'M4V ' ||
-            long_code == 'M4A ' ||
-            long_code == '3gp6' ||
-            long_code == '3gp4' ||
-            long_code == '3gp5' ||
-            long_code == 'avc1' ||
-            long_code == 'avs2' ||
-            long_code == 'qt  ')
+        if(iDWord == 'mp42' ||
+            iDWord == 'mp41' ||
+            iDWord == 'isom' ||
+            iDWord == 'MSNV' ||
+            iDWord == 'M4V ' ||
+            iDWord == 'M4A ' ||
+            iDWord == '3gp6' ||
+            iDWord == '3gp4' ||
+            iDWord == '3gp5' ||
+            iDWord == 'avc1' ||
+            iDWord == 'avs2' ||
+            iDWord == 'qt  ')
         {
-            //MP4 container
             return MP4_ATOM_STREAM;
         }
     }
 
-    umcSts = dr->Check32u(&long_code,4);
-    if (UMC_OK != umcSts)
-        return UNDEF_STREAM;
-
-    if (long_code == 'moov')
-    {
-        return MP4_ATOM_STREAM;
-    }
-
     return MPEGx_SYSTEM_STREAM;
-} // SystemStreamType Splitter::GetStreamType(DataReader* dr)
-
-} // namespace UMC
+}

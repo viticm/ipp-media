@@ -4,60 +4,50 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//       Copyright(c) 2003-2008 Intel Corporation. All Rights Reserved.
+//       Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
-#include "ippdefs.h"
 #include "umc_media_data.h"
 
-namespace UMC
-{
+#include "ippdefs.h"
+#include "ipps.h"
 
-MediaData::MediaData(size_t length)
+using namespace UMC;
+
+
+MediaData::MediaData()
 {
     m_pBufferPointer   = NULL;
     m_pDataPointer     = NULL;
-    m_nBufferSize      = 0;
-    m_nDataSize        = 0;
-    m_pts_start        = -1;
-    m_pts_end          = 0;
-    m_FrameType        = NONE_PICTURE;
-    m_isInvalid        = 0;
-
-    m_bMemoryAllocated = 0;
-
-    if (length)
-    {
-        m_pBufferPointer = new Ipp8u[length];
-        if (m_pBufferPointer)
-        {
-            m_pDataPointer     = m_pBufferPointer;
-            m_nBufferSize      = length;
-            m_bMemoryAllocated = 1;
-        }
-    }
-} // MediaData::MediaData(size_t length) :
+    m_iBufferSize      = 0;
+    m_iDataSize        = 0;
+    m_fPTSStart        = -1;
+    m_fPTSEnd          = 0;
+    m_frameType        = NONE_PICTURE;
+    m_iFlags           = 0;
+    m_iInvalid         = 0;
+    m_bMemoryAllocated = false;
+}
 
 MediaData::~MediaData()
 {
     Close();
+}
 
-} // MediaData::~MediaData()
-
-Status MediaData::Alloc(size_t length)
+Status MediaData::Alloc(size_t iLength)
 {
-    Close();
+    MediaData::Close();
 
-    if (length)
+    if(iLength)
     {
-        m_pBufferPointer = new Ipp8u[length];
-        if (!m_pBufferPointer) {
+        m_pBufferPointer = (Ipp8u*)malloc(iLength);
+        if(!m_pBufferPointer)
             return UMC_ERR_ALLOC;
-        }
+
         m_pDataPointer     = m_pBufferPointer;
-        m_nBufferSize      = length;
-        m_bMemoryAllocated = 1;
+        m_iBufferSize      = iLength;
+        m_bMemoryAllocated = true;
     }
 
     return UMC_OK;
@@ -65,162 +55,133 @@ Status MediaData::Alloc(size_t length)
 
 Status MediaData::Close(void)
 {
-    if (m_bMemoryAllocated)
+    if(m_bMemoryAllocated)
     {
-        if (m_pBufferPointer)
-            delete[] m_pBufferPointer;
+        free(m_pBufferPointer);
+        m_bMemoryAllocated = false;
     }
 
     m_pBufferPointer   = NULL;
     m_pDataPointer     = NULL;
-    m_nBufferSize      = 0;
-    m_nDataSize        = 0;
-    m_FrameType        = NONE_PICTURE;
-
-    m_bMemoryAllocated = 0;
+    m_iBufferSize      = 0;
+    m_iDataSize        = 0;
+    m_frameType        = NONE_PICTURE;
 
     return UMC_OK;
-
-} // Status MediaData::Close(void)
-
-Status MediaData::SetDataSize(size_t bytes)
-{
-    if (!m_pBufferPointer)
-        return UMC_ERR_NULL_PTR;
-
-    if (bytes > (m_nBufferSize - (m_pDataPointer - m_pBufferPointer)))
-        return UMC_ERR_FAILED;
-
-    m_nDataSize = bytes;
-
-    return UMC_OK;
-
-} // Status MediaData::SetDataSize(size_t bytes)
+}
 
 // Set the pointer to a buffer allocated by the user
 // bytes define the size of buffer
 // size of data is equal to buffer size after this call
-Status MediaData::SetBufferPointer(Ipp8u *ptr, size_t size)
+Status MediaData::SetBufferPointer(Ipp8u *pBuffer, size_t iSize)
 {
-    // release object
     MediaData::Close();
 
-    // set new value(s)
-    m_pBufferPointer  = ptr;
-    m_pDataPointer    = ptr;
-    m_nBufferSize     = size;
-    m_nDataSize       = 0;
+    m_pBufferPointer = pBuffer;
+    m_pDataPointer   = pBuffer;
+    m_iBufferSize    = iSize;
+    m_iDataSize      = 0;
 
     return UMC_OK;
+}
 
-} // Status MediaData::SetBufferPointer(Ipp8u *ptr, size_t size)
-
-Status MediaData::SetTime(Ipp64f start, Ipp64f end)
+Status MediaData::SetDataSize(size_t iSize)
 {
- //   if (start < 0  && start != -1.0)
- //       return UMC_ERR_FAILED;
+    if(!m_pBufferPointer)
+        return UMC_ERR_NULL_PTR;
 
-    m_pts_start = start;
-    m_pts_end = end;
+    if(iSize > (m_iBufferSize - (m_pDataPointer - m_pBufferPointer)))
+        return UMC_ERR_FAILED;
+
+    m_iDataSize = iSize;
 
     return UMC_OK;
+}
 
-} // Status MediaData::SetTime(Ipp64f start, Ipp64f end)
-
-Status MediaData::GetTime(Ipp64f& start, Ipp64f& end)
+Status MediaData::MoveDataPointer(Ipp64s iBytes)
 {
-    start = m_pts_start;
-    end = m_pts_end;
+    Ipp64s iPos = (Ipp64s)(m_pDataPointer - m_pBufferPointer) + iBytes;
+
+    if(iPos < 0 || iPos > (Ipp64s)m_iBufferSize)
+        return UMC_ERR_FAILED;
+
+    if(iBytes > (Ipp64s)m_iDataSize)
+        iBytes = m_iDataSize;
+
+    m_pDataPointer = m_pDataPointer + iBytes;
+    m_iDataSize    = m_iDataSize + (-iBytes);
 
     return UMC_OK;
+}
 
-} // Status MediaData::GetTime(Ipp64f& start, Ipp64f& end)
-
-Status MediaData::MoveDataPointer(Ipp32s bytes)
+Status MediaData::ResetDataPointer()
 {
-    if (bytes >= 0 && m_nDataSize >= (size_t)bytes) {
-        m_pDataPointer   += bytes;
-        m_nDataSize      -= bytes;
+    m_iDataSize    = (m_pDataPointer - m_pBufferPointer) + m_iDataSize;
+    m_pDataPointer = m_pBufferPointer;
 
-        return UMC_OK;
-    } else if (bytes < 0 && (size_t)(m_pDataPointer - m_pBufferPointer) >= (size_t)(-bytes)) {
-        m_pDataPointer   += bytes;
-        m_nDataSize      -= bytes;
-
-        return UMC_OK;
-    }
-
-    return UMC_ERR_FAILED;
-} // Status MediaData::MovePointer(Ipp32s bytes)
+    return UMC_OK;
+}
 
 Status MediaData::Reset()
 {
     m_pDataPointer = m_pBufferPointer;
-    m_nDataSize = 0;
-    m_pts_start = -1.0;
-    m_pts_end = -1.0;
-    m_FrameType = NONE_PICTURE;
-    m_isInvalid = 0;
+    m_iDataSize    = 0;
+    m_fPTSStart    = -1;
+    m_fPTSEnd      = 0;
+    m_frameType    = NONE_PICTURE;
+    m_iInvalid     = 0;
+
     return UMC_OK;
 }
 
-MediaData& MediaData::operator = (MediaData& src)
+MediaData& MediaData::operator=(const MediaData& src)
 {
     MediaData::Close();
 
-    m_pts_start        = src.m_pts_start;
-    m_pts_end          = src.m_pts_end;
-    m_nBufferSize      = src.m_nBufferSize;
-    m_nDataSize        = src.m_nDataSize;
-    m_FrameType        = src.m_FrameType;
-    m_isInvalid        = src.m_isInvalid;
-
     m_pDataPointer     = src.m_pDataPointer;
     m_pBufferPointer   = src.m_pBufferPointer;
+    m_fPTSStart        = src.m_fPTSStart;
+    m_fPTSEnd          = src.m_fPTSEnd;
+    m_iBufferSize      = src.m_iBufferSize;
+    m_iDataSize        = src.m_iDataSize;
+    m_frameType        = src.m_frameType;
+    m_iInvalid         = src.m_iInvalid;
+    m_iFlags           = src.m_iFlags;
     m_bMemoryAllocated = false;
 
     return *this;
-} // MediaData& MediaData::operator = (MediaData& src)
+}
 
-Status MediaData::MoveDataTo(MediaData* dst)
+Status MediaData::MoveDataTo(MediaData* pDst)
 {
-    MediaData *src;
-    Ipp8u *pDataEnd;
-    Ipp8u *pBufferEnd;
-    size_t size;
+    MediaData *pSrc;
+    Ipp8u     *pDataEnd;
+    Ipp8u     *pBufferEnd;
+    size_t     iSize;
 
-    // check error(s)
-    if (NULL == m_pDataPointer)
-    {
+    if(!m_pDataPointer)
         return UMC_ERR_NOT_INITIALIZED;
-    }
-    if ((NULL == dst) ||
-        (NULL == dst->m_pDataPointer))
-    {
+
+    if(!pDst || !pDst->m_pDataPointer)
         return UMC_ERR_NULL_PTR;
-    }
 
-    // get parameters
-    src = this;
-    pDataEnd = dst->m_pDataPointer + dst->m_nDataSize;
-    pBufferEnd = dst->m_pBufferPointer + dst->m_nBufferSize;
-    size = IPP_MIN(src->m_nDataSize, (size_t) (pBufferEnd - pDataEnd));
 
-    if (size)
-    {
-        ippsCopy_8u(src->m_pDataPointer, pDataEnd, (int) size);
-    }
+    pSrc       = this;
+    pDataEnd   = pDst->m_pDataPointer + pDst->m_iDataSize;
+    pBufferEnd = pDst->m_pBufferPointer + pDst->m_iBufferSize;
+    iSize      = IPP_MIN(pSrc->m_iDataSize, (size_t)(pBufferEnd - pDataEnd));
 
-    dst->m_nDataSize += size;
-    src->MoveDataPointer((Ipp32s) size);
+    if(iSize)
+        memcpy(pDataEnd, pSrc->m_pDataPointer, iSize);
 
-    dst->m_pts_start = src->m_pts_start;
-    dst->m_pts_end   = src->m_pts_end;
-    dst->m_FrameType = src->m_FrameType;
-    dst->m_isInvalid = src->m_isInvalid;
+    pDst->m_iDataSize += iSize;
+    pSrc->MoveDataPointer(iSize);
+
+    pDst->m_fPTSStart = pSrc->m_fPTSStart;
+    pDst->m_fPTSEnd   = pSrc->m_fPTSEnd;
+    pDst->m_frameType = pSrc->m_frameType;
+    pDst->m_iInvalid  = pSrc->m_iInvalid;
 
     return UMC_OK;
 
-} // MediaData::MoveDataTo(MediaData& src)
-
-} // namespace UMC
+}

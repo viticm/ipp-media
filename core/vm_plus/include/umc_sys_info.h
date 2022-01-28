@@ -4,7 +4,7 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//       Copyright(c) 2003-2008 Intel Corporation. All Rights Reserved.
+//       Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
@@ -20,42 +20,45 @@ namespace UMC
 
 typedef struct sSystemInfo
 {
-    Ipp32u num_proc;                                           // (Ipp32u) number of processor(s)
-    Ipp32u cpu_freq;                                           // (Ipp32u) CPU frequency
-    vm_char os_name[_MAX_LEN];                                 // (vm_char []) OS name
-    vm_char proc_name[_MAX_LEN];                               // (vm_char []) processor's name
-    vm_char computer_name[_MAX_LEN];                           // (vm_char []) computer's name
-    vm_char user_name[_MAX_LEN];                               // (vm_char []) user's name
-    vm_char video_card[_MAX_LEN];                              // (vm_char []) video adapter's name
-    vm_char program_path[_MAX_LEN];                            // (vm_char []) program path
-    vm_char program_name[_MAX_LEN];                            // (vm_char []) program name
+    Ipp32u num_proc;                                           // number of processor(s)
+    Ipp32u cpu_freq;                                           // CPU frequency
+    vm_char os_name[_MAX_LEN];                                 // OS name
+    vm_char proc_name[_MAX_LEN];                               // processor's name
+    vm_char computer_name[_MAX_LEN];                           // computer's name
+    vm_char user_name[_MAX_LEN];                               // user's name
+    vm_char video_card[_MAX_LEN];                              // video adapter's name
+    vm_char program_path[_MAX_LEN];                            // program path
+    vm_char program_name[_MAX_LEN];                            // program name
     vm_char description[_MAX_LEN];
     Ipp32u phys_mem;
 } sSystemInfo;
 
-#if ! (defined(_WIN32_WCE) || defined(__linux) || defined(OSX32))
+#if defined WINDOWS && !(defined _WIN32_WCE)
 /* obtain  */
 typedef LONG    NTSTATUS;
 typedef LONG    KPRIORITY;
 
 #define NT_SUCCESS(Status) ((NTSTATUS)(Status) >= 0)
 
-#define STATUS_INFO_LENGTH_MISMATCH      ((NTSTATUS)0xC0000004L)
+#define STATUS_INFO_LENGTH_MISMATCH ((NTSTATUS)0xC0000004L)
 
 #define SystemProcessesAndThreadsInformation    5
 
-typedef struct _CLIENT_ID {
+typedef struct _CLIENT_ID
+{
     Ipp32u        UniqueProcess;
     Ipp32u        UniqueThread;
 } CLIENT_ID;
 
-typedef struct _UNICODE_STRING {
+typedef struct _UNICODE_STRING
+{
     USHORT        Length;
     USHORT        MaximumLength;
     PWSTR         Buffer;
 } UNICODE_STRING;
 
-typedef struct _VM_COUNTERS {
+typedef struct _VM_COUNTERS
+{
     SIZE_T        PeakVirtualSize;
     SIZE_T        VirtualSize;
     ULONG         PageFaultCount;
@@ -69,7 +72,8 @@ typedef struct _VM_COUNTERS {
     SIZE_T        PeakPagefileUsage;
 } VM_COUNTERS;
 
-typedef struct _SYSTEM_THREADS {
+typedef struct _SYSTEM_THREADS
+{
     LARGE_INTEGER KernelTime;
     LARGE_INTEGER UserTime;
     LARGE_INTEGER CreateTime;
@@ -83,7 +87,8 @@ typedef struct _SYSTEM_THREADS {
     LONG          WaitReason;
 } SYSTEM_THREADS, * PSYSTEM_THREADS;
 
-typedef struct _SYSTEM_PROCESSES {
+typedef struct _SYSTEM_PROCESSES
+{
     ULONG             NextEntryDelta;
     ULONG             ThreadCount;
     ULONG             Reserved1[6];
@@ -102,14 +107,12 @@ typedef struct _SYSTEM_PROCESSES {
 #endif
     SYSTEM_THREADS    Threads[1];
 } SYSTEM_PROCESSES, * PSYSTEM_PROCESSES;
-#endif // if !(defined(_WIN32_WCE) || defined(__linux) || defined(OSX32))
+#endif
 
 class SysInfo
 {
 public:
-    // Default constructor
     SysInfo(vm_char *pProcessName = NULL);
-    // Destructor
     virtual ~SysInfo(void);
 
     // Get system information
@@ -131,9 +134,8 @@ protected:
     Ipp64f max_cpuusage;
     Ipp64f avg_cpuusage;
 
-    sSystemInfo m_sSystemInfo;                                     // (sSystemInfo) system info struct
+    sSystemInfo m_sSystemInfo;  // system info struct
 };
 
-} // namespace UMC
-
-#endif // __SYS_INFO_H__
+}
+#endif

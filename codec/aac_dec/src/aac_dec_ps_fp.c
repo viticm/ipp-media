@@ -16,7 +16,7 @@
 #include <math.h>
 /* IPP */
 #include "ipps.h"
-#include "ippac.h"
+#include "ippac90legacy.h" //#include "ippac.h"
 /* SBR/PS */
 #include "sbr_huff_tabs.h"
 #include "sbr_dec_tabs_fp.h"

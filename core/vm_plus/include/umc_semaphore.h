@@ -4,7 +4,7 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//       Copyright(c) 2003-2006 Intel Corporation. All Rights Reserved.
+//       Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
@@ -21,9 +21,7 @@ namespace UMC
 class Semaphore
 {
 public:
-    // Default constructor
     Semaphore(void);
-    // Destructor
     virtual ~Semaphore(void);
 
     // Initialize semaphore
@@ -40,44 +38,38 @@ public:
     Status Signal(void);
 
 protected:
-    vm_semaphore m_handle;                                      // (vm_semaphore) handle to system semaphore
+    vm_semaphore m_handle;      // handle to system semaphore
 };
 
 inline
 bool Semaphore::IsValid(void)
 {
     return vm_semaphore_is_valid(&m_handle) ? true : false;
-
-} // bool Semaphore::IsValid(void)
+}
 
 inline
 Status Semaphore::TryWait(void)
 {
     return vm_semaphore_try_wait(&m_handle);
-
-} // Status Semaphore::TryWait(void)
+}
 
 inline
 Status Semaphore::Wait(Ipp32u msec)
 {
     return vm_semaphore_timedwait(&m_handle, msec);
-
-} // Status Semaphore::Wait(Ipp32u msec)
+}
 
 inline
 Status Semaphore::Wait(void)
 {
     return vm_semaphore_wait(&m_handle);
-
-} // Status Semaphore::Wait(void)
+}
 
 inline
 Status Semaphore::Signal(void)
 {
     return vm_semaphore_post(&m_handle);
+}
 
-} // Status Semaphore::Signal(void)
-
-} // namespace UMC
-
-#endif // __UMC_SEMAPHORE_H__
+}
+#endif

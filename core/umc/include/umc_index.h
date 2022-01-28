@@ -4,7 +4,7 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//       Copyright(c) 2003-2008 Intel Corporation. All Rights Reserved.
+//       Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
@@ -36,7 +36,7 @@ struct IndexEntry
     }
 
     // Aboslute position of the sample
-    size_t stPosition;
+    Ipp64u stPosition;
 
     // Presentation time stamp in seconds
     Ipp64f dPts;
@@ -45,7 +45,7 @@ struct IndexEntry
     Ipp64f dDts;
 
     // Sample size in byte
-    Ipp32u uiSize;
+    size_t uiSize;
 
     // Flags (frame type for video samples)
     Ipp32u uiFlags;
@@ -126,24 +126,24 @@ protected:
     // first entry from the NEXT fragment will be returned
     // Input parameter and current state are not checked
     // State variables will be modified
-    IndexEntry *NextEntry(void);
+    IndexEntry* NextEntry(void);
 
     // Returns pointer to previous entry
     // If last returned entry is the first in the fragment,
     // last entry from the PREVIOUS fragment will be returned
     // Input parameter and current state are not checked
     // State variables will be modified
-    IndexEntry *PrevEntry(void);
+    IndexEntry* PrevEntry(void);
 
     // Returns element at a specified position
     // Input parameter and current state are not checked
     // State variables will be modified
-    IndexEntry *GetEntry(Ipp32s pos);
+    IndexEntry* GetEntry(Ipp32s pos);
 
     // Returns element with timestamp is less or equal to specified
     // Input parameter and current state are not checked
     // State variables will be modified
-    IndexEntry *GetEntry(Ipp64f time);
+    IndexEntry* GetEntry(Ipp64f time);
 
     // Linked list of index fragments
     LinkedList<IndexFragment> m_FragmentList;
@@ -164,7 +164,7 @@ protected:
     Ipp32s m_iLastReturned;
 
     // synchro object
-    vm_mutex m_Mutex;
+    Mutex m_mutex;
 
 }; // class TrackIndex
 

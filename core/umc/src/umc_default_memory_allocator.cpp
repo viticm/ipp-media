@@ -3,94 +3,100 @@
 //  This software is supplied under the terms of a license  agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in  accordance  with the terms of that agreement.
-//       Copyright (c) 2006-2008 Intel Corporation. All Rights Reserved.
+//       Copyright (c) 2006-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
 #include "umc_default_memory_allocator.h"
-#include "ipps.h"
+#include "umc_automatic_mutex.h"
+
+#include "ippcore.h"
 
 namespace UMC
 {
-
-  // structure to describe one memory block
-  struct MemoryInfo
-  {
-    void *pMemory;          // allocated memory block
+// structure to describe one memory block
+struct MemoryInfo
+{
+    void*  pMemory;          // allocated memory block
     size_t Size;            // allocated size
     MemID  MID;             // MID_INVALID if unused
     Ipp32s Alignment;       // requested alignment
     Ipp32s LocksCount;      // lock counter
     Ipp32s InvalidatedFlag; // set after Free()
 
-    void Init()
+    void Init(void)
     {
-      pMemory = 0;
-      Size = 0;
-      MID = MID_INVALID;
+        pMemory = 0;
+        Size    = 0;
+        MID     = MID_INVALID;
     }
+
     // Released descriptor with not released memory of suitable size
     Ipp32s CanReuse(size_t s_Size, Ipp32s s_Alignment)
     {
-      if(MID == MID_INVALID &&
-        pMemory != 0 &&
-        s_Size+(align_pointer<Ipp8u*>(pMemory, s_Alignment) - (Ipp8u*)pMemory) <= Size)
-        return 1;
-      return 0;
+        if((MID == MID_INVALID) && (pMemory != 0) && ((s_Size + (align_pointer<Ipp8u*>(pMemory, s_Alignment) - (Ipp8u*)pMemory)) <= Size))
+            return 1;
 
+        return 0;
     }
+
     // assign memory to descriptor
     Status Alloc(size_t s_Size, Ipp32s s_Alignment)
     {
-      if(!CanReuse(s_Size, s_Alignment)) { // can't reuse
-        pMemory = ippsMalloc_8u((int) (s_Size + s_Alignment));
-        if(pMemory == 0) {
-          vm_debug_trace1(VM_DEBUG_ERROR, VM_STRING("failed to allocate %d bytes"), (Ipp32s)Size);
-          return UMC_ERR_ALLOC;
-        }
-        Size = s_Size+s_Alignment; // align to be done on Lock() call
-      }
-      Alignment = s_Alignment;
-      LocksCount = 0;
-      InvalidatedFlag = 0;
-      return UMC_OK;
-    }
-    // mark as no more used checking the state
-    void Clear()
-    {
-      if(pMemory != 0) {
-        if(InvalidatedFlag == 0) {
-          vm_debug_trace2(VM_DEBUG_MEMORY, VM_STRING("Mem block ID:%d size:%d wasn't released"),
-            (Ipp32s)MID, (Ipp32s)Size);
-          InvalidatedFlag = 1;
-        }
-        if(LocksCount != 0) {
-          vm_debug_trace2(VM_DEBUG_MEMORY, VM_STRING("Mem block ID:%d size:%d has bad lock counter"),
-            (Ipp32s)MID, (Ipp32s)Size);
-          LocksCount = 0;
-        }
-        MID = MID_INVALID;
-      }
-    }
-    // release memory allocated to descriptor
-    void Release()
-    {
-      if(pMemory != 0) {
-        Clear();
-        ippsFree(pMemory);
-        pMemory = 0;
-      }
+        if(!CanReuse(s_Size, s_Alignment))
+        {
+            // can't reuse
+            pMemory = ippMalloc((Ipp32s)s_Size+s_Alignment);
+            if(pMemory == 0)
+                return UMC_ERR_ALLOC;
 
+            Size = s_Size+s_Alignment; // align to be done on Lock() call
+        }
+        Alignment       = s_Alignment;
+        LocksCount      = 0;
+        InvalidatedFlag = 0;
+
+        return UMC_OK;
     }
-  };
+
+    // mark as no more used checking the state
+    void Clear(void)
+    {
+        if(pMemory != 0)
+        {
+            if(InvalidatedFlag == 0)
+                InvalidatedFlag = 1;
+
+            if(LocksCount != 0)
+                LocksCount = 0;
+
+            MID = MID_INVALID;
+        }
+    }
+
+    // release memory allocated to descriptor
+    void Release(void)
+    {
+        if(pMemory != 0)
+        {
+            Clear();
+            ippFree(pMemory);
+            pMemory = 0;
+        }
+    }
+};
+}
+
+using namespace UMC;
 
 
 DefaultMemoryAllocator::DefaultMemoryAllocator(void)
 {
-    memInfo = 0;
-    memCount = 0; // allocate only on call
-    memUsed = 0;
-    lastMID = MID_INVALID;
+    m_memInfo  = 0;
+    m_memCount = 0; // allocate only on call
+    m_memUsed  = 0;
+    m_lastMID  = MID_INVALID;
+
     Init(NULL);
 }
 
@@ -101,179 +107,228 @@ DefaultMemoryAllocator::~DefaultMemoryAllocator(void)
 
 Status DefaultMemoryAllocator::Init(MemoryAllocatorParams* /*pParams*/)
 {
+    AutomaticMutex guard(m_guard);
+
     DefaultMemoryAllocator::Close();
 
     return UMC_OK;
 }
 
-Status DefaultMemoryAllocator::Close()
-{
-  Ipp32s i;
-  for(i=0; i<memUsed; i++) {
-    memInfo[i].Release();
-  }
-  if(memInfo != 0) {
-    ippsFree(memInfo);
-    memInfo = 0;
-  }
-  memUsed = 0;
-  memCount = 0;
 
-  return UMC_OK;
+Status DefaultMemoryAllocator::Close(void)
+{
+    AutomaticMutex guard(m_guard);
+
+    Ipp32s i;
+
+    for(i = 0; i < m_memUsed; i++)
+    {
+        m_memInfo[i].Release();
+    }
+
+    if(m_memInfo != 0)
+    {
+        ippFree(m_memInfo);
+        m_memInfo = 0;
+    }
+
+    m_memUsed = 0;
+    m_memCount = 0;
+
+    return UMC_OK;
 }
 
-Status DefaultMemoryAllocator::Alloc(MemID *pNewMemID, size_t Size, Ipp32u /*Flags*/, Ipp32u Align/*=16*/)
+
+Status DefaultMemoryAllocator::Alloc(MemID* pNewMemID, size_t Size, Ipp32u /*Flags*/, Ipp32u Align/*=16*/)
 {
-  Ipp32s i;
-  MemoryInfo* pmem = 0;
-  MemoryInfo* pmemtofree = 0;
+    MemoryInfo* pmem = 0;
+    MemoryInfo* pmemtofree = 0;
+    Ipp32s i;
 
-  if (pNewMemID == NULL)
-    return UMC_ERR_NULL_PTR;
+    AutomaticMutex guard(m_guard);
 
-  if (Size == 0 || Align == 0)
-    return UMC_ERR_INVALID_PARAMS;
+    if(pNewMemID == NULL)
+        return UMC_ERR_NULL_PTR;
 
-  *pNewMemID = MID_INVALID;
+    if (Size == 0 || Align == 0)
+        return UMC_ERR_INVALID_PARAMS;
 
+    *pNewMemID = MID_INVALID;
 
-  for (i = 1; i <= (1 << 20); i <<= 1) {
-    if (i & Align) {
-      break; // stop at nonzero bit
-    }
-  }
-
-  if (i != (Ipp32s)Align) // no 1 in 20 ls bits or more than 1 nonzero bit
-    return UMC_ERR_INVALID_PARAMS;
-
-  for (i=0; i<memUsed; i++) { // search unused or free
-    if (memInfo[i].pMemory == 0 || memInfo[i].CanReuse(Size, Align)) {
-      pmem = &memInfo[i];
-      break;
-    } else if(memInfo[i].MID == MID_INVALID)
-      pmemtofree = &memInfo[i];
-  }
-  if (pmem == 0 && memUsed < memCount) { // take from never used
-    pmem = &memInfo[memUsed];
-    memUsed ++;
-  }
-  if(pmem == 0 && pmemtofree != 0) { // release last unsuitable
-    pmemtofree->Release();
-    pmem = pmemtofree;
-  }
-  if (pmem == 0) { // relocate all descriptors
-    Ipp32s newcount = IPP_MAX(8, memCount*2);
-    MemoryInfo* newmem = (MemoryInfo*)ippsMalloc_8u(newcount*sizeof(MemoryInfo));
-    if (newmem == 0) {
-      vm_debug_trace1(VM_DEBUG_ERROR, VM_STRING("failed to allocate %d bytes"), newcount*sizeof(MemoryInfo));
-      return UMC_ERR_ALLOC;
+    for (i = 1; i <= (1 << 20); i <<= 1)
+    {
+        if (i & Align)
+            break; // stop at nonzero bit
     }
 
-    for (i=0; i<memCount; i++) // copy existing
-      newmem[i] = memInfo[i];
+    if (i != (Ipp32s)Align) // no 1 in 20 ls bits or more than 1 nonzero bit
+        return UMC_ERR_INVALID_PARAMS;
 
-    // free old descriptors
-    if (memInfo)
-        ippsFree(memInfo);
+    for (i = 0; i < m_memUsed; i++)
+    {
+        // search unused or free
+        if (m_memInfo[i].pMemory == 0 || m_memInfo[i].CanReuse(Size, Align))
+        {
+            pmem = &m_memInfo[i];
+            break;
+        }
+        else if(m_memInfo[i].MID == MID_INVALID)
+            pmemtofree = &m_memInfo[i];
+    }
 
-    memInfo = newmem;
-    memCount = newcount;
-    for (; i<memCount; i++)
-      memInfo[i].Init(); // init new
+    if (pmem == 0 && m_memUsed < m_memCount)
+    {
+        // take from never used
+        pmem = &m_memInfo[m_memUsed];
+        m_memUsed++;
+    }
 
-    pmem = &memInfo[memUsed]; // take first in new
-    memUsed ++;
-  }
+    if(pmem == 0 && pmemtofree != 0)
+    {
+        // release last unsuitable
+        pmemtofree->Release();
+        pmem = pmemtofree;
+    }
 
-  if(UMC_OK != pmem->Alloc(Size, Align))
-    return UMC_ERR_ALLOC;
-  lastMID++;
-  pmem->MID = lastMID;
-  *pNewMemID = lastMID;
+    if (pmem == 0)
+    {
+        // relocate all descriptors
+        Ipp32s newcount = IPP_MAX(8, m_memCount*2);
+        MemoryInfo* newmem = (MemoryInfo*)ippMalloc((int)(newcount*sizeof(MemoryInfo)));
+        if (newmem == 0)
+            return UMC_ERR_ALLOC;
 
-  return UMC_OK;
+        for (i = 0; i < m_memCount; i++) // copy existing
+            newmem[i] = m_memInfo[i];
+
+        // free old descriptors
+        if (m_memInfo)
+            ippFree(m_memInfo);
+
+        m_memInfo = newmem;
+        m_memCount = newcount;
+
+        for (; i < m_memCount; i++)
+            m_memInfo[i].Init(); // init new
+
+        pmem = &m_memInfo[m_memUsed]; // take first in new
+        m_memUsed++;
+    }
+
+    if(UMC_OK != pmem->Alloc(Size, Align))
+        return UMC_ERR_ALLOC;
+
+    m_lastMID++;
+
+    pmem->MID  = m_lastMID;
+    *pNewMemID = m_lastMID;
+
+    return UMC_OK;
 }
 
 void* DefaultMemoryAllocator::Lock(MemID MID)
 {
-  Ipp32s i;
+    Ipp32s i;
 
-  if( MID == MID_INVALID )
-    return NULL;
+    if( MID == MID_INVALID )
+        return NULL;
 
-  for (i=0; i<memUsed; i++) {
-    if (memInfo[i].MID == MID) {
-      if(memInfo[i].pMemory == 0 || memInfo[i].InvalidatedFlag)
-        return NULL; // no memory or invalidated
-      memInfo[i].LocksCount ++;
-      // return with aligning
-      return align_pointer<Ipp8u*>(memInfo[i].pMemory, memInfo[i].Alignment);
+    AutomaticMutex guard(m_guard);
+
+    for (i = 0; i < m_memUsed; i++)
+    {
+        if (m_memInfo[i].MID == MID)
+        {
+            if(m_memInfo[i].pMemory == 0 || m_memInfo[i].InvalidatedFlag)
+                return NULL; // no memory or invalidated
+            m_memInfo[i].LocksCount++;
+            // return with aligning
+            return align_pointer<Ipp8u*>(m_memInfo[i].pMemory, m_memInfo[i].Alignment);
+        }
     }
-  }
 
-  return NULL;
+    return NULL;
 }
+
 
 Status DefaultMemoryAllocator::Unlock(MemID MID)
 {
-  Ipp32s i;
+    Ipp32s i;
 
-  if( MID == MID_INVALID )
-    return UMC_ERR_FAILED;
+    if( MID == MID_INVALID )
+        return UMC_ERR_FAILED;
 
-  for (i=0; i<memUsed; i++) {
-    if (memInfo[i].MID == MID) {
-      if(memInfo[i].pMemory == 0 || memInfo[i].LocksCount <= 0)
-        return UMC_ERR_FAILED; // no mem or lock /unlock mismatch
-      memInfo[i].LocksCount --;
-      if(memInfo[i].LocksCount == 0 && memInfo[i].InvalidatedFlag)
-        memInfo[i].Clear(); //  no more use
-      return UMC_OK;
+    AutomaticMutex guard(m_guard);
+
+    for (i = 0; i < m_memUsed; i++)
+    {
+        if (m_memInfo[i].MID == MID)
+        {
+            if(m_memInfo[i].pMemory == 0 || m_memInfo[i].LocksCount <= 0)
+                return UMC_ERR_FAILED; // no mem or lock /unlock mismatch
+
+            m_memInfo[i].LocksCount--;
+            if(m_memInfo[i].LocksCount == 0 && m_memInfo[i].InvalidatedFlag)
+                m_memInfo[i].Clear(); //  no more use
+
+            return UMC_OK;
+        }
     }
-  }
 
-  return UMC_ERR_FAILED;
+    return UMC_ERR_FAILED;
 }
+
 
 Status DefaultMemoryAllocator::Free(MemID MID)
 {
-  Ipp32s i;
+    Ipp32s i;
 
-  if( MID == MID_INVALID )
-    return UMC_ERR_FAILED;
+    if( MID == MID_INVALID )
+        return UMC_ERR_FAILED;
 
-  for (i=0; i<memUsed; i++) {
-    if (memInfo[i].MID == MID) {
-      if(memInfo[i].pMemory == 0 || memInfo[i].InvalidatedFlag != 0)
-        return UMC_ERR_FAILED; // no mem or re-free
-      memInfo[i].InvalidatedFlag = 1;
-      if(memInfo[i].LocksCount == 0)
-        memInfo[i].Clear(); // not in use
-      return UMC_OK;
+    AutomaticMutex guard(m_guard);
+
+    for (i = 0; i < m_memUsed; i++)
+    {
+        if (m_memInfo[i].MID == MID)
+        {
+            if(m_memInfo[i].pMemory == 0 || m_memInfo[i].InvalidatedFlag != 0)
+                return UMC_ERR_FAILED; // no mem or re-free
+
+            m_memInfo[i].InvalidatedFlag = 1;
+            if(m_memInfo[i].LocksCount == 0)
+                m_memInfo[i].Clear(); // not in use
+
+            return UMC_OK;
+        }
     }
-  }
 
-  return UMC_ERR_FAILED;
+    return UMC_ERR_FAILED;
 }
+
 
 Status DefaultMemoryAllocator::DeallocateMem(MemID MID)
 {
-  Ipp32s i;
+    Ipp32s i;
 
-  if( MID == MID_INVALID )
-    return UMC_ERR_FAILED;
+    if( MID == MID_INVALID )
+        return UMC_ERR_FAILED;
 
-  for (i=0; i<memUsed; i++) {
-    if (memInfo[i].MID == MID) {
-      if(memInfo[i].pMemory == 0)
-        return UMC_ERR_FAILED; // no memory
-      memInfo[i].InvalidatedFlag = 1;
-      memInfo[i].Clear();
-      return UMC_OK;
+    AutomaticMutex guard(m_guard);
+
+    for (i = 0; i < m_memUsed; i++)
+    {
+        if (m_memInfo[i].MID == MID)
+        {
+            if(m_memInfo[i].pMemory == 0)
+                return UMC_ERR_FAILED; // no memory
+
+            m_memInfo[i].InvalidatedFlag = 1;
+            m_memInfo[i].Clear();
+
+            return UMC_OK;
+        }
     }
-  }
 
-  return UMC_OK;
+    return UMC_OK;
 }
-
-} // namespace UMC

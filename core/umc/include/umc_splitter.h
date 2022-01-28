@@ -4,7 +4,7 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//        Copyright(c) 2003-2008 Intel Corporation. All Rights Reserved.
+//        Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
@@ -20,21 +20,51 @@
 namespace UMC
 {
 
-class SplitterParams
+enum // splitter flags
 {
-    DYNAMIC_CAST_DECL_BASE(SplitterParams)
+    //invalid value
+    UNDEF_SPLITTER             = 0x00000000,
+    //audio splitting required in any present in stream
+    AUDIO_SPLITTER             = 0x00000001,
+    //video splitting required in any present in stream
+    VIDEO_SPLITTER             = 0x00000002,
+    //example if setup VIDEO_SPLITTER && !set AUDIO_SPLITTER, splitter will ignore
+    //any audio elementary stream, only video data request will be valid
 
-public:
-    // Default constructor
-    SplitterParams();
-    // Destructor
-    virtual ~SplitterParams();
+    //audio and video splitting required if any present in stream
+    AV_SPLITTER                = AUDIO_SPLITTER|VIDEO_SPLITTER,
 
-    Ipp32u m_lFlags;                                       // (Ipp32u) splitter's flags
-    DataReader *m_pDataReader;                             // (DataReader *) pointer to data reader
-    Ipp32u m_uiSelectedVideoPID;                           // ID for video stream chosen by user
-    Ipp32u m_uiSelectedAudioPID;                           // ID for audio stream chosen by user
-    MemoryAllocator *m_pMemoryAllocator;                   // (MemoryAllocator *) pointer to memory allocator object
+    //main video header (sequence header) is required to return from Init
+    //splitter function, application is responsible to pass it to decoder
+    //as a regular video data for properly decoding consequent data
+    FLAG_VSPL_VIDEO_HEADER_REQ = 0x00000010,
+
+    //the first video frame is required to return from Init
+    //splitter function, application is responsible to pass it to decoder
+    //as a regular video data for properly decoding consequent data.
+    //The first frame will follow main video header. This flag expands
+    //splitter behavior for FLAG_VSPL_VIDEO_HEADER_REQ case
+    FLAG_VSPL_VIDEO_FRAME_REQ  = 0x00000020,
+    FLAG_VSPL_AUDIO_INFO_REQ   = 0x00000040,
+    FLAG_VSPL_VIDEO_INFO_REQ   = 0x00000080,
+
+    //next flag describes endian related properties of input data
+    //when set, means that coded data should be accessed by 4-reading operations
+    //for little-endian systems it means that each 4 bytes are swapped
+    //i.e [0]<->[3], [1]<->[2]
+    //for big-endian systems swapping is not required
+    FLAG_VSPL_4BYTE_ACCESS     = 0x00000100,
+
+    ////traditional, not UMC specific behavior
+    ////original byte order, headers before data, return bytes consumed
+    //FLAG_VSPL_COMPATIBLE       = 0x00001000,
+
+    //some splitters may have a behavior to run internal
+    //to prohibit asynchronous splitting use this flag
+    FLAG_VSPL_NO_INTERNAL_THREAD= 0x00002000,
+    // if reposition is not supported
+
+    FLAG_SPL_REPOSITION_DISABLED= 0x00004000
 };
 
 enum TrackType
@@ -55,9 +85,10 @@ enum TrackType
     TRACK_MJPEG                 = 0x00001000,
     TRACK_YUV                   = 0x00002000,
     TRACK_AVS                   = 0x00004000,
+    TRACK_VP8                   = 0x00008000,
     TRACK_ANY_VIDEO             = 0x0000FFFF,
 
-    /* audio typTRACK 0x0XXX0000 */
+    /* audio types 0x0XXX0000 */
     TRACK_PCM                   = 0x00010000,
     TRACK_LPCM                  = 0x00020000,
     TRACK_AC3                   = 0x00040000,
@@ -69,144 +100,154 @@ enum TrackType
     TRACK_AMR                   = 0x01000000,
     TRACK_ANY_AUDIO             = 0x0FFF0000,
 
+    /* special types 0xX0000000 */
     TRACK_SUB_PIC               = 0x10000000,
     TRACK_DVD_NAV               = 0x20000000,
     TRACK_ANY_DVD               = 0x30000000,
-
     TRACK_VBI_TXT               = 0x40000000,
     TRACK_VBI_SPEC              = 0x80000000,
     TRACK_ANY_VBI               = 0xC0000000,
-
     TRACK_ANY_SPECIAL           = 0xF0000000,
 
     TRACK_UNKNOWN               = 0x00000000
 };
 
-struct TrackInfo
+enum TrackState
 {
+    TRACK_DISABLED = 0x0,
+    TRACK_ENABLED  = 0x1
+};
+
+class TrackInfo
+{
+public:
     DYNAMIC_CAST_DECL_BASE(TrackInfo)
 
     TrackInfo()
     {
-        m_Type = TRACK_UNKNOWN;
-        m_PID = 0;
-        m_isSelected = 0;
-        m_pDecSpecInfo = NULL;
-        m_pStreamInfo = NULL;
+        m_type         = TRACK_UNKNOWN;
+        m_iPID         = 0;
+        m_bEnabled     = false;
+        m_pHeader      = NULL;
+        m_pHeaderExt   = NULL;
+        m_pStreamInfo  = NULL;
     }
 
-    TrackType     m_Type;                 // common type (all audio/video/other in one enum)
-    Ipp32u        m_PID;                  //
-    Ipp32s        m_isSelected;           // if Track is on or off
-    MediaData    *m_pDecSpecInfo;         // Keeps DecSpecInfo and its length
-    StreamInfo   *m_pStreamInfo;          // Base for AudioStreamInfo, VideoStreamInfo, etc
+    virtual ~TrackInfo() {}
+
+    TrackType    m_type;          // common type (all audio/video/other in one enum)
+    Ipp32u       m_iPID;
+    bool         m_bEnabled;      // if Track is on or off
+    MediaData*   m_pHeader;       // Keeps Header and its length
+    MediaData*   m_pHeaderExt;    // Keeps extension Header and its length
+    StreamInfo*  m_pStreamInfo;   // Base for AudioStreamInfo, VideoStreamInfo, etc
 };
 
 class SplitterInfo
 {
+public:
     DYNAMIC_CAST_DECL_BASE(SplitterInfo)
 
-public:
-    // Default constructor
-    SplitterInfo();
-    // Destructor
-    virtual ~SplitterInfo();
+    SplitterInfo()
+    {
+        m_iFlags      = 0;
+        m_systemType  = UNDEF_STREAM;
+        m_iTracks     = 0;
+        m_fRate       = 1;
+        m_fDuration   = -1.0;
+        m_ppTrackInfo = NULL;
+    }
+    virtual ~SplitterInfo() {}
 
     // common fields
-    Ipp32u              m_splitter_flags;
-    SystemStreamType    m_SystemType;       // system type (MPEG4, MPEG2, AVI, pure)
-    Ipp32u              m_nOfTracks;        // number of tracks detected
-    Ipp64f              m_dRate;            // current playback rate
-    Ipp64f              m_dDuration;        // duration of stream
-    TrackInfo         **m_ppTrackInfo;      // array of pointers to TrackInfo(s)
+    Ipp32u            m_iFlags;
+    SystemStreamType  m_systemType;       // system type (MPEG4, MPEG2, AVI, pure)
+    Ipp32u            m_iTracks;          // number of tracks detected
+    Ipp64f            m_fRate;            // current playback rate
+    Ipp64f            m_fDuration;        // duration of stream
+    TrackInfo**       m_ppTrackInfo;      // array of pointers to TrackInfo(s)
+};
+
+class SplitterParams
+{
+public:
+    DYNAMIC_CAST_DECL_BASE(SplitterParams)
+
+    SplitterParams(void)
+    {
+        m_iFlags            = 0;
+        m_pDataReader       = NULL;
+        m_iSelectedVideoPID = SELECT_ANY_VIDEO_PID;
+        m_iSelectedAudioPID = SELECT_ANY_AUDIO_PID;
+        m_pMemoryAllocator  = NULL;
+    }
+    virtual ~SplitterParams(void) {}
+
+    Ipp32u           m_iFlags;              // splitter's flags
+    DataReader*      m_pDataReader;         // pointer to data reader
+    Ipp32u           m_iSelectedVideoPID;   // ID for video stream chosen by user
+    Ipp32u           m_iSelectedAudioPID;   // ID for audio stream chosen by user
+    MemoryAllocator* m_pMemoryAllocator;    // pointer to memory allocator object
 };
 
 /*
 //  Class:       Splitter
 //
-//  Notes:       Base abstract class of splitter. Class describes
-//               the high level interface of abstract splitter of media stream.
-//               All specific ( avi, mpeg2, mpeg4 etc ) must be implemented in
-//               derevied classes.
+//  Notes:       Base abstract class of splitter. Class describes the high level interface of abstract splitter of media stream.
+//               All specific ( avi, mpeg2, mpeg4 etc ) must be implemented in derived classes.
 //               Splitter uses this class to obtain data
 //
 */
 class Splitter
 {
+public:
     DYNAMIC_CAST_DECL_BASE(Splitter)
 
-public:
-    // constructor
-    Splitter();
-
-    // decstructor
-    virtual ~Splitter() {}
+    Splitter(void);
+    virtual ~Splitter(void) {}
 
     // Get media data type
-    static SystemStreamType GetStreamType(DataReader *dr);
+    static SystemStreamType GetStreamType(DataReader *pReader);
 
-    // Initialize splitter
-    virtual Status Init(SplitterParams& rInit) = 0;
-
-    // Close splitter and free all resources
-    virtual Status Close() = 0;
+    virtual Status Init(SplitterParams *pInit) = 0;
+    virtual Status Close(void) = 0;
 
     // Get next data, unlocks previously returned
-    virtual Status GetNextData(MediaData* /*data*/, Ipp32u /*nTrack*/)
-    {
-      return UMC_ERR_NOT_IMPLEMENTED;
-    }
+    virtual Status GetNextData(MediaData *pData, Ipp32u iTrack) = 0;
 
     // Get next data without moving DataReader
-    virtual Status CheckNextData(MediaData* /*data*/, Ipp32u /*nTrack*/)
-    {
-      return UMC_ERR_NOT_IMPLEMENTED;
-    }
+    virtual Status CheckNextData(MediaData *pData, Ipp32u iTrack) = 0;
 
     // Set time position
-    virtual Status SetTimePosition(Ipp64f /*timePos*/)
-    {
-      return UMC_ERR_NOT_IMPLEMENTED;
-    }
+    virtual Status SetTimePosition(Ipp64f fPos) = 0;
 
     // Get time position
-    virtual Status GetTimePosition(Ipp64f& timePos)
-        {timePos = 0; return UMC_ERR_NOT_IMPLEMENTED;}
+    virtual Status GetTimePosition(Ipp64f &fPos) = 0;
 
     // Get splitter info
-    virtual Status GetInfo(SplitterInfo** /*ppInfo*/)
-    {
-      return UMC_ERR_NOT_IMPLEMENTED;
-    }
+    virtual Status GetInfo(SplitterInfo **ppInfo) = 0;
 
     // Set playback rate
-    virtual Status SetRate(Ipp64f /*rate*/)
+    virtual Status SetRate(Ipp64f fRate)
     {
-      return UMC_ERR_NOT_IMPLEMENTED;
-    }
-
-    // changes state of track
-    // iState = 0 means disable, iState = 1 means enable
-    virtual Status EnableTrack(Ipp32u /*nTrack*/, Ipp32s /*iState*/)
-    {
+        fRate = fRate;
         return UMC_ERR_NOT_IMPLEMENTED;
     }
 
+    // changes state of track
+    virtual Status SetTrackState(Ipp32u iTrack, TrackState state) = 0;
+
     // Runs reading threads
-    virtual Status Run()
-    {
-      return UMC_ERR_NOT_IMPLEMENTED;
-    }
+    virtual Status Run(void) = 0;
 
     // Stops reading threads
-    virtual Status Stop() = 0;
+    virtual Status Stop(void) = 0;
 
 protected:
-
-    DataReader  *m_pDataReader;  // (DataReader *) pointer to data reader
-    SplitterInfo m_info;      // (SplitterInfo *) splitter info
+    DataReader*  m_pDataReader;  // pointer to data reader
+    SplitterInfo m_info;         // splitter info
 };
 
-} // namespace UMC
+}
 
-#endif /* __UMC_SPLITTER_H__ */
+#endif

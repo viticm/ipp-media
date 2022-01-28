@@ -4,30 +4,29 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//       Copyright(c) 2003-2006 Intel Corporation. All Rights Reserved.
+//       Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
 #include "umc_mmap.h"
 
-namespace UMC
-{
+using namespace UMC;
 
-MMap::MMap(void) :
-    m_address(NULL),
-    m_file_size(0),
-    m_offset(0),
-    m_sizet(0)
+
+MMap::MMap(void)
 {
+    m_address   = NULL;
+    m_file_size = 0;
+    m_offset    = 0;
+    m_sizet     = 0;
+
     vm_mmap_set_invalid(&m_handle);
-
-} // MMap::MMap(void) :
+}
 
 MMap::~MMap(void)
 {
     vm_mmap_close(&m_handle);
-
-} // MMap::~MMap(void)
+}
 
 Status MMap::Init(vm_char *sz_file)
 {
@@ -43,10 +42,9 @@ Status MMap::Init(vm_char *sz_file)
         return UMC_ERR_FAILED;
 
     return UMC_OK;
+}
 
-} // Status MMap::Init(vm_char *sz_file)
-
-Status MMap::Map(Ipp64u st_offset, Ipp64u st_sizet)
+Status MMap::Map(Ipp64u st_offset, size_t st_sizet)
 {
     void *pv_addr;
     Ipp64u st_align = st_offset % vm_mmap_get_alloc_granularity();
@@ -57,7 +55,7 @@ Status MMap::Map(Ipp64u st_offset, Ipp64u st_sizet)
     if (st_offset + st_sizet > m_file_size)
         return UMC_ERR_NOT_ENOUGH_DATA;
 
-    st_sizet += st_align;
+    st_sizet += (size_t)st_align;
     st_offset -= st_align;
 
     // set new window
@@ -75,7 +73,4 @@ Status MMap::Map(Ipp64u st_offset, Ipp64u st_sizet)
     m_sizet = st_sizet;
 
     return UMC_OK;
-
-} // Status MMap::Map(Ipp64u st_offset, Ipp64u st_sizet)
-
-}   //  namespace UMC
+}

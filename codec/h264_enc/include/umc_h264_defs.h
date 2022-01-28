@@ -4,29 +4,24 @@
 //  This software is supplied under the terms of a license  agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in  accordance  with the terms of that agreement.
-//        Copyright (c) 2003-2008 Intel Corporation. All Rights Reserved.
+//        Copyright (c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 //
 */
-
-#include "umc_defs.h"
-#if defined(UMC_ENABLE_H264_VIDEO_ENCODER)
 
 #ifndef __UMC_H264_DEFS_H__
 #define __UMC_H264_DEFS_H__
 
 #include <vector>
-#include "ippdefs.h"
-#include "ippvc.h"
-#include "ipps.h"
 
 #include "umc_h264_config.h"
-//#include "umc_video_encoder.h"
 #include "umc_h264_video_encoder.h"
 
-using namespace UMC;
+#include "ippcore.h"
+#include "ipps.h"
+#include "ippvc.h"
 
-#define H264ENC_UNREFERENCED_PARAMETER(X) X
+using namespace UMC;
 
 #if (defined(__INTEL_COMPILER) || defined(_MSC_VER)) && !defined(_WIN32_WCE)
 #define __ALIGN16 __declspec (align(16))
@@ -88,53 +83,6 @@ using namespace UMC;
 #define CHROMA_BLOCK_IS_ON_TOP_EDGE(x) ((x)<18 || (x)==20 || (x)==21)
 #define CHROMA_BLOCK_IS_ON_TOP_EDGE_C(x) (!((x)&2))
 
-#define H264ENC_CALL_NEW(STS, TYPE, PTR) {      \
-    STS = UMC::UMC_ERR_ALLOC;                   \
-    PTR = (H264ENC_MAKE_NAME(TYPE) *)H264_Malloc(sizeof(H264ENC_MAKE_NAME(TYPE)));  \
-    if (PTR)                                    \
-        STS = H264ENC_MAKE_NAME(TYPE##_Create)(PTR);               \
-}
-
-#define H264ENC_CALL_DELETE(TYPE, PTR)  \
-    if (PTR) {                          \
-        H264ENC_MAKE_NAME(TYPE##_Destroy)(PTR);            \
-        H264_Free(PTR);                  \
-        PTR = 0;                        \
-    }
-
-#define H264ENC_CALL_NEW_ARR(STS, TYPE, PTR, ITEMS) {   \
-    STS = UMC::UMC_ERR_ALLOC;                           \
-    size_t* _alloc_ptr = (size_t *)H264_Malloc(       \
-        ITEMS * sizeof(H264ENC_MAKE_NAME(TYPE)) + sizeof(size_t));         \
-    PTR = (H264ENC_MAKE_NAME(TYPE) *)(_alloc_ptr + 1);                               \
-    _alloc_ptr[0] = (size_t)ITEMS;                      \
-    if (PTR) {                                          \
-        for (size_t i = 0; i < (size_t)ITEMS; i++) {    \
-            STS = H264ENC_MAKE_NAME(TYPE##_Create)((H264ENC_MAKE_NAME(TYPE) *)PTR + i);       \
-            if (STS != UMC::UMC_OK) {                   \
-                for (i++; i > 0; i--)                   \
-                    H264ENC_MAKE_NAME(TYPE##_Destroy)((H264ENC_MAKE_NAME(TYPE) *)PTR + i - 1);    \
-                H264_Free(_alloc_ptr);                   \
-                PTR = 0;                                \
-                break;                                  \
-            }                                           \
-        }                                               \
-    }                                                   \
-}
-
-#define H264ENC_CALL_DELETE_ARR(TYPE, PTR) {        \
-    if (PTR) {                                      \
-        size_t* _alloc_ptr = (size_t *)PTR - 1;     \
-        for (size_t i = _alloc_ptr[0]; i > 0; i--)  \
-            H264ENC_MAKE_NAME(TYPE##_Destroy)((H264ENC_MAKE_NAME(TYPE) *)PTR + i - 1);        \
-        H264_Free(_alloc_ptr);                       \
-        PTR = 0;                                    \
-    }                                               \
-}
-
-namespace UMC_H264_ENCODER
-{
-
 #define SUB_PEL_SHIFT 2
 
 #define SubPelFactor 4  // Don't change this!!!
@@ -189,7 +137,6 @@ namespace UMC_H264_ENCODER
 
 #define DATA_ALIGN 64
 #define LUMA_PADDING 32
-
 
 enum EnumPicCodType     // bits : Permitted Slice Types
 {                       // ----------------------------
@@ -425,9 +372,6 @@ struct H264MacroblockLocalInfo
     Ipp32u               cost;
     //f Ipp32u               header_bits;
     //f Ipp32u               texture_bits;
-#ifdef ALT_RC
-    Ipp32s               sad;
-#endif
 };
 
 struct H264BlockLocation
@@ -581,20 +525,112 @@ inline Ipp32u CalcPitchFromWidth(Ipp32u width, Ipp32s pixSize)
 }
 
 
-#define PIXBITS 8
-#include "umc_h264_defs_tmpl.h"
-#undef PIXBITS
+template<typename COEFFSTYPE>
+struct T_RLE_Data
+{
+    // Note: uNumCoeffs and uTotalZeros are not redundant because
+    // this struct covers blocks with 4, 15 and 16 possible coded coeffs.
+    Ipp8u   uTrailing_Ones;         // Up to 3 trailing ones are allowed (not in iLevels below)
+    Ipp8u   uTrailing_One_Signs;    // Packed into up to 3 lsb, (1==neg)
+    Ipp8u   uNumCoeffs;             // Total Number of non-zero coeffs (including Trailing Ones)
+    Ipp8u   uTotalZeros;            // Total Number of zero coeffs
+    COEFFSTYPE iLevels[64];         // Up to 64 Coded coeffs are possible, in reverse zig zag order
+    Ipp8u   uRuns[64];              // Up to 64 Runs are recorded, including Trailing Ones, in rev zig zag order
 
-#if defined (BITDEPTH_9_12)
+};
 
-#define PIXBITS 16
-#include "umc_h264_defs_tmpl.h"
-#undef PIXBITS
+template<typename COEFFSTYPE>
+struct T_Block_CABAC_Data
+{
+    Ipp8u   uBlockType;
+    Ipp8u   uNumSigCoeffs;
+    Ipp8u   uLastCoeff;
+    Ipp8u   uFirstCoeff;
+    Ipp8u   uFirstSignificant;
+    Ipp8u   uLastSignificant;
+    COEFFSTYPE uSignificantLevels[64];
+    Ipp8u   uSignificantSigns[64];
+    Ipp8u   uSignificantMap[64];
+    Ipp32s  CtxBlockCat;
 
-#endif // BITDEPTH_9_12
+};
 
-} // end namespace UMC_H264_ENCODER
+template<typename COEFFSTYPE, typename PIXTYPE>
+struct MBDissection
+{
+    PIXTYPE* prediction;
+    PIXTYPE* reconstruct;
+    COEFFSTYPE* transform;
+};
+
+template<typename COEFFSTYPE, typename PIXTYPE>
+struct H264CurrentMacroblockDescriptor
+{
+    Ipp32u   uMB, uMBpair;  //MacroBlock address
+    Ipp16u   uMBx, uMBy;
+    PIXTYPE* mbPtr;  //Pointer to macroblock data in original frame
+    Ipp32s   mbPitchPixels;
+    Ipp32s   lambda;
+    Ipp32s   chroma_format_idc;  //Current chroma mode
+    Ipp32s   lumaQP;
+    Ipp32s   lumaQP51;
+    Ipp32s   chromaQP;
+    H264MacroblockLocalInfo  *LocalMacroblockInfo;
+    H264MacroblockLocalInfo  *LocalMacroblockPairInfo;
+    H264MacroblockGlobalInfo *GlobalMacroblockInfo;
+    H264MacroblockGlobalInfo *GlobalMacroblockPairInfo;
+    H264MacroblockCoeffsInfo *MacroblockCoeffsInfo;
+    Ipp32u      m_uIntraCBP4x4;
+    Ipp32s      m_iNumCoeffs4x4[16];
+    Ipp32u      m_iLastCoeff4x4[16];
+    Ipp32u      m_uIntraCBP8x8;
+    Ipp32s      m_iNumCoeffs8x8[16];
+    Ipp32u      m_iLastCoeff8x8[16];
+    T_AIMode *intra_types;
+    MBDissection<COEFFSTYPE, PIXTYPE> mb4x4;
+    MBDissection<COEFFSTYPE, PIXTYPE> mb8x8;
+    MBDissection<COEFFSTYPE, PIXTYPE> mb16x16;
+    MBDissection<COEFFSTYPE, PIXTYPE> mbInter;
+    MBDissection<COEFFSTYPE, PIXTYPE> mbChromaInter;
+    MBDissection<COEFFSTYPE, PIXTYPE> mbChromaIntra;
+
+    H264MacroblockMVs *MVs[4];         //MV L0,L1, MVDeltas 0,1
+    H264MacroblockRefIdxs *RefIdxs[2]; //RefIdx L0, L1
+    H264MacroblockNeighboursInfo MacroblockNeighbours; //mb neighbouring info
+    H264BlockNeighboursInfo BlockNeighbours; //block neighbouring info (if mbaff turned off remained static)
+    T_Block_CABAC_Data<COEFFSTYPE> *cabac_data;
+};
+
+template<typename PIXTYPE>
+struct ME_Inf
+{
+    PIXTYPE *pCur;
+    PIXTYPE *pCurU;
+    PIXTYPE *pCurV;
+    PIXTYPE *pRef;
+    PIXTYPE *pRefU;
+    PIXTYPE *pRefV;
+#ifdef FRAME_INTERPOLATION
+    Ipp32s planeSize;
+#endif
+    Ipp32s pitchPixels;
+    Ipp32s bit_depth_luma;
+    Ipp32s bit_depth_chroma;
+    Ipp32s chroma_mvy_offset;
+    Ipp32s chroma_format_idc;
+    IppiSize block;
+    H264MotionVector candMV[ME_MAX_CANDIDATES];
+    H264MotionVector predictedMV;
+    H264MotionVector bestMV;
+    H264MotionVector bestMV_Int;
+    Ipp32s candNum;
+    Ipp16s *pRDQM;
+    Ipp32s xMin, xMax, yMin, yMax, rX, rY;
+    Ipp32s flags;
+    Ipp32s searchAlgo;
+    Ipp32s threshold;
+    Ipp32s bestSAD;
+
+};
 
 #endif // __UMC_H264_DEFS_H__
-
-#endif //UMC_ENABLE_H264_VIDEO_ENCODER

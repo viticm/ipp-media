@@ -4,7 +4,7 @@
 //  This software is supplied under the terms of a license  agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in  accordance  with the terms of that agreement.
-//    Copyright (c) 2003-2007 Intel Corporation. All Rights Reserved.
+//    Copyright (c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 //
 */
@@ -22,51 +22,36 @@ class SampleInfo;
 
 class SampleBuffer : public MediaBuffer
 {
+public:
     DYNAMIC_CAST_DECL(SampleBuffer, MediaBuffer)
 
-public:
-    // Default constructor
     SampleBuffer(void);
-    // Destructor
-    virtual
-    ~SampleBuffer(void);
+    virtual ~SampleBuffer(void);
 
     // Initialize buffer
-    virtual
-    Status Init(MediaReceiverParams* init);
+    virtual Status Init(MediaReceiverParams* init);
 
     // Lock input buffer
-    virtual
-    Status LockInputBuffer(MediaData* in);
+    virtual Status LockInputBuffer(MediaData* in);
     // Unlock input buffer
-    virtual
-    Status UnLockInputBuffer(MediaData* in, Status StreamStatus = UMC_OK);
+    virtual Status UnLockInputBuffer(MediaData* in, Status StreamStatus = UMC_OK);
 
     // Lock output buffer
-    virtual
-    Status LockOutputBuffer(MediaData* out);
+    virtual Status LockOutputBuffer(MediaData* out);
     // Unlock output buffer
-    virtual
-    Status UnLockOutputBuffer(MediaData* out);
+    virtual Status UnLockOutputBuffer(MediaData* out);
 
     // Stop buffer
-    virtual
-    Status Stop(void);
+    virtual Status Stop(void);
 
     // Release object
-    virtual
-    Status Close(void);
+    virtual Status Close(void);
 
     // Reset object
-    virtual
-    Status Reset(void);
-
-    // Dump current state via vm_debug_trace
-    virtual
-    Status DumpState();
+    virtual Status Reset(void);
 
 protected:
-    vm_mutex m_synchro;                                         // (vm_mutex) synchro object
+    Mutex m_synchro;                                            // synchro object
 
     Ipp8u *m_pbAllocatedBuffer;                                 // (Ipp8u *) pointer to allocated buffer
     MemID m_midAllocatedBuffer;                                 // (MemID) memory ID of allocated buffer

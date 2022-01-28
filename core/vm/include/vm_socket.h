@@ -4,14 +4,9 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//       Copyright(c) 2003-2008 Intel Corporation. All Rights Reserved.
+//       Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
-
-#ifndef __VM_SOCKET_H__
-#define __VM_SOCKET_H__
-
-#include "vm_types.h"
 
 /*
  * TCP, UDP, and MCAST protocols are supported. The functions are as follows:
@@ -53,13 +48,18 @@
  *
  */
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif /* __cplusplus */
+#ifndef __VM_SOCKET_H__
+#define __VM_SOCKET_H__
 
-#ifndef LINUX32
+#include "vm_types.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#if defined WINDOWS
 #define VM_SOCKET_QUEUE 20
+
 typedef struct vm_socket
 {
     fd_set r_set, w_set;
@@ -73,8 +73,8 @@ typedef struct vm_socket
 
 typedef struct
 {
-   vm_char *hostname; /* hostname */
-   Ipp16u port;       /* port number */
+    vm_char *hostname; /* hostname */
+    Ipp16u port;       /* port number */
 } vm_socket_host;
 
 /* Initialize network connection and return socket handle.
@@ -149,8 +149,7 @@ Ipp32s vm_socket_get_client_ip(vm_socket *handle, Ipp8u* buffer, Ipp32s len);
 
 /*****************************************************************************/
 /** Old part **/
-#if defined(_WIN32) || defined (_WIN64) || defined(_WIN32_WCE)
-
+#if defined WINDOWS
 typedef Ipp32s socklen_t;
 
 Ipp32s vm_sock_startup(vm_char a, vm_char b);
@@ -158,9 +157,7 @@ Ipp32s vm_sock_cleanup(void);
 Ipp32s vm_sock_host_by_name(vm_char *name, struct in_addr *paddr);
 
 #define vm_sock_get_error() WSAGetLastError()
-
-#else /* !(defined(_WIN32) || defined (_WIN64) || defined(_WIN32_WCE)) */
-
+#else
 #include <netinet/in.h>
 #include <netdb.h>
 #include <sys/socket.h>
@@ -184,11 +181,10 @@ typedef struct sockaddr * LPSOCKADDR;
 #define vm_sock_get_error() errno
 
 Ipp32s vm_sock_host_by_name(vm_char *name, struct in_addr *paddr);
-
-#endif /* defined(_WIN32) || defined (_WIN64) || defined(_WIN32_WCE) */
+#endif
 
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
+#endif
 
-#endif /* __VM_SOCKET_H__ */
+#endif

@@ -4,7 +4,7 @@
 //  This software is supplied under the terms of a license  agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in  accordance  with the terms of that agreement.
-//    Copyright (c) 2003-2006 Intel Corporation. All Rights Reserved.
+//    Copyright (c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 //
 */
@@ -21,11 +21,8 @@ namespace UMC
 class Pendulum
 {
 public:
-    // Default constructor
     Pendulum(void);
-    // Destructor
-    virtual
-    ~Pendulum(void);
+    virtual ~Pendulum(void);
 
     // Initialize
     Status Init(bool bSignaled = true);
@@ -42,10 +39,9 @@ protected:
     // Release object
     void Release(void);
 
-    vm_event m_hHigh;                                           // (vm_event) event to waiting high state
-    vm_event m_hLow;                                            // (vm_event) event to waiting low state
+    vm_event m_hHigh;       // event to waiting high state
+    vm_event m_hLow;        // event to waiting low state
 };
 
-} // namespace UMC
-
-#endif // __UMC_PENDULUM_H__
+}
+#endif

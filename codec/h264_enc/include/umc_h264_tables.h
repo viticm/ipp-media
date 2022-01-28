@@ -3,19 +3,14 @@
 //  This software is supplied under the terms of a license agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in accordance with the terms of that agreement.
-//        Copyright (c) 2004 - 2008 Intel Corporation. All Rights Reserved.
+//        Copyright (c) 2004 - 2012 Intel Corporation. All Rights Reserved.
 //
-
-#include "umc_defs.h"
-#if defined(UMC_ENABLE_H264_VIDEO_ENCODER)
 
 #ifndef UMC_H264_TABLES_H
 #define UMC_H264_TABLES_H
 
 #include "umc_h264_defs.h"
 
-namespace UMC_H264_ENCODER
-{
 
 extern const Ipp8u EdgePelCountTable[52];
 extern const Ipp8u EdgePelDiffTable[52];
@@ -30,7 +25,7 @@ extern const Ipp16s MAX_PIX_VALUE[5];
 // offsets for 4x4 blocks
 extern const Ipp8u xoff[16];
 extern const Ipp8u yoff[16];
-extern const Ipp8s xyoff[16][2];
+extern const Ipp8s xyoff_[16][2];
 
 // Offset for 8x8 blocks
 extern const Ipp8u xoff8[4];
@@ -66,7 +61,7 @@ extern const Ipp8u subblock_block_ss[24];
 extern const Ipp8u subblock_block_ds[32];
 
 // Mapping from 8x8 block number to 4x4 block number
-extern const Ipp8u block_subblock_mapping[16];
+extern const Ipp8u block_subblock_mapping_[16];
 
 // Mapping from block number in loop to 8x8 block number
 extern const Ipp8u subblock_block_mapping[16];
@@ -105,11 +100,11 @@ extern const Ipp32s COEFF_MB_THRESHOLD ;
 
 // Tables used for finding if a block is on the edge
 // of a macroblock
-extern const Ipp8u left_edge_tab4[4];
-extern const Ipp8u top_edge_tab4[4];
+extern const Ipp8u left_edge_tab4_[4];
+extern const Ipp8u top_edge_tab4_[4];
 extern const Ipp8u right_edge_tab4[4];
-extern const Ipp8u left_edge_tab16[16];
-extern const Ipp8u top_edge_tab16[16];
+extern const Ipp8u left_edge_tab16_[16];
+extern const Ipp8u top_edge_tab16_[16];
 extern const Ipp8u right_edge_tab16[16];
 extern const Ipp8u left_edge_tab16_8x4[16];
 extern const Ipp8u top_edge_tab16_8x4[16];
@@ -120,7 +115,7 @@ extern const Ipp8u right_edge_tab16_4x8[16];
 
 extern const Ipp8u above_right_avail_8x4[16];
 extern const Ipp8u above_right_avail_4x8[16];
-extern const Ipp8u above_right_avail_4x4[16];
+extern const Ipp8u above_right_avail_4x4_[16];
 extern const Ipp8u above_right_avail_4x4_lin[16];
 extern const Ipp8u intra4x4_below_left_avail[16];
 
@@ -187,8 +182,4 @@ extern const Ipp8u transTbl[2][128];
 
 extern const Ipp8u IntraMBTypeOffset[5];
 
-} //namespace UMC_H264_ENCODER
-
 #endif // UMC_H264_TABLES_H
-
-#endif //UMC_ENABLE_H264_VIDEO_ENCODER

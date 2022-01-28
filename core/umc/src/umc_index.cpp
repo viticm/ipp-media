@@ -4,7 +4,7 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//       Copyright(c) 2003-2008 Intel Corporation. All Rights Reserved.
+//       Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
@@ -19,8 +19,6 @@ TrackIndex::TrackIndex()
     m_iFirstEntryPos = 0;
     m_iLastEntryPos = 0;
     m_iLastReturned = -1;
-    vm_mutex_set_invalid(&m_Mutex);
-    vm_mutex_init(&m_Mutex);
 } // TrackIndex::TrackIndex()
 
 TrackIndex::~TrackIndex()
@@ -40,20 +38,17 @@ TrackIndex::~TrackIndex()
         umcRes = m_FragmentList.Next(frag);
     }
 
-    // destroy mutex
-    if (1 == vm_mutex_is_valid(&m_Mutex))
-        vm_mutex_destroy(&m_Mutex);
 } // TrackIndex::~TrackIndex()
 
 Ipp32u TrackIndex::NOfEntries(void)
 {
-    AutomaticMutex guard(m_Mutex);
+    AutomaticMutex guard(m_mutex);
     return m_uiTotalEntries;
 } // Ipp32u TrackIndex::NOfEntries(void)
 
 Status TrackIndex::First(IndexEntry &entry)
 {
-    AutomaticMutex guard(m_Mutex);
+    AutomaticMutex guard(m_mutex);
 
     Status umcRes = m_FragmentList.First(m_ActiveFrag);
     if (UMC_OK != umcRes)
@@ -68,7 +63,7 @@ Status TrackIndex::First(IndexEntry &entry)
 
 Status TrackIndex::Last(IndexEntry &entry)
 {
-    AutomaticMutex guard(m_Mutex);
+    AutomaticMutex guard(m_mutex);
 
     Status umcRes = m_FragmentList.Last(m_ActiveFrag);
     if (UMC_OK != umcRes)
@@ -83,7 +78,7 @@ Status TrackIndex::Last(IndexEntry &entry)
 
 Status TrackIndex::Next(IndexEntry &entry)
 {
-    AutomaticMutex guard(m_Mutex);
+    AutomaticMutex guard(m_mutex);
 
     if (m_iLastReturned < 0)
         return UMC_ERR_FAILED;
@@ -98,7 +93,7 @@ Status TrackIndex::Next(IndexEntry &entry)
 
 Status TrackIndex::Prev(IndexEntry &entry)
 {
-    AutomaticMutex guard(m_Mutex);
+    AutomaticMutex guard(m_mutex);
 
     if (m_iLastReturned < 0)
         return UMC_ERR_FAILED;
@@ -113,7 +108,7 @@ Status TrackIndex::Prev(IndexEntry &entry)
 
 Status TrackIndex::NextKey(IndexEntry &entry)
 {
-    AutomaticMutex guard(m_Mutex);
+    AutomaticMutex guard(m_mutex);
 
     if (m_iLastReturned < 0)
         return UMC_ERR_FAILED;
@@ -133,7 +128,7 @@ Status TrackIndex::NextKey(IndexEntry &entry)
 
 Status TrackIndex::PrevKey(IndexEntry &entry)
 {
-    AutomaticMutex guard(m_Mutex);
+    AutomaticMutex guard(m_mutex);
 
     if (m_iLastReturned < 0)
         return UMC_ERR_FAILED;
@@ -153,7 +148,7 @@ Status TrackIndex::PrevKey(IndexEntry &entry)
 
 Status TrackIndex::Get(IndexEntry &entry)
 {
-    AutomaticMutex guard(m_Mutex);
+    AutomaticMutex guard(m_mutex);
 
     if (m_iLastReturned < 0)
         return UMC_ERR_FAILED;
@@ -164,7 +159,7 @@ Status TrackIndex::Get(IndexEntry &entry)
 
 Status TrackIndex::Get(IndexEntry &entry, Ipp32s pos)
 {
-    AutomaticMutex guard(m_Mutex);
+    AutomaticMutex guard(m_mutex);
 
     if (pos < 0 || pos >= (Ipp32s)m_uiTotalEntries)
         return UMC_ERR_FAILED;
@@ -192,7 +187,7 @@ Status TrackIndex::Get(IndexEntry &entry, Ipp32s pos)
 
 Status TrackIndex::Get(IndexEntry &entry, Ipp64f time)
 {
-    AutomaticMutex guard(m_Mutex);
+    AutomaticMutex guard(m_mutex);
 
     if (time < 0)
         return UMC_ERR_FAILED;
@@ -220,7 +215,7 @@ Status TrackIndex::Get(IndexEntry &entry, Ipp64f time)
 
 Status TrackIndex::Add(IndexFragment &newFrag)
 {
-    AutomaticMutex guard(m_Mutex);
+    AutomaticMutex guard(m_mutex);
 
     if (0 == newFrag.iNOfEntries || NULL == newFrag.pEntryArray)
         return UMC_ERR_FAILED;
@@ -236,7 +231,7 @@ Status TrackIndex::Add(IndexFragment &newFrag)
 
 Status TrackIndex::Remove(void)
 {
-    AutomaticMutex guard(m_Mutex);
+    AutomaticMutex guard(m_mutex);
 
     IndexFragment frag;
     Status umcRes = m_FragmentList.Last(frag);
@@ -356,16 +351,20 @@ IndexEntry *TrackIndex::GetEntry(Ipp64f time)
     Ipp64f dStartTime = pEntryArray[0].GetTimeStamp();
     Ipp64f dEndTime = pEntryArray[nOfEntries - 1].GetTimeStamp();
 
-    // approximate position of requested entry
-    m_iLastReturned = (Ipp32s)(nOfEntries * (time - dStartTime) / (dEndTime - dStartTime));
+    m_iLastReturned = 0;
 
-    if (pEntryArray[m_iLastReturned].GetTimeStamp() < time)
-        while (m_iLastReturned + 1 < nOfEntries && pEntryArray[m_iLastReturned + 1].GetTimeStamp() < time)
-            m_iLastReturned++;
-    else
-        while (m_iLastReturned >= 0 && pEntryArray[m_iLastReturned].GetTimeStamp() > time)
-            m_iLastReturned--;
+    if (nOfEntries > 1)
+    {
+      // approximate position of requested entry
+      m_iLastReturned = (Ipp32s)(nOfEntries * (time - dStartTime) / (dEndTime - dStartTime));
 
+      if (pEntryArray[m_iLastReturned].GetTimeStamp() < time)
+          while (m_iLastReturned + 1 < nOfEntries && pEntryArray[m_iLastReturned + 1].GetTimeStamp() < time)
+              m_iLastReturned++;
+      else
+          while (m_iLastReturned >= 0 && pEntryArray[m_iLastReturned].GetTimeStamp() > time)
+              m_iLastReturned--;
+    }
 
     return &m_ActiveFrag.pEntryArray[m_iLastReturned];
 } // IndexEntry *TrackIndex::GetEntry(Ipp64f time)

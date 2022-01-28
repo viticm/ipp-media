@@ -3,60 +3,37 @@
 //  This software is supplied under the terms of a license agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in accordance with the terms of that agreement.
-//        Copyright (c) 2004 - 2008 Intel Corporation. All Rights Reserved.
+//        Copyright (c) 2004 - 2012 Intel Corporation. All Rights Reserved.
 //
-
-#include "umc_defs.h"
-#if defined(UMC_ENABLE_H264_VIDEO_ENCODER)
 
 #ifndef UMC_H264_TO_IPP_H
 #define UMC_H264_TO_IPP_H
 
-#include "ippdefs.h"
-#include "ipps.h"
-#include "ippvc.h"
 #include "umc_h264_core_enc.h"
 
-typedef struct _CabacStates{
-    Ipp8u  absLevelM1[10];
+struct CabacStates
+{
+    Ipp8u   absLevelM1[10];
     Ipp8u*  sig;
     Ipp8u*  last;
-} CabacStates;
+};
 
-inline void ippiTransformDequantLumaDC_H264_8u16s(
-    Ipp16s* pSrcDst,
-    Ipp32s QP,
-    const Ipp16s* pScaleLevels/* = NULL*/)
+inline void ownTransformDequantLumaDC_H264(Ipp16s* pSrcDst, Ipp32s QP, const Ipp16s* pScaleLevels/* = NULL*/)
 {
     ippiTransformQuantInvLumaDC4x4_H264_16s_C1I(pSrcDst, QP, pScaleLevels);
 }
 
-inline void ippiTransformDequantChromaDC_H264_8u16s(
-    Ipp16s* pSrcDst,
-    Ipp32s QP,
-    const Ipp16s* pLevelScale/* = NULL*/)
+inline void ownTransformDequantChromaDC_H264(Ipp16s* pSrcDst, Ipp32s QP, const Ipp16s* pLevelScale/* = NULL*/)
 {
     ippiTransformQuantInvChromaDC2x2_H264_16s_C1I (pSrcDst, QP, pLevelScale);
 }
 
-inline void ippiDequantTransformResidualAndAdd_H264_8u16s(
-    const Ipp8u*  pPred,
-    Ipp16s* pSrcDst,
-    const Ipp16s* pDC, // should be const ?
-    Ipp8u*  pDst,
-    Ipp32s  PredStep,
-    Ipp32s  DstStep,
-    Ipp32s  QP,
-    Ipp32s  AC,
-    Ipp32s  /*bit_depth*/,
-    const Ipp16s* pScaleLevels/* = NULL*/)
+inline void ownDequantTransformResidualAndAdd_H264(const Ipp8u*  pPred, Ipp16s* pSrcDst, const Ipp16s* pDC, Ipp8u* pDst, Ipp32s PredStep, Ipp32s DstStep, Ipp32s QP, Ipp32s AC, Ipp32s, const Ipp16s* pScaleLevels)
 {
-    ippiTransformQuantInvAddPred4x4_H264_16s_C1IR (pPred, PredStep, pSrcDst, pDC, pDst, DstStep, QP, AC, pScaleLevels);
+    ippiTransformQuantInvAddPred4x4_H264_16s_C1IR(pPred, PredStep, pSrcDst, pDC, pDst, DstStep, QP, AC, pScaleLevels);
 }
 
-inline void ippiTransformLuma8x8Fwd_H264_8u16s(
-    const Ipp16s* pDiffBuf,
-    Ipp16s* pTransformResult)
+inline void ownTransformLuma8x8Fwd_H264(const Ipp16s* pDiffBuf,Ipp16s* pTransformResult)
 {
     ippiTransformFwdLuma8x8_H264_16s_C1(pDiffBuf, pTransformResult);
 }
@@ -70,11 +47,11 @@ void QuantOptLuma8x8_H264_16s_C1_8u16s(
     const Ipp16s* pScaleLevels,
     Ipp32s* pNumLevels,
     Ipp32s* pLastCoeff,
-    const H264Slice_8u16s* curr_slice,
+    const H264Slice<Ipp16s, Ipp8u>* curr_slice,
     CabacStates* cbSt,
     const Ipp16s* pInvLevelScale);
 
-inline void ippiQuantLuma8x8_H264_8u16s(
+inline void ownQuantLuma8x8_H264(
     const Ipp16s* pSrc,
     Ipp16s* pDst,
     Ipp32s  Qp6,
@@ -83,38 +60,27 @@ inline void ippiQuantLuma8x8_H264_8u16s(
     const Ipp16s* pScaleLevels,
     Ipp32s* pNumLevels,
     Ipp32s* pLastCoeff,
-    const H264Slice_8u16s* curr_slice/* = NULL*/,
-    CabacStates* cbSt/* = NULL*/,
-    const Ipp16s* pInvLevelScale/* = NULL*/)
+    const H264Slice<Ipp16s, Ipp8u>* curr_slice,
+    CabacStates* cbSt,
+    const Ipp16s* pInvLevelScale)
 {
-    if( curr_slice == NULL ){
+    if(curr_slice == NULL )
         ippiQuantLuma8x8_H264_16s_C1(pSrc, pDst,Qp6,intra,pScanMatrix,pScaleLevels,pNumLevels,pLastCoeff);
-    }else{
+    else
         QuantOptLuma8x8_H264_16s_C1_8u16s(pSrc, pDst,Qp6,intra,pScanMatrix,pScaleLevels,pNumLevels,pLastCoeff,curr_slice,cbSt,pInvLevelScale);
-    }
 }
 
-inline void ippiQuantLuma8x8Inv_H264_8u16s(
-    Ipp16s* pSrcDst,
-    Ipp32s Qp6,
-    const Ipp16s* pInvLevelScale)
+inline void ownQuantLuma8x8Inv_H264(Ipp16s* pSrcDst, Ipp32s Qp6, const Ipp16s* pInvLevelScale)
 {
     ippiQuantLuma8x8Inv_H264_16s_C1I(pSrcDst, Qp6, pInvLevelScale);
 }
 
-inline void ippiTransformLuma8x8InvAddPred_H264_8u16s(
-    const Ipp8u* pPred,
-    Ipp32s PredStepPixels,
-    Ipp16s* pSrcDst,
-    Ipp8u* pDst,
-    Ipp32s DstStepPixels,
-    Ipp32s bit_depth)
+inline void ownTransformLuma8x8InvAddPred_H264(const Ipp8u* pPred, Ipp32s PredStepPixels, Ipp16s* pSrcDst, Ipp8u* pDst, Ipp32s DstStepPixels, Ipp32s)
 {
-    H264ENC_UNREFERENCED_PARAMETER(bit_depth);
     ippiTransformLuma8x8InvAddPred_H264_16s8u_C1R(pPred, PredStepPixels*sizeof(Ipp8u), pSrcDst,pDst, DstStepPixels*sizeof(Ipp8u));
 }
 
-inline void ippiEncodeChromaDcCoeffsCAVLC_H264_8u16s(
+inline void ownEncodeChromaDcCoeffsCAVLC_H264(
     Ipp16s* pSrc,
     Ipp8u*  pTrailingOnes,
     Ipp8u*  pTrailingOneSigns,
@@ -124,10 +90,9 @@ inline void ippiEncodeChromaDcCoeffsCAVLC_H264_8u16s(
     Ipp8u*  pRuns)
 {
     ippiEncodeChromaDcCoeffsCAVLC_H264_16s(pSrc,pTrailingOnes, pTrailingOneSigns, pNumOutCoeffs, pTotalZeroes, pLevels, pRuns);
-    //ippiEncodeChromaDC2x2CoeffsCAVLC_H264_16s(pSrc,pTrailingOnes, pTrailingOneSigns, pNumOutCoeffs, pTotalZeroes, pLevels, pRuns);
 }
 
-inline void ippiEncodeChroma422DC_CoeffsCAVLC_H264_8u16s(
+inline void ownEncodeChroma422DC_CoeffsCAVLC_H264(
     const Ipp16s *pSrc,
     Ipp8u *Trailing_Ones,
     Ipp8u *Trailing_One_Signs,
@@ -139,7 +104,7 @@ inline void ippiEncodeChroma422DC_CoeffsCAVLC_H264_8u16s(
     ippiEncodeCoeffsCAVLCChromaDC2x4_H264_16s (pSrc, Trailing_Ones, Trailing_One_Signs, NumOutCoeffs, TotalZeros, Levels, Runs);
 }
 
-inline void ippiTransformDequantChromaDC422_H264_8u16s(
+inline void ownTransformDequantChromaDC422_H264(
     Ipp16s *pSrcDst,
     Ipp32s QPChroma,
     Ipp16s* pScaleLevels)
@@ -147,19 +112,19 @@ inline void ippiTransformDequantChromaDC422_H264_8u16s(
     ippiTransformQuantInvChromaDC2x4_H264_16s_C1I(pSrcDst, QPChroma, pScaleLevels);
 }
 
-inline void ippiTransformQuantChroma422DC_H264_8u16s(
+inline void ownTransformQuantChroma422DC_H264(
     Ipp16s *pDCBuf,
     Ipp16s *pTBuf,
     Ipp32s  QPChroma,
     Ipp32s* NumCoeffs,
     Ipp32s  intra,
     Ipp32s  NeedTransform,
-    const Ipp16s* pScaleLevels/* = NULL*/)
+    const Ipp16s* pScaleLevels)
 {
     ippiTransformQuantFwdChromaDC2x4_H264_16s_C1I(pDCBuf, pTBuf, QPChroma, NumCoeffs, intra, NeedTransform, pScaleLevels);
 }
 
-inline void ippiSumsDiff8x8Blocks4x4_8u16s(
+inline void ownSumsDiff8x8Blocks4x4(
     Ipp8u* pSrc,
     Ipp32s srcStepPixels,
     Ipp8u* pPred,
@@ -170,7 +135,7 @@ inline void ippiSumsDiff8x8Blocks4x4_8u16s(
     ippiSumsDiff8x8Blocks4x4_8u16s_C1(pSrc, srcStepPixels*sizeof(Ipp8u), pPred, predStepPixels*sizeof(Ipp8u), pDC, pDiff);
 }
 
-inline void ippiTransformQuantChromaDC_H264_8u16s(
+inline void ownTransformQuantChromaDC_H264(
     Ipp16s* pSrcDst,
     Ipp16s* pTBlock,
     Ipp32s  QPChroma,
@@ -191,11 +156,11 @@ IppStatus TransformQuantOptFwd4x4_H264_16s_C1(
     Ipp16s* pScanMatrix,
     Ipp32s* pLastCoeff,
     Ipp16s* pScaleLevels,
-    const H264Slice_8u16s * curr_slice,
+    const H264Slice<Ipp16s, Ipp8u> * curr_slice,
     Ipp32s sCoeff,
     CabacStates* states);
 
-inline void ippiTransformQuantResidual_H264_8u16s(
+inline void ownTransformQuantResidual_H264(
     Ipp16s* pSrcDst,
     Ipp16s* pDst,
     Ipp32s  Qp,
@@ -204,18 +169,17 @@ inline void ippiTransformQuantResidual_H264_8u16s(
     Ipp16s* pScanMatrix,
     Ipp32s* pLastCoeff,
     Ipp16s* pScaleLevels/* = NULL*/,
-    const H264Slice_8u16s* curr_slice/* = NULL*/,
+    const H264Slice<Ipp16s, Ipp8u>* curr_slice/* = NULL*/,
     Ipp32s sCoeff/* = 0*/,
     CabacStates* states/* = NULL*/)
 {
-    if( curr_slice == NULL ){
+    if( curr_slice == NULL )
         ippiTransformQuantFwd4x4_H264_16s_C1(pSrcDst,pDst, Qp, pNumLevels, (Ipp8u)Intra, pScanMatrix,pLastCoeff, pScaleLevels);
-    }else{
+    else
         TransformQuantOptFwd4x4_H264_16s_C1(pSrcDst,pDst, Qp, pNumLevels, (Ipp8u)Intra, pScanMatrix,pLastCoeff, pScaleLevels, curr_slice, sCoeff, states);
-    }
 }
 
-inline void ippiInterpolateLuma_H264_8u16s(
+inline void ownInterpolateLuma_H264(
     const Ipp8u*   src,
     Ipp32s   src_pitch,
     Ipp8u*   dst,
@@ -223,13 +187,12 @@ inline void ippiInterpolateLuma_H264_8u16s(
     Ipp32s   xh,
     Ipp32s   yh,
     IppiSize sz,
-    Ipp32s   bit_depth)
+    Ipp32s)
 {
-    H264ENC_UNREFERENCED_PARAMETER(bit_depth);
     ippiInterpolateLuma_H264_8u_C1R(src, src_pitch, dst, dst_pitch, xh, yh, sz);
 }
 
-inline void ippiInterpolateLumaTop_H264_8u16s(
+inline void ownInterpolateLumaTop_H264_8u16s(
     const Ipp8u* src,
     Ipp32s   src_pitch,
     Ipp8u*   dst,
@@ -238,13 +201,12 @@ inline void ippiInterpolateLumaTop_H264_8u16s(
     Ipp32s   yh,
     Ipp32s   outPixels,
     IppiSize sz,
-    Ipp32s   bit_depth)
+    Ipp32s)
 {
-    H264ENC_UNREFERENCED_PARAMETER(bit_depth);
     ippiInterpolateLumaTop_H264_8u_C1R(src, src_pitch, dst, dst_pitch, xh, yh, outPixels, sz);
 }
 
-inline void ippiInterpolateLumaBottom_H264_8u16s(
+inline void ownInterpolateLumaBottom_H264_8u16s(
     const Ipp8u* src,
     Ipp32s   src_pitch,
     Ipp8u*   dst,
@@ -253,13 +215,12 @@ inline void ippiInterpolateLumaBottom_H264_8u16s(
     Ipp32s   yh,
     Ipp32s   outPixels,
     IppiSize sz,
-    Ipp32s   bit_depth)
+    Ipp32s)
 {
-    H264ENC_UNREFERENCED_PARAMETER(bit_depth);
     ippiInterpolateLumaBottom_H264_8u_C1R(src, src_pitch, dst, dst_pitch, xh, yh, outPixels, sz);
 }
 
-inline void ippiInterpolateChroma_H264_8u16s(
+inline void ownInterpolateChroma_H264(
     const Ipp8u* src,
     Ipp32s src_pitch,
     Ipp8u* dst,
@@ -267,13 +228,12 @@ inline void ippiInterpolateChroma_H264_8u16s(
     Ipp32s xh,
     Ipp32s yh,
     IppiSize sz,
-    Ipp32s bit_depth)
+    Ipp32s)
 {
-    H264ENC_UNREFERENCED_PARAMETER(bit_depth);
     ippiInterpolateChroma_H264_8u_C1R(src, src_pitch, dst, dst_pitch, xh, yh, sz);
 }
 
-inline void ippiInterpolateChromaTop_H264_8u16s(
+inline void ownInterpolateChromaTop_H264(
     const Ipp8u* src,
     Ipp32s   src_pitch,
     Ipp8u*   dst,
@@ -282,13 +242,12 @@ inline void ippiInterpolateChromaTop_H264_8u16s(
     Ipp32s   yh,
     Ipp32s   outPixels,
     IppiSize sz,
-    Ipp32s   bit_depth)
+    Ipp32s)
 {
-    H264ENC_UNREFERENCED_PARAMETER(bit_depth);
     ippiInterpolateChromaTop_H264_8u_C1R(src, src_pitch, dst, dst_pitch, xh, yh, outPixels, sz);
 }
 
-inline void ippiInterpolateChromaBottom_H264_8u16s(
+inline void ownInterpolateChromaBottom_H264(
     const Ipp8u* src,
     Ipp32s   src_pitch,
     Ipp8u*   dst,
@@ -297,13 +256,12 @@ inline void ippiInterpolateChromaBottom_H264_8u16s(
     Ipp32s   yh,
     Ipp32s   outPixels,
     IppiSize sz,
-    Ipp32s   bit_depth)
+    Ipp32s)
 {
-    H264ENC_UNREFERENCED_PARAMETER(bit_depth);
     ippiInterpolateChromaBottom_H264_8u_C1R(src, src_pitch, dst, dst_pitch, xh, yh, outPixels, sz);
 }
 
-inline void ippiInterpolateBlock_H264_8u16s(
+inline void ownInterpolateBlock_H264(
     const Ipp8u* pSrc1,
     const Ipp8u* pSrc2,
     Ipp8u* pDst,
@@ -314,7 +272,7 @@ inline void ippiInterpolateBlock_H264_8u16s(
     ippiInterpolateBlock_H264_8u_P2P1R(const_cast<Ipp8u*>(pSrc1), const_cast<Ipp8u*>(pSrc2), pDst, width, height, pitchPixels);
 }
 
-inline void ippiInterpolateBlock_H264_A_8u16s(
+inline void ownInterpolateBlock_H264_A(
     const Ipp8u* pSrc1,
     const Ipp8u* pSrc2,
     Ipp8u* pDst,
@@ -327,7 +285,7 @@ inline void ippiInterpolateBlock_H264_A_8u16s(
     ippiInterpolateBlock_H264_8u_P3P1R(pSrc1, pSrc2, pDst, width, height, pitchPix1, pitchPix2, pitchPix3);
 }
 
-inline void ippiEncodeCoeffsCAVLC_H264_8u16s(
+inline void ownEncodeCoeffsCAVLC_H264(
     Ipp16s* pSrc,
     Ipp8u   AC,
     Ipp32s* pScanMatrix,
@@ -342,7 +300,7 @@ inline void ippiEncodeCoeffsCAVLC_H264_8u16s(
     ippiEncodeCoeffsCAVLC_H264_16s(pSrc, AC, pScanMatrix, Count, Trailing_Ones, Trailing_One_Signs, NumOutCoeffs, TotalZeroes, Levels, Runs);
 }
 
-inline void ippiSumsDiff16x16Blocks4x4_8u16s(
+inline void ownSumsDiff16x16Blocks4x4(
     Ipp8u* pSrc,
     Ipp32s srcStepPixels,
     Ipp8u* pPred,
@@ -353,7 +311,7 @@ inline void ippiSumsDiff16x16Blocks4x4_8u16s(
     ippiSumsDiff16x16Blocks4x4_8u16s_C1(pSrc, srcStepPixels*sizeof(Ipp8u), pPred, predStepPixels*sizeof(Ipp8u), pDC, pDiff);
 }
 
-inline void ippiTransformQuantLumaDC_H264_8u16s(
+inline void ownTransformQuantLumaDC_H264(
     Ipp16s* pDCBuf,
     Ipp16s* pQBuf,
     Ipp32s QP,
@@ -366,7 +324,7 @@ inline void ippiTransformQuantLumaDC_H264_8u16s(
     ippiTransformQuantFwdLumaDC4x4_H264_16s_C1I(pDCBuf,pQBuf,QP,iNumCoeffs,intra, scan,iLastCoeff, pLevelScale);
 }
 
-inline void ippiEdgesDetect16x16_8u16s(
+inline void ownEdgesDetect16x16(
     const Ipp8u *pSrc,
     Ipp32s srcStepPixels,
     Ipp32s EdgePelDifference,
@@ -378,8 +336,8 @@ inline void ippiEdgesDetect16x16_8u16s(
     *pRes = uRes;
 }
 
-#if defined (BITDEPTH_9_12)
-inline void ippiTransformDequantLumaDC_H264_16u32s(
+#ifdef BITDEPTH_9_12
+inline void ownTransformDequantLumaDC_H264(
     Ipp32s* pSrcDst,
     Ipp32s QP,
     const Ipp16s* pScaleLevels/* = NULL*/)
@@ -387,7 +345,7 @@ inline void ippiTransformDequantLumaDC_H264_16u32s(
     ippiTransformQuantInvLumaDC4x4_H264_32s_C1I(pSrcDst, QP, pScaleLevels);
 }
 
-inline void ippiTransformDequantChromaDC_H264_16u32s(
+inline void ownTransformDequantChromaDC_H264(
     Ipp32s* pSrcDst,
     Ipp32s QP,
     const Ipp16s *pLevelScale/* = NULL*/)
@@ -395,7 +353,7 @@ inline void ippiTransformDequantChromaDC_H264_16u32s(
     ippiTransformQuantInvChromaDC2x2_H264_32s_C1I (pSrcDst, QP, pLevelScale);
 }
 
-inline void ippiDequantTransformResidualAndAdd_H264_16u32s(
+inline void ownDequantTransformResidualAndAdd_H264(
     const Ipp16u* pPred,
     Ipp32s* pSrcDst,
     const Ipp32s* pDC,
@@ -410,14 +368,14 @@ inline void ippiDequantTransformResidualAndAdd_H264_16u32s(
     ippiTransformQuantInvAddPred4x4_H264_32s_C1IR (pPred, PredStep*sizeof(Ipp16s), pSrcDst, pDC, pDst, DstStep*sizeof(Ipp16u), QP, AC, bit_depth, pScaleLevels);
 }
 
-inline void ippiTransformLuma8x8Fwd_H264_16u32s(
+inline void ownTransformLuma8x8Fwd_H264(
     const Ipp16s* pDiffBuf,
     Ipp32s* pTransformResult)
 {
     ippiTransformFwdLuma8x8_H264_16s32s_C1(pDiffBuf, pTransformResult);
 }
 
-inline void ippiQuantLuma8x8_H264_16u32s(
+inline void ownQuantLuma8x8_H264(
     const Ipp32s* pSrc,
     Ipp32s* pDst,
     Ipp32s  Qp6,
@@ -426,17 +384,14 @@ inline void ippiQuantLuma8x8_H264_16u32s(
     const Ipp16s* pScaleLevels,
     Ipp32s* pNumLevels,
     Ipp32s* pLastCoeff,
-    const H264Slice_16u32s * curr_slice/* = NULL*/,
-    CabacStates* cbSt/* = NULL*/,
-    const Ipp16s* pInvLevelScale/* = NULL*/)
+    const H264Slice<Ipp32s, Ipp16u>*,
+    CabacStates*,
+    const Ipp16s*)
 {
-    curr_slice;
-    cbSt;
-    pInvLevelScale;
     ippiQuantLuma8x8_H264_32s_C1(pSrc, pDst,Qp6,intra,pScanMatrix,pScaleLevels,pNumLevels,pLastCoeff);
 }
 
-inline void ippiQuantLuma8x8Inv_H264_16u32s(
+inline void ownQuantLuma8x8Inv_H264(
     Ipp32s* pSrcDst,
     Ipp32s Qp6,
     const Ipp16s* pInvLevelScale)
@@ -444,7 +399,7 @@ inline void ippiQuantLuma8x8Inv_H264_16u32s(
     ippiQuantInvLuma8x8_H264_32s_C1I(pSrcDst, Qp6, pInvLevelScale);
 }
 
-inline void ippiTransformLuma8x8InvAddPred_H264_16u32s(
+inline void ownTransformLuma8x8InvAddPred_H264(
     const Ipp16u* pPred,
     Ipp32s PredStepPixels,
     Ipp32s* pSrcDst,
@@ -456,7 +411,7 @@ inline void ippiTransformLuma8x8InvAddPred_H264_16u32s(
     ippiTransformInvAddPredLuma8x8_H264_32s16u_C1R(pPred, PredStepPixels*sizeof(Ipp16u), pSrcDst, pDst, DstStepPixels*sizeof(Ipp16u), bit_depth);
 }
 
-inline void ippiEncodeChromaDcCoeffsCAVLC_H264_16u32s(
+inline void ownEncodeChromaDcCoeffsCAVLC_H264(
     const Ipp32s* pSrc,
     Ipp8u*  pTrailingOnes,
     Ipp8u*  pTrailingOneSigns,
@@ -468,7 +423,7 @@ inline void ippiEncodeChromaDcCoeffsCAVLC_H264_16u32s(
     ippiEncodeCoeffsCAVLCChromaDC2x2_H264_32s(pSrc,pTrailingOnes, pTrailingOneSigns, pNumOutCoeffs, pTotalZeroes, pLevels, pRuns);
 }
 
-inline void ippiEncodeChroma422DC_CoeffsCAVLC_H264_16u32s(
+inline void ownEncodeChroma422DC_CoeffsCAVLC_H264(
     const Ipp32s *pSrc,
     Ipp8u *Trailing_Ones,
     Ipp8u *Trailing_One_Signs,
@@ -477,10 +432,10 @@ inline void ippiEncodeChroma422DC_CoeffsCAVLC_H264_16u32s(
     Ipp32s *Levels,
     Ipp8u *Runs)
 {
-    ippiEncodeCoeffsCAVLCChromaDC2x4_H264_32s (pSrc, Trailing_Ones, Trailing_One_Signs, NumOutCoeffs, TotalZeros, Levels, Runs);
+    ippiEncodeCoeffsCAVLCChromaDC2x4_H264_32s(pSrc, Trailing_Ones, Trailing_One_Signs, NumOutCoeffs, TotalZeros, Levels, Runs);
 }
 
-inline void ippiTransformQuantChromaDC_H264_16u32s(
+inline void ownTransformQuantChromaDC_H264(
     Ipp32s* pSrcDst,
     Ipp32s* pTBlock,
     Ipp32s  QPChroma,
@@ -501,12 +456,12 @@ IppStatus TransformQuantOptFwd4x4_H264_16s32s_C1(
     const Ipp16s* pScanMatrix,
     Ipp32s* pLastCoeff,
     const Ipp16s* pLevelScales,
-    const H264Slice_16u32s* curr_slice,
+    const H264Slice<Ipp32s, Ipp16u>* curr_slice,
     Ipp32s sCoeff,
     CabacStates* states);
 
 
-inline void ippiTransformQuantResidual_H264_16u32s(
+inline void ownTransformQuantResidual_H264(
     Ipp16s* pSrc,
     Ipp32s* pDst,
     Ipp32s  Qp,
@@ -515,17 +470,14 @@ inline void ippiTransformQuantResidual_H264_16u32s(
     const Ipp16s* pScanMatrix,
     Ipp32s* pLastCoeff,
     const Ipp16s* pLevelScales/* = NULL*/,
-    const H264Slice_16u32s* curr_slice/* = NULL*/,
-    Ipp32s sCoeff/* = 0*/,
-    CabacStates* states/* = NULL*/)
+    const H264Slice<Ipp32s, Ipp16u>*,
+    Ipp32s,
+    CabacStates*)
 {
-    curr_slice;
-    sCoeff;
-    states;
     ippiTransformQuantFwd4x4_H264_16s32s_C1(pSrc, pDst, Qp, pNumLevels, intra, pScanMatrix,pLastCoeff, pLevelScales);
 }
 
-inline void ippiInterpolateBlock_H264_16u32s(
+inline void ownInterpolateBlock_H264(
     const Ipp16u* pSrc1,
     const Ipp16u* pSrc2,
     Ipp16u* pDst,
@@ -543,7 +495,7 @@ inline void ippiInterpolateBlock_H264_16u32s(
     ippiBidir_H264_16u_P2P1R( &info );
 }
 
-inline void ippiInterpolateBlock_H264_A_16u32s(
+inline void ownInterpolateBlock_H264_A(
     const Ipp16u* pSrc1,
     const Ipp16u* pSrc2,
     Ipp16u* pDst,
@@ -565,7 +517,7 @@ inline void ippiInterpolateBlock_H264_A_16u32s(
     ippiBidir_H264_16u_P2P1R( &info );
 }
 
-inline void ippiEncodeCoeffsCAVLC_H264_16u32s(
+inline void ownEncodeCoeffsCAVLC_H264(
     const Ipp32s* pSrc,
     Ipp8u AC,
     const Ipp32s* pScanMatrix,
@@ -580,7 +532,7 @@ inline void ippiEncodeCoeffsCAVLC_H264_16u32s(
     ippiEncodeCoeffsCAVLC_H264_32s(pSrc, AC, pScanMatrix, Count, Trailing_Ones, Trailing_One_Signs, NumOutCoeffs, TotalZeroes, Levels, Runs);
 }
 
-inline void ippiSumsDiff16x16Blocks4x4_16u32s(
+inline void ownSumsDiff16x16Blocks4x4(
     const Ipp16u* pSrc,
     Ipp32s srcStepPixels,
     const Ipp16u* pPred,
@@ -591,7 +543,7 @@ inline void ippiSumsDiff16x16Blocks4x4_16u32s(
     ippiSumsDiff16x16Blocks4x4_16u32s_C1R(pSrc, srcStepPixels*sizeof(Ipp16s), pPred, predStepPixels*sizeof(Ipp16s), pDC, pDiff);
 }
 
-inline void ippiTransformQuantLumaDC_H264_16u32s(
+inline void ownTransformQuantLumaDC_H264(
     Ipp32s* pDCBuf,
     Ipp32s* pQBuf,
     Ipp32s QP,
@@ -604,7 +556,7 @@ inline void ippiTransformQuantLumaDC_H264_16u32s(
     ippiTransformQuantFwdLumaDC4x4_H264_32s_C1I (pDCBuf,pQBuf,QP,iNumCoeffs,intra, scan,iLastCoeff, pLevelScale);
 }
 
-inline void ippiInterpolateLuma_H264_16u32s(
+inline void ownInterpolateLuma_H264(
     const Ipp16u* src,
     Ipp32s   src_pitch,
     Ipp16u*  dst,
@@ -628,7 +580,7 @@ inline void ippiInterpolateLuma_H264_16u32s(
     ippiInterpolateLuma_H264_16u_C1R(&info);
 }
 
-inline void ippiInterpolateLumaTop_H264_16u32s(
+inline void ownInterpolateLumaTop_H264(
     const Ipp16u* src,
     Ipp32s    src_pitch,
     Ipp16u*   dst,
@@ -652,7 +604,7 @@ inline void ippiInterpolateLumaTop_H264_16u32s(
     ippiInterpolateLumaTop_H264_16u_C1R( &info, outPixels );
 }
 
-inline void ippiInterpolateLumaBottom_H264_16u32s(
+inline void ownInterpolateLumaBottom_H264(
     const Ipp16u* src,
     Ipp32s src_pitch,
     Ipp16u* dst,
@@ -677,7 +629,7 @@ inline void ippiInterpolateLumaBottom_H264_16u32s(
     ippiInterpolateLumaBottom_H264_16u_C1R( &info, outPixels );
 }
 
-inline void ippiTransformDequantChromaDC422_H264_16u32s(
+inline void ownTransformDequantChromaDC422_H264(
     Ipp32s *pSrcDst,
     Ipp32s QPChroma,
     Ipp16s* pScaleLevels/* = NULL*/)
@@ -685,7 +637,7 @@ inline void ippiTransformDequantChromaDC422_H264_16u32s(
     ippiTransformQuantInvChromaDC2x4_H264_32s_C1I(pSrcDst, QPChroma, pScaleLevels);
 }
 
-inline void ippiTransformQuantChroma422DC_H264_16u32s(
+inline void ownTransformQuantChroma422DC_H264(
     Ipp32s *pDCBuf,
     Ipp32s *pTBuf,
     Ipp32s QPChroma,
@@ -697,7 +649,7 @@ inline void ippiTransformQuantChroma422DC_H264_16u32s(
     ippiTransformQuantFwdChromaDC2x4_H264_32s_C1I(pDCBuf, pTBuf, QPChroma, NumCoeffs, Intra, NeedTransform, pScaleLevels);
 }
 
-inline void ippiSumsDiff8x8Blocks4x4_16u32s(
+inline void ownSumsDiff8x8Blocks4x4(
     const Ipp16u* pSrc,
     Ipp32s  srcStepPixels,
     const Ipp16u* pPred,
@@ -708,7 +660,7 @@ inline void ippiSumsDiff8x8Blocks4x4_16u32s(
     ippiSumsDiff8x8Blocks4x4_16u32s_C1R(pSrc, srcStepPixels*sizeof(Ipp16u), pPred, predStepPixels*sizeof(Ipp16u), pDC, pDiff);
 }
 
-inline void ippiInterpolateChromaBottom_H264_16u32s(
+inline void ownInterpolateChromaBottom_H264(
     const Ipp16u* src,
     Ipp32s src_pitch,
     Ipp16u* dst,
@@ -733,7 +685,7 @@ inline void ippiInterpolateChromaBottom_H264_16u32s(
     ippiInterpolateChromaBottom_H264_16u_C1R( &info, outPixels );
 }
 
-inline void ippiInterpolateChromaTop_H264_16u32s(
+inline void ownInterpolateChromaTop_H264(
     const Ipp16u* src,
     Ipp32s src_pitch,
     Ipp16u* dst,
@@ -758,7 +710,7 @@ inline void ippiInterpolateChromaTop_H264_16u32s(
     ippiInterpolateChromaTop_H264_16u_C1R( &info, outPixels );
 }
 
-inline void ippiEdgesDetect16x16_16u32s(
+inline void ownEdgesDetect16x16(
     const Ipp16u* pSrc,
     Ipp32s srcStepPixels,
     Ipp32s EdgePelDifference,
@@ -768,7 +720,7 @@ inline void ippiEdgesDetect16x16_16u32s(
     ippiEdgesDetect16x16_16u_C1R(pSrc, srcStepPixels * sizeof(Ipp16u), EdgePelDifference, EdgePelCount, pRes);
 }
 
-inline void ippiInterpolateChroma_H264_16u32s(
+inline void ownInterpolateChroma_H264(
     const Ipp16u* src,
     Ipp32s src_pitch,
     Ipp16u* dst,
@@ -793,8 +745,4 @@ inline void ippiInterpolateChroma_H264_16u32s(
 }
 
 #endif // BITDEPTH_9_12
-
 #endif // UMC_H264_TO_IPP_H
-
-#endif //UMC_ENABLE_H264_VIDEO_ENCODER
-

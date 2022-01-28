@@ -3,7 +3,7 @@
 //  This software is supplied under the terms of a license  agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in  accordance  with the terms of that agreement.
-//       Copyright (c) 2006 Intel Corporation. All Rights Reserved.
+//       Copyright (c) 2011-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
@@ -13,6 +13,7 @@
 #include "ippdefs.h"
 #include "umc_structures.h"
 #include "umc_dynamic_cast.h"
+#include "umc_mutex.h"
 
 #define MID_INVALID 0
 
@@ -29,30 +30,30 @@ enum UMC_ALLOC_FLAGS
 
 class MemoryAllocatorParams
 {
-     DYNAMIC_CAST_DECL_BASE(MemoryAllocatorParams)
-
 public:
-    MemoryAllocatorParams(){}
-    virtual ~MemoryAllocatorParams(){}
+    DYNAMIC_CAST_DECL_BASE(MemoryAllocatorParams)
+
+    MemoryAllocatorParams(void) {}
+    virtual ~MemoryAllocatorParams(void) {}
 };
 
 class MemoryAllocator
 {
+public:
     DYNAMIC_CAST_DECL_BASE(MemoryAllocator)
 
-public:
-    MemoryAllocator(void){}
-    virtual ~MemoryAllocator(void){}
+    MemoryAllocator(void) {}
+    virtual ~MemoryAllocator(void) {}
 
     // Initiates object
-    virtual Status Init(MemoryAllocatorParams *pParams) = 0;
+    virtual Status Init(MemoryAllocatorParams* pParams) = 0;
 
     // Closes object and releases all allocated memory
-    virtual Status Close() = 0;
+    virtual Status Close(void) = 0;
 
     // Allocates or reserves physical memory and returns unique ID
     // Sets lock counter to 0
-    virtual Status Alloc(MemID *pNewMemID, size_t Size, Ipp32u Flags, Ipp32u Align = 16) = 0;
+    virtual Status Alloc(MemID* pNewMemID, size_t Size, Ipp32u Flags, Ipp32u Align = 16) = 0;
 
     // Lock() provides pointer from ID. If data is not in memory (swapped)
     // prepares (restores) it. Increases lock counter
@@ -61,11 +62,14 @@ public:
     // Unlock() decreases lock counter
     virtual Status Unlock(MemID MID) = 0;
 
-    // Notifies that the data won’t be used anymore. Memory can be freed.
+    // Notifies that the data won't be used anymore. Memory can be freed.
     virtual Status Free(MemID MID) = 0;
 
     // Immediately deallocates memory regardless of whether it is in use (locked) or no
     virtual Status DeallocateMem(MemID MID) = 0;
+
+protected:
+    Mutex m_guard;
 };
 
 } //namespace UMC

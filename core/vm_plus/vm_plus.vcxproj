@@ -34,6 +34,30 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\umc_event.cpp" />
+    <ClCompile Include="src\umc_malloc.cpp" />
+    <ClCompile Include="src\umc_mmap.cpp" />
+    <ClCompile Include="src\umc_pendulum.cpp" />
+    <ClCompile Include="src\umc_semaphore.cpp" />
+    <ClCompile Include="src\umc_string.cpp" />
+    <ClCompile Include="src\umc_sys_info.cpp" />
+    <ClCompile Include="src\umc_thread.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\umc_automatic_mutex.h" />
+    <ClInclude Include="include\umc_dynamic_cast.h" />
+    <ClInclude Include="include\umc_event.h" />
+    <ClInclude Include="include\umc_list.h" />
+    <ClInclude Include="include\umc_malloc.h" />
+    <ClInclude Include="include\umc_mmap.h" />
+    <ClInclude Include="include\umc_mutex.h" />
+    <ClInclude Include="include\umc_pendulum.h" />
+    <ClInclude Include="include\umc_semaphore.h" />
+    <ClInclude Include="include\umc_string.h" />
+    <ClInclude Include="include\umc_sys_info.h" />
+    <ClInclude Include="include\umc_thread.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <ProjectGuid>{04854E7F-2A17-4B40-A14F-4E1D9B1D4785}</ProjectGuid>
@@ -263,27 +287,6 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="src\umc_event.cpp" />
-    <ClCompile Include="src\umc_malloc.cpp" />
-    <ClCompile Include="src\umc_mmap.cpp" />
-    <ClCompile Include="src\umc_mutex.cpp" />
-    <ClCompile Include="src\umc_pendulum.cpp" />
-    <ClCompile Include="src\umc_semaphore.cpp" />
-    <ClCompile Include="src\umc_sys_info.cpp" />
-    <ClCompile Include="src\umc_thread.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="include\umc_automatic_mutex.h" />
-    <ClInclude Include="include\umc_event.h" />
-    <ClInclude Include="include\umc_malloc.h" />
-    <ClInclude Include="include\umc_mmap.h" />
-    <ClInclude Include="include\umc_mutex.h" />
-    <ClInclude Include="include\umc_pendulum.h" />
-    <ClInclude Include="include\umc_semaphore.h" />
-    <ClInclude Include="include\umc_sys_info.h" />
-    <ClInclude Include="include\umc_thread.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

@@ -4,7 +4,7 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//       Copyright(c) 2003-2007 Intel Corporation. All Rights Reserved.
+//       Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
@@ -14,9 +14,8 @@
 #include "vm_types.h"
 
 #ifdef __cplusplus
-extern "C"
-{
-#endif /* __cplusplus */
+extern "C" {
+#endif
 
 typedef Ipp64s vm_tick;
 typedef Ipp32s vm_time_handle;
@@ -56,6 +55,6 @@ int vm_time_timercmp(struct vm_timeval* src1, struct vm_timeval* src2, struct vm
 
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
+#endif
 
-#endif /* __VM_TIME_H__ */
+#endif

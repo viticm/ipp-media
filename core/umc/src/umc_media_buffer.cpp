@@ -4,42 +4,31 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//          Copyright(c) 2003-2007 Intel Corporation. All Rights Reserved.
+//          Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
 #include "umc_media_buffer.h"
 #include "umc_default_memory_allocator.h"
 
-namespace UMC
-{
+using namespace UMC;
 
-MediaBufferParams::MediaBufferParams(void)
-{
-    m_prefInputBufferSize = 0;
-    m_numberOfFrames = 0;
-    m_prefOutputBufferSize = 0;
-
-    m_pMemoryAllocator = 0;
-
-} // MediaBufferParams::MediaBufferParams(void)
 
 MediaBuffer::MediaBuffer(void)
 {
     m_pMemoryAllocator = 0;
     m_pAllocated = 0;
 
-} // MediaBuffer::MediaBuffer(void)
+}
 
 MediaBuffer::~MediaBuffer(void)
 {
     Close();
-
-} // MediaBuffer::~MediaBuffer(void)
+}
 
 Status MediaBuffer::Init(MediaReceiverParams *pInit)
 {
-    MediaBufferParams *pParams = DynamicCast<MediaBufferParams> (pInit);
+    MediaBufferParams *pParams = DynamicCast<MediaBufferParams, MediaReceiverParams>(pInit);
 
     // check error(s)
     if (NULL == pParams)
@@ -64,8 +53,7 @@ Status MediaBuffer::Init(MediaReceiverParams *pInit)
     }
 
     return UMC_OK;
-
-} // Status MediaBuffer::Init(MediaReceiverParams *pInit)
+}
 
 Status MediaBuffer::Close(void)
 {
@@ -76,7 +64,4 @@ Status MediaBuffer::Close(void)
     m_pAllocated = NULL;
 
     return UMC_OK;
-
-} // Status MediaBuffer::Close(void)
-
-} // namespace UMC
+}

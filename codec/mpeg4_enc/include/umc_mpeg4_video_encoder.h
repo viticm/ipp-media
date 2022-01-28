@@ -4,18 +4,17 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//          Copyright(c) 2003-2007 Intel Corporation. All Rights Reserved.
+//          Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
-
-#include "umc_defs.h"
-
-#if defined (UMC_ENABLE_MPEG4_VIDEO_ENCODER)
 
 #ifndef __UMC_MPEG4_VIDEO_ENCODER_H__
 #define __UMC_MPEG4_VIDEO_ENCODER_H__
 
-#include "mp4_enc.hpp"
+#include "umc_defs.h"
+//#pragma message (UMC_DEPRECATED_MESSAGE("MPEG-4 encoder"))
+
+#include "mp4_enc.h"
 #include "umc_video_encoder.h"
 #include "umc_dynamic_cast.h"
 #include "vm_strings.h"
@@ -27,23 +26,24 @@ namespace UMC
 
 class MPEG4EncoderParams : public VideoEncoderParams
 {
-    DYNAMIC_CAST_DECL(MPEG4EncoderParams, VideoEncoderParams)
 public:
+    DYNAMIC_CAST_DECL(MPEG4EncoderParams, VideoEncoderParams)
+
     MPEG4_ENC::mp4_Param  m_Param;
 
     MPEG4EncoderParams();
 
-    virtual Status ReadParamFile(const vm_char *FileName);
+    virtual Status ReadParams(ParserCfg *par);
 };
 
 class MPEG4VideoEncoder: public VideoEncoder
 {
 public:
-    MPEG4_ENC::ippVideoEncoderMPEG4 *mp4enc;
-    bool        m_IsInit;
-    Ipp32s      m_FrameCount;
+    DYNAMIC_CAST_DECL(MPEG4VideoEncoder, VideoEncoder)
+
     MPEG4VideoEncoder();
     ~MPEG4VideoEncoder();
+
     virtual Status Init(BaseCodecParams *init);
     virtual Status GetFrame(MediaData *in, MediaData *out);
     virtual Status GetInfo(BaseCodecParams *info);
@@ -55,6 +55,11 @@ public:
     Ipp8u* GetFrameQuant() { return mp4enc->GetFrameQuant(); };
     IppMotionVector* GetFrameMVpred() { return mp4enc->GetFrameMVpred(); };
     Ipp32u* GetFrameMBpos() { return mp4enc->GetFrameMBpos(); };
+
+    MPEG4_ENC::VideoEncoderMPEG4 *mp4enc;
+    bool        m_IsInit;
+    Ipp32s      m_FrameCount;
+
 protected:
     MPEG4EncoderParams  m_Param;
     Ipp64f             *bTime, gTime, iTime;
@@ -72,5 +77,3 @@ protected:
 } //namespace UMC
 
 #endif /* __UMC_MPEG4_VIDEO_ENCODER_H__ */
-
-#endif //defined (UMC_ENABLE_MPEG4_VIDEO_ENCODER)

@@ -4,7 +4,7 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//       Copyright(c) 2003-2006 Intel Corporation. All Rights Reserved.
+//       Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
@@ -35,10 +35,10 @@ protected:
         T m_data;
 
         // The pointer to next element of the list
-        ListElement *pNext;
+        ListElement* pNext;
 
         // The pointer to previous element of the list
-        ListElement *pPrev;
+        ListElement* pPrev;
     };
 
 public:
@@ -56,7 +56,7 @@ public:
     //Destructor
     virtual ~LinkedList()
     {
-        ListElement *tmp;
+        ListElement* tmp;
 
         while (m_pFirst)
         {
@@ -111,7 +111,7 @@ public:
     // returns UMC_OK if succeeds (updates m_pLastReturned)
     // returns UMC_ERR_FAILED if there is no last returned element
     // returns UMC_ERR_NOT_ENOUGH_DATA if there is no next element
-    virtual Status Next(T &data)
+    virtual Status Next(T& data)
     {
         if (NULL == m_pLastReturned)
             return UMC_ERR_FAILED;
@@ -157,11 +157,12 @@ public:
     // Function to add element to the end of the list
     // returns UMC_OK if succeeds
     // returns UMC_ERR_ALLOC if failed to allocate new element
-    virtual Status Add(T &data)
+    virtual Status Add(T& data)
     {
-        ListElement *pNew;
+        ListElement* pNew;
         if (m_pHeap)
-        { // Reuse allocated element
+        {
+            // Reuse allocated element
             pNew = m_pHeap;
             m_pHeap = m_pHeap->pNext;
             if (m_pHeap)
@@ -169,7 +170,8 @@ public:
             pNew->pNext = NULL;
         }
         else
-        { // There is no allocated elements, create new
+        {
+            // There is no allocated elements, create new
             pNew = new ListElement;
             if (!pNew)
                 return UMC_ERR_ALLOC;
@@ -193,29 +195,31 @@ public:
     // returns UMC_OK if succeeds
     // returns UMC_ERR_FAILED if specified position is wrong
     // returns UMC_ERR_ALLOC if failed to allocate new element
-    virtual Status Add(T &data, Ipp32s index)
+    virtual Status Add(T& data, Ipp32s index)
     {
         if (index < 0 || index > m_iSize)
             return UMC_ERR_FAILED;
 
         if (index < m_iSize)
         {
-            ListElement *pNew;
+            ListElement* pNew;
             if (m_pHeap)
-            { // Reuse allocated element
+            {
+                // Reuse allocated element
                 pNew = m_pHeap;
                 m_pHeap = m_pHeap->pNext;
                 if (m_pHeap)
                     m_pHeap->pPrev = NULL;
             }
             else
-            { // There is no allocated elements, create new
+            {
+                // There is no allocated elements, create new
                 pNew = new ListElement;
                 if (!pNew)
                     return UMC_ERR_ALLOC;
             }
 
-            ListElement *pAfterNew = GetElement(index);
+            ListElement* pAfterNew = GetElement(index);
             pNew->m_data = data;
             pNew->pNext = pAfterNew;
             pNew->pPrev = pAfterNew->pPrev;
@@ -239,7 +243,7 @@ public:
         if (0 == m_iSize)
             return UMC_ERR_FAILED;
 
-        ListElement *pToRemove = m_pLast;
+        ListElement* pToRemove = m_pLast;
         m_pLast = m_pLast->pPrev;
         if (m_pLast)
             m_pLast->pNext = NULL;
@@ -268,7 +272,7 @@ public:
         if (index < 0 || index >= m_iSize)
             return UMC_ERR_FAILED;
 
-        ListElement *pToRemove = GetElement(index);
+        ListElement* pToRemove = GetElement(index);
 
         if (index > 0) // except for the first element
             pToRemove->pPrev->pNext = pToRemove->pNext;
@@ -297,12 +301,12 @@ public:
     // Function to modify element at the specified position in the list
     // returns UMC_OK if succeeds
     // returns UMC_ERR_FAILED if specified position is wrong
-    virtual Status Modify(T &data, Ipp32s index)
+    virtual Status Modify(T& data, Ipp32s index)
     {
         if (index < 0 || index >= m_iSize)
             return UMC_ERR_FAILED;
 
-        ListElement *pToModify = GetElement(index);
+        ListElement* pToModify = GetElement(index);
         pToModify->m_data = data;
         return UMC_OK;
     }
@@ -311,9 +315,9 @@ protected:
 
     // Returns element at a specified position
     // Param 'index' is not checked
-    ListElement *GetElement(Ipp32s index)
+    ListElement* GetElement(Ipp32s index)
     {
-        ListElement *pElem;
+        ListElement* pElem;
         if (index < m_iSize / 2)
         { // find from the begin
             pElem = m_pFirst;
@@ -330,16 +334,16 @@ protected:
     }
 
     // The pointer to the first element of the list
-    ListElement *m_pFirst;
+    ListElement* m_pFirst;
 
     // The pointer to the last element of the list
-    ListElement *m_pLast;
+    ListElement* m_pLast;
 
     // The pointer to the last returned element
-    ListElement *m_pLastReturned;
+    ListElement* m_pLastReturned;
 
     // The pointer to the once allocated elements but currently unused
-    ListElement *m_pHeap;
+    ListElement* m_pHeap;
 
     // The number of elements in the list
     Ipp32s m_iSize;

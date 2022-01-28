@@ -4,25 +4,24 @@
 //  This software is supplied under the terms of a license agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in accordance with the terms of that agreement.
-//        Copyright (c) 2003-2008 Intel Corporation. All Rights Reserved.
+//        Copyright (c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
-//  Description:    class ippVideoEncoderMPEG4
+//  Description:    class VideoEncoderMPEG4
 //
 */
 
-#include "umc_defs.h"
-
-#if defined (UMC_ENABLE_MPEG4_VIDEO_ENCODER)
+#include "umc_config.h"
+#ifdef UMC_ENABLE_MPEG4_VIDEO_ENCODER
 
 #include <math.h>
-#include "mp4_enc.hpp"
+#include "mp4_enc.h"
 
 namespace MPEG4_ENC
 {
 
 
 mp4_Param::mp4_Param() {
-    ippsZero_8u((Ipp8u*)(this), sizeof(mp4_Param));
+    ippsSet_8u(0, (Ipp8u*)(this), sizeof(mp4_Param));
     quantIVOP = 4;
     quantPVOP = 4;
     quantBVOP = 6;
@@ -37,56 +36,62 @@ mp4_Param::mp4_Param() {
     MEaccuracy = 2;
     obmc_disable = 1;
     RoundingControl = 1;
+    RateControl = 1;
     SceneChangeThreshold = 45;
     bsBuffer = (Ipp8u*)1;
     bsBuffSize = 1; // encoder will not allocate buffer
-    //padType = 0; // set 1 for QuickTime(tm) and 2 for DivX (tm) v. >= 5
+    padType = 0; // set 1 for QuickTime(tm) and 2 for DivX (tm) v. >= 5
     TimeResolution = 30;
     TimeIncrement = 1;
     //numThreads = 0;
     profile_and_level = 1;
     aspect_ratio_width = 1;
     aspect_ratio_height = 1;
+    load_intra_quant_mat = 0;
+    load_intra_quant_mat_len = 0;
+    load_nonintra_quant_mat = 0;
+    load_nonintra_quant_mat_len = 0;
+
 }
 
-void ippVideoEncoderMPEG4::Close()
+void VideoEncoderMPEG4::Close()
 {
     if (mIsInit) {
         // free
         if (MBinfo)
             delete [] MBinfo;
         if (mbsAlloc && cBS.mBuffer)
-            ippsFree(cBS.mBuffer);
+            ippFree(cBS.mBuffer);
         if (mBuffer_1)
-            ippsFree(mBuffer_1);
+            ippFree(mBuffer_1);
         if (mBuffer_2)
-            ippsFree(mBuffer_2);
+            ippFree(mBuffer_2);
 #ifdef USE_ME_SADBUFF
         if (mMEfastSAD)
-            ippsFree(mMEfastSAD);
+            ippFree(mMEfastSAD);
 #endif
         if (mQuantInvIntraSpec)
-            ippsFree(mQuantInvIntraSpec);
+            ippFree(mQuantInvIntraSpec);
         if (mQuantInvInterSpec)
-            ippsFree(mQuantInvInterSpec);
+            ippFree(mQuantInvInterSpec);
         if (mQuantIntraSpec)
-            ippsFree(mQuantIntraSpec);
+            ippFree(mQuantIntraSpec);
         if (mQuantInterSpec)
-            ippsFree(mQuantInterSpec);
+            ippFree(mQuantInterSpec);
         if (mWarpSpec)
-            ippsFree(mWarpSpec);
+            ippFree(mWarpSpec);
         if (mGMCPredY)
-            ippsFree(mGMCPredY);
+            ippFree(mGMCPredY);
         if (mMBpos)
-            ippsFree(mMBpos);
+            ippFree(mMBpos);
         if (mMBquant)
-            ippsFree(mMBquant);
+            ippFree(mMBquant);
         if (mMBpredMV)
-            ippsFree(mMBpredMV);
+            ippFree(mMBpredMV);
         if (mFrame) {
             //for (Ipp32s i = 0; i < mPlanes; i ++) {
             //    if (mFrame[i].ap)
-            //        ippsFree(mFrame[i].ap);
+            //        ippFree(mFrame[i].ap);
             //}
             delete [] mFrame;
         }
@@ -143,135 +148,81 @@ void ippVideoEncoderMPEG4::Close()
     mIsInit = false;
 }
 
-Ipp32s ippVideoEncoderMPEG4::Init(mp4_Param *par)
+Ipp32s VideoEncoderMPEG4::Init(mp4_Param *par)
 {
     Ipp32s  i, j, specSize, intBuffSize;
-    IppStatus stsAlloc = ippStsNoErr, stsPyr;
+    IppStatus stsAlloc = ippStsNoErr;
 
     // check parameters correctness
-    if (par->Width < 1 || par->Width > 8191) {
-        ErrorMessage(VM_STRING("Width must be between 1 and 8191"));
+    if (par->Width < 1 || par->Width > 8191)
         return MP4_STS_ERR_PARAM;
-    }
-    if (par->Width & 1) {
-        ErrorMessage(VM_STRING("Width must be a even"));
+    if (par->Width & 1)
         return MP4_STS_ERR_PARAM;
-    }
-    if (par->Height < 1 || par->Height > 8191) {
-        ErrorMessage(VM_STRING("Height must be between 1 and 8191"));
+    if (par->Height < 1 || par->Height > 8191)
         return MP4_STS_ERR_PARAM;
-    }
-    if (par->Height & 1) {
-        ErrorMessage(VM_STRING("Height must be a even"));
+    if (par->Height & 1)
         return MP4_STS_ERR_PARAM;
-    }
     if (par->RateControl == 0) {
-        if (par->quantIVOP < 1 || par->quantIVOP > 31) {
-            ErrorMessage(VM_STRING("quantIVOP must be between 1 and 31"));
+        if (par->quantIVOP < 1 || par->quantIVOP > 31)
             return MP4_STS_ERR_PARAM;
-        }
-        if (par->quantPVOP < 1 || par->quantPVOP > 31) {
-            ErrorMessage(VM_STRING("quantPVOP must be between 1 and 31"));
+        if (par->quantPVOP < 1 || par->quantPVOP > 31)
             return MP4_STS_ERR_PARAM;
-        }
-        if (par->quantBVOP < 1 || par->quantBVOP > 31) {
-            ErrorMessage(VM_STRING("quantBVOP must be between 1 and 31"));
+        if (par->quantBVOP < 1 || par->quantBVOP > 31)
             return MP4_STS_ERR_PARAM;
-        }
     }
-    if (par->IVOPdist < 1) {
-        ErrorMessage(VM_STRING("IVOPdist must be positive"));
+    if (par->IVOPdist < 1)
         return MP4_STS_ERR_PARAM;
-    }
-    if (par->padType < 0 || par->padType > 2) {
-        ErrorMessage(VM_STRING("padType must be between 0 and 2"));
+    if (par->padType < 0 || par->padType > 2)
         return MP4_STS_ERR_PARAM;
-    }
-    if (par->RateControl != 0 && par->BitRate <= 0) {
-        ErrorMessage(VM_STRING("BitRate must be positive"));
+    if (par->RateControl != 0 && par->BitRate <= 0)
         return MP4_STS_ERR_PARAM;
-    }
-    if (par->SceneChangeThreshold < 0) {
-        ErrorMessage(VM_STRING("SceneChangeThreshold must be >= 0"));
+    if (par->SceneChangeThreshold < 0)
         return MP4_STS_ERR_PARAM;
-    }
     if (par->short_video_header) {
-        if (par->TimeResolution != 30000) {
-            ErrorMessage(VM_STRING("TimeResolution must be equal 30000 for short_video_header"));
+        if (par->TimeResolution != 30000)
             return MP4_STS_ERR_PARAM;
-        }
-        if ((par->TimeIncrement % 1001) || par->TimeIncrement < 1001 || par->TimeIncrement > 256 * 1001) {
-            ErrorMessage(VM_STRING("TimeIncrement must be one from i*1001 (i=1,256) for short_video_header"));
+        if ((par->TimeIncrement % 1001) || par->TimeIncrement < 1001 || par->TimeIncrement > 256 * 1001)
             return MP4_STS_ERR_PARAM;
-        }
     } else {
-        if (par->TimeResolution < 1 || par->TimeResolution > 65536) {
-            ErrorMessage(VM_STRING("TimeResolution must be between 1 and 65536"));
+        if (par->TimeResolution < 1 || par->TimeResolution > 65536)
             return MP4_STS_ERR_PARAM;
-        }
-        if (par->TimeIncrement < 1 || par->TimeIncrement > 65536) {
-            ErrorMessage(VM_STRING("TimeIncrement must be between 1 and 65536"));
+        if (par->TimeIncrement < 1 || par->TimeIncrement > 65536)
             return MP4_STS_ERR_PARAM;
-        }
-        if (par->BVOPdist < 0) {
-            ErrorMessage(VM_STRING("BVOPdist must be >= 0"));
+        if (par->BVOPdist < 0)
             return MP4_STS_ERR_PARAM;
-        }
-        if (par->resync && par->VideoPacketLenght <= 0) {
-            ErrorMessage(VM_STRING("VideoPacketLenght must be positive"));
+        if (par->resync && par->VideoPacketLenght <= 0)
             return MP4_STS_ERR_PARAM;
-        }
-        if (par->data_partitioned && par->interlaced) {
-            ErrorMessage(VM_STRING("data_partitioned VOP can't be interlaced"));
+        if (par->data_partitioned && par->interlaced)
             return MP4_STS_ERR_PARAM;
-        }
         if (par->sprite_enable == MP4_SPRITE_STATIC) {
-            if (par->no_of_sprite_warping_points < 0 || par->no_of_sprite_warping_points > 4) {
-                ErrorMessage(VM_STRING("no_of_sprite_warping_points must be between 0 and 4 for Basic Sprites"));
+            if (par->no_of_sprite_warping_points < 0 || par->no_of_sprite_warping_points > 4)
                 return MP4_STS_ERR_PARAM;
-            }
         }
         if (par->sprite_enable == MP4_SPRITE_GMC) {
-            if (par->no_of_sprite_warping_points < 0 || par->no_of_sprite_warping_points > 3) {
-                ErrorMessage(VM_STRING("no_of_sprite_warping_points must be between 0 and 3 for GMC"));
+            if (par->no_of_sprite_warping_points < 0 || par->no_of_sprite_warping_points > 3)
                 return MP4_STS_ERR_PARAM;
-            }
         }
         if (par->sprite_enable == MP4_SPRITE_STATIC || par->sprite_enable == MP4_SPRITE_GMC) {
-            if (par->sprite_warping_accuracy < 0 || par->sprite_warping_accuracy > 3) {
-                ErrorMessage(VM_STRING("sprite_warping_accuracy must be between 0 and 3"));
+            if (par->sprite_warping_accuracy < 0 || par->sprite_warping_accuracy > 3)
                 return MP4_STS_ERR_PARAM;
-            }
         }
         if (par->sprite_enable == MP4_SPRITE_STATIC) {
-            if (par->sprite_left_coordinate < -4096 || par->sprite_left_coordinate > 4095) {
-                ErrorMessage(VM_STRING("sprite_left_coordinate must be between -4096 and 4095"));
+            if (par->sprite_left_coordinate < -4096 || par->sprite_left_coordinate > 4095)
                 return MP4_STS_ERR_PARAM;
-            }
-            if (par->sprite_left_coordinate & 1) {
-                ErrorMessage(VM_STRING("sprite_left_coordinate must be even"));
+            if (par->sprite_left_coordinate & 1)
                 return MP4_STS_ERR_PARAM;
-            }
-            if (par->sprite_top_coordinate < -4096 || par->sprite_top_coordinate > 4095) {
-                ErrorMessage(VM_STRING("sprite_top_coordinate must be between -4096 and 4095"));
+            if (par->sprite_top_coordinate < -4096 || par->sprite_top_coordinate > 4095)
                 return MP4_STS_ERR_PARAM;
-            }
-            if (par->sprite_top_coordinate & 1) {
-                ErrorMessage(VM_STRING("sprite_top_coordinate must be even"));
+            if (par->sprite_top_coordinate & 1)
                 return MP4_STS_ERR_PARAM;
-            }
-            if (par->sprite_width < 1 || par->sprite_width > 8191) {
-                ErrorMessage(VM_STRING("sprite_width must be between 1 and 8191"));
+            if (par->sprite_width < 1 || par->sprite_width > 8191)
                 return MP4_STS_ERR_PARAM;
-            }
-            if (par->sprite_height < 1 || par->sprite_height > 8191) {
-                ErrorMessage(VM_STRING("sprite_height must be between 1 and 8191"));
+            if (par->sprite_height < 1 || par->sprite_height > 8191)
                 return MP4_STS_ERR_PARAM;
-            }
         }
     }
     Close();
-    ippsZero_8u((Ipp8u*)this, sizeof(ippVideoEncoderMPEG4));
+    ippsSet_8u(0, (Ipp8u*)this, sizeof(VideoEncoderMPEG4));
     mNumOfFrames = par->NumOfFrames;
     mNumOfFrames = -1;
     mPadType = par->padType;
@@ -384,7 +335,7 @@ Ipp32s ippVideoEncoderMPEG4::Init(mp4_Param *par)
     VOL.sprite_width = par->sprite_width;
     VOL.sprite_height = par->sprite_height;
     VOL.sprite_left_coordinate = par->sprite_left_coordinate;
-    VOL.sprite_top_coordinate = par->sprite_left_coordinate;
+    VOL.sprite_top_coordinate = par->sprite_top_coordinate;
     VOL.no_of_sprite_warping_points = par->no_of_sprite_warping_points;
     VOL.sprite_warping_accuracy = par->sprite_warping_accuracy;
     VOL.sprite_brightness_change = VOL.sprite_enable == MP4_SPRITE_GMC ? 0 : par->sprite_brightness_change;
@@ -480,10 +431,9 @@ Ipp32s ippVideoEncoderMPEG4::Init(mp4_Param *par)
             VOP.source_format = 5;
             VOP.num_gobs_in_vop = 18;
             VOP.num_macroblocks_in_gob = 352;
-        } else {
-            ErrorMessage(VM_STRING("Size of picture is incompatible with short_video_header"));
+        } else
             return MP4_STS_ERR_PARAM;
-        }
+
         VOP.temporal_reference_increment = VOL.fixed_vop_time_increment / 1001;
         VOL.quarter_sample = 0;
         if (mMEflags & ME_QP) {
@@ -544,7 +494,7 @@ Ipp32s ippVideoEncoderMPEG4::Init(mp4_Param *par)
             while (j > ((16 << mBVOPfcodeForw) - 1))
                 mBVOPfcodeForw ++;
             // calc vop_fcode_backward for BVOPs
-            i = IPP_MAX(mBVOPsearchHorBack, mBVOPsearchHorBack);
+            i = IPP_MAX(mBVOPsearchHorBack, mBVOPsearchVerBack);
             j = i << 1;
             mBVOPfcodeBack = 1;
             while (j > ((16 << mBVOPfcodeBack) - 1))
@@ -604,7 +554,7 @@ Ipp32s ippVideoEncoderMPEG4::Init(mp4_Param *par)
         stsAlloc = ippStsMemAllocErr;
     if (VOL.sprite_enable == MP4_SPRITE_GMC) {
         ippiWarpGetSize_MPEG4(&specSize);
-        mWarpSpec = (IppiWarpSpec_MPEG4*)ippsMalloc_8u(specSize);
+        mWarpSpec = (IppiWarpSpec_MPEG4*)ippMalloc(specSize);
         if (!mWarpSpec)
             stsAlloc = ippStsMemAllocErr;
         mGMCPredY = mGMCPredU = mGMCPredV = NULL;
@@ -683,13 +633,13 @@ Ipp32s ippVideoEncoderMPEG4::Init(mp4_Param *par)
     }
     if (!VOL.short_video_header) {
         ippiQuantInvIntraGetSize_MPEG4(&specSize);
-        mQuantInvIntraSpec = (IppiQuantInvIntraSpec_MPEG4*)ippsMalloc_8u(specSize);
+        mQuantInvIntraSpec = (IppiQuantInvIntraSpec_MPEG4*)ippMalloc(specSize);
         ippiQuantInvInterGetSize_MPEG4(&specSize);
-        mQuantInvInterSpec = (IppiQuantInvInterSpec_MPEG4*)ippsMalloc_8u(specSize);
+        mQuantInvInterSpec = (IppiQuantInvInterSpec_MPEG4*)ippMalloc(specSize);
         ippiQuantIntraGetSize_MPEG4(&specSize);
-        mQuantIntraSpec = (IppiQuantIntraSpec_MPEG4*)ippsMalloc_8u(specSize);
+        mQuantIntraSpec = (IppiQuantIntraSpec_MPEG4*)ippMalloc(specSize);
         ippiQuantInterGetSize_MPEG4(&specSize);
-        mQuantInterSpec = (IppiQuantInterSpec_MPEG4*)ippsMalloc_8u(specSize);
+        mQuantInterSpec = (IppiQuantInterSpec_MPEG4*)ippMalloc(specSize);
         if (!mQuantInvIntraSpec || !mQuantInvInterSpec || !mQuantIntraSpec || !mQuantInterSpec)
             stsAlloc = ippStsMemAllocErr;
         mMBpos = NULL;
@@ -700,9 +650,9 @@ Ipp32s ippVideoEncoderMPEG4::Init(mp4_Param *par)
         mQuantInvInterSpec = NULL;
         mQuantIntraSpec = NULL;
         mQuantInterSpec = NULL;
-        mMBpos = ippsMalloc_32u(mNumMacroBlockPerVOP);
-        mMBquant = ippsMalloc_8u(mNumMacroBlockPerVOP);
-        mMBpredMV = (IppMotionVector*)ippsMalloc_8u(mNumMacroBlockPerVOP * sizeof(IppMotionVector));
+        mMBpos = (Ipp32u*)ippMalloc(mNumMacroBlockPerVOP*sizeof(Ipp32u));
+        mMBquant = (Ipp8u*)ippMalloc(mNumMacroBlockPerVOP);
+        mMBpredMV = (IppMotionVector*)ippMalloc(mNumMacroBlockPerVOP * sizeof(IppMotionVector));
         if (!mMBpos || !mMBquant || !mMBpredMV)
             stsAlloc = ippStsMemAllocErr;
     }
@@ -711,7 +661,7 @@ Ipp32s ippVideoEncoderMPEG4::Init(mp4_Param *par)
         cBS.Init(par->bsBuffer, par->bsBuffSize);
         mbsAlloc = false;
     } else {
-        Ipp8u *buff = ippsMalloc_8u(intBuffSize);
+        Ipp8u *buff = (Ipp8u*)ippMalloc(intBuffSize);
         if (!buff)
             stsAlloc = ippStsMemAllocErr;
         cBS.Init(buff, intBuffSize);
@@ -765,8 +715,8 @@ Ipp32s ippVideoEncoderMPEG4::Init(mp4_Param *par)
 #endif
 #endif // _OMP_KARABAS
     if (VOL.data_partitioned) {
-        mBuffer_1 = ippsMalloc_8u(intBuffSize * mNumThreads);
-        mBuffer_2 = ippsMalloc_8u(intBuffSize * mNumThreads);
+        mBuffer_1 = (Ipp8u*)ippMalloc(intBuffSize * mNumThreads);
+        mBuffer_2 = (Ipp8u*)ippMalloc(intBuffSize * mNumThreads);
         if (!mBuffer_1 || !mBuffer_2)
             stsAlloc = ippStsMemAllocErr;
     } else {
@@ -776,7 +726,7 @@ Ipp32s ippVideoEncoderMPEG4::Init(mp4_Param *par)
     if (!MBinfo)
         stsAlloc = ippStsMemAllocErr;
     else
-        ippsZero_8u((Ipp8u*)MBinfo, mNumMacroBlockPerVOP * sizeof(mp4_MacroBlock));
+        ippsSet_8u(0, (Ipp8u*)MBinfo, mNumMacroBlockPerVOP * sizeof(mp4_MacroBlock));
 #ifdef USE_ME_SADBUFF
     if (mMEflags & ME_AUTO_RANGE)
         mMEfastSADsize = (63 * 2 + 1) * (63 * 2 + 1);
@@ -789,7 +739,6 @@ Ipp32s ippVideoEncoderMPEG4::Init(mp4_Param *par)
 #endif
     if (stsAlloc != ippStsNoErr) {
         Close();
-        ErrorMessage(VM_STRING("Not enough memory"));
         return MP4_STS_ERR_NOMEM;
     }
     // setup quant matrix
@@ -935,35 +884,27 @@ Ipp32s ippVideoEncoderMPEG4::Init(mp4_Param *par)
     return MP4_STS_NOERR;
 }
 
-Ipp32s ippVideoEncoderMPEG4::SetFrameBasicSpriteWarpCoeffs(Ipp32s *du, Ipp32s *dv, Ipp32s bcf)
+Ipp32s VideoEncoderMPEG4::SetFrameBasicSpriteWarpCoeffs(Ipp32s *du, Ipp32s *dv, Ipp32s bcf)
 {
     Ipp32s  i;
 
     if (!mIsInit)
         return MP4_STS_ERR_NOTINIT;
-    for (i = 0; i < VOL.no_of_sprite_warping_points; i ++) {
-        if (du[i] < -16383 || du[i] > 16383 || dv[i] < -16383 || dv[i] > 16383) {
-            ErrorMessage(VM_STRING("warping_mv_code must be between -16383 and 16383"));
+    for (i = 0; i < VOL.no_of_sprite_warping_points; i ++)
+    {
+        if (du[i] < -16383 || du[i] > 16383 || dv[i] < -16383 || dv[i] > 16383)
             return MP4_STS_ERR_PARAM;
-        }
+
         VOP.warping_mv_code_du[i] = du[i];
         VOP.warping_mv_code_dv[i] = dv[i];
     }
     if (VOL.sprite_brightness_change) {
-        if (bcf < -112 || bcf > 1648) {
-            ErrorMessage(VM_STRING("brightness_change_factor must be between -112 and 1648"));
+        if (bcf < -112 || bcf > 1648)
             return MP4_STS_ERR_PARAM;
-        }
+
         VOP.brightness_change_factor = bcf;
     }
     return MP4_STS_NOERR;
-}
-
-void ippVideoEncoderMPEG4::ErrorMessage(const vm_char *msg)
-{
-    vm_debug_trace(VM_DEBUG_INFO, __VM_STRING("MPEG-4 encoder error: "));
-    vm_debug_trace(VM_DEBUG_INFO, msg);
-    vm_debug_trace(VM_DEBUG_INFO, __VM_STRING("\n"));
 }
 
 static void mp4_ExpandFrameReplicate(Ipp8u *pSrcDstPlane, Ipp32s frameWidth, Ipp32s frameHeight, Ipp32s expandPels, Ipp32s step)
@@ -1025,7 +966,7 @@ static void mp4_ExpandFrameReplicate(Ipp8u *pSrcDstPlane, Ipp32s frameWidth, Ipp
     }
 }
 
-void ippVideoEncoderMPEG4::ExpandFrame(Ipp8u *pY, Ipp8u *pU, Ipp8u *pV)
+void VideoEncoderMPEG4::ExpandFrame(Ipp8u *pY, Ipp8u *pU, Ipp8u *pV)
 {
     if (mExpandSize) {
         Ipp32s  wL = mNumMacroBlockPerRow << 4;
@@ -1062,7 +1003,7 @@ void ippVideoEncoderMPEG4::ExpandFrame(Ipp8u *pY, Ipp8u *pU, Ipp8u *pV)
 //      128 for QuickTime(tm) MP4 streams
 //      replication for other
 */
-void ippVideoEncoderMPEG4::PadFrame(Ipp8u *pY, Ipp8u *pU, Ipp8u *pV)
+void VideoEncoderMPEG4::PadFrame(Ipp8u *pY, Ipp8u *pU, Ipp8u *pV)
 {
     Ipp32s i, j;
     Ipp8u  *py, *pu, *pv;
@@ -1124,7 +1065,7 @@ void ippVideoEncoderMPEG4::PadFrame(Ipp8u *pY, Ipp8u *pU, Ipp8u *pV)
     }
 }
 
-Ipp32s ippVideoEncoderMPEG4::GetCurrentFrameInfo(Ipp8u **pY, Ipp8u **pU, Ipp8u **pV, Ipp32s *stepLuma, Ipp32s *stepChroma)
+Ipp32s VideoEncoderMPEG4::GetCurrentFrameInfo(Ipp8u **pY, Ipp8u **pU, Ipp8u **pV, Ipp32s *stepLuma, Ipp32s *stepChroma)
 {
     if (!mIsInit)
         return MP4_STS_ERR_NOTINIT;
@@ -1136,7 +1077,7 @@ Ipp32s ippVideoEncoderMPEG4::GetCurrentFrameInfo(Ipp8u **pY, Ipp8u **pU, Ipp8u *
     return MP4_STS_NOERR;
 }
 
-Ipp32s ippVideoEncoderMPEG4::GetDecodedFrameInfo(Ipp8u **pY, Ipp8u **pU, Ipp8u **pV, Ipp32s *stepLuma, Ipp32s *stepChroma)
+Ipp32s VideoEncoderMPEG4::GetDecodedFrameInfo(Ipp8u **pY, Ipp8u **pU, Ipp8u **pV, Ipp32s *stepLuma, Ipp32s *stepChroma)
 {
     if (!mIsInit)
         return MP4_STS_ERR_NOTINIT;
@@ -1220,19 +1161,19 @@ void mp4_ComputeChroma4MVQ(const IppMotionVector mvLuma[4], IppMotionVector *mvC
     mvChroma->dy = (Ipp16s)((dy >= 0) ? cdy : -cdy);
 }
 
-void ippVideoEncoderMPEG4::LimitMV(IppMotionVector *pMV, Ipp32s x, Ipp32s y)
+void VideoEncoderMPEG4::LimitMV(IppMotionVector *pMV, Ipp32s x, Ipp32s y)
 {
     mp4_Clip(pMV->dx, (Ipp16s)((-16 - x) << 1), (Ipp16s)((VOL.video_object_layer_width - x) << 1));
     mp4_Clip(pMV->dy, (Ipp16s)((-16 - y) << 1), (Ipp16s)((VOL.video_object_layer_height - y) << 1));
 }
 
-void ippVideoEncoderMPEG4::LimitMVQ(IppMotionVector *pMV, Ipp32s x, Ipp32s y)
+void VideoEncoderMPEG4::LimitMVQ(IppMotionVector *pMV, Ipp32s x, Ipp32s y)
 {
     mp4_Clip(pMV->dx, (Ipp16s)((-16 - x) << 2), (Ipp16s)((VOL.video_object_layer_width - x) << 2));
     mp4_Clip(pMV->dy, (Ipp16s)((-16 - y) << 2), (Ipp16s)((VOL.video_object_layer_height - y) << 2));
 }
 
-void ippVideoEncoderMPEG4::Limit4MV(IppMotionVector *pMV, Ipp32s x, Ipp32s y)
+void VideoEncoderMPEG4::Limit4MV(IppMotionVector *pMV, Ipp32s x, Ipp32s y)
 {
     mp4_Clip(pMV[0].dx, (Ipp16s)((-8 - x) << 1), (Ipp16s)((VOL.video_object_layer_width - x) << 1));
     mp4_Clip(pMV[0].dy, (Ipp16s)((-8 - y) << 1), (Ipp16s)((VOL.video_object_layer_height - y) << 1));
@@ -1244,7 +1185,7 @@ void ippVideoEncoderMPEG4::Limit4MV(IppMotionVector *pMV, Ipp32s x, Ipp32s y)
     mp4_Clip(pMV[3].dy, (Ipp16s)((-8 - y) << 1), (Ipp16s)((VOL.video_object_layer_height - y - 8) << 1));
 }
 
-void ippVideoEncoderMPEG4::Limit4MVQ(IppMotionVector *pMV, Ipp32s x, Ipp32s y)
+void VideoEncoderMPEG4::Limit4MVQ(IppMotionVector *pMV, Ipp32s x, Ipp32s y)
 {
     mp4_Clip(pMV[0].dx, (Ipp16s)((-8 - x) << 2), (Ipp16s)((VOL.video_object_layer_width - x) << 2));
     mp4_Clip(pMV[0].dy, (Ipp16s)((-8 - y) << 2), (Ipp16s)((VOL.video_object_layer_height - y) << 2));
@@ -1256,25 +1197,25 @@ void ippVideoEncoderMPEG4::Limit4MVQ(IppMotionVector *pMV, Ipp32s x, Ipp32s y)
     mp4_Clip(pMV[3].dy, (Ipp16s)((-8 - y) << 2), (Ipp16s)((VOL.video_object_layer_height - y - 8) << 2));
 }
 
-void ippVideoEncoderMPEG4::LimitFMV(IppMotionVector *pMV, Ipp32s x, Ipp32s y)
+void VideoEncoderMPEG4::LimitFMV(IppMotionVector *pMV, Ipp32s x, Ipp32s y)
 {
     mp4_Clip(pMV->dx, (Ipp16s)((-16 - x) << 1), (Ipp16s)((VOL.video_object_layer_width - x) << 1));
     mp4_Clip(pMV->dy, (Ipp16s)((-16 - y)), (Ipp16s)((VOL.video_object_layer_height - y)));
 }
 
-void ippVideoEncoderMPEG4::LimitFMVQ(IppMotionVector *pMV, Ipp32s x, Ipp32s y)
+void VideoEncoderMPEG4::LimitFMVQ(IppMotionVector *pMV, Ipp32s x, Ipp32s y)
 {
     mp4_Clip(pMV->dx, (Ipp16s)((-16 - x) << 1), (Ipp16s)((VOL.video_object_layer_width - x) << 1));
     mp4_Clip(pMV->dy, (Ipp16s)((-16 - y) << 1), (Ipp16s)((VOL.video_object_layer_height - y) << 1));
 }
 
-void ippVideoEncoderMPEG4::LimitCMV(IppMotionVector *pMV, Ipp32s x, Ipp32s y)
+void VideoEncoderMPEG4::LimitCMV(IppMotionVector *pMV, Ipp32s x, Ipp32s y)
 {
     mp4_Clip(pMV->dx, (Ipp16s)((-8 - x) << 1), (Ipp16s)(((VOL.video_object_layer_width >> 1) - x) << 1));
     mp4_Clip(pMV->dy, (Ipp16s)((-8 - y) << 1), (Ipp16s)(((VOL.video_object_layer_height >> 1) - y) << 1));
 }
 
-void ippVideoEncoderMPEG4::AdjustSearchRange()
+void VideoEncoderMPEG4::AdjustSearchRange()
 {
     if (mMEflags & ME_AUTO_RANGE) {
         Ipp32s  fcRangeMin, fcRangeMax, flRangeMin, flRangeMax, co, ci, cnz, r, i;
@@ -1577,7 +1518,7 @@ int mp4_CalcBitsCoeffsInter(const Ipp16s* pCoeffs, int countNonZero, int rvlcFla
 }
 
 
-void ippVideoEncoderMPEG4::ResetRC(Ipp32s bitRate, Ipp64f frameRate)
+void VideoEncoderMPEG4::ResetRC(Ipp32s bitRate, Ipp64f frameRate)
 {
     if (mRateControl == 1) {
         mRC.Init(0, 0, 0, bitRate, frameRate, mSourceWidth, mSourceHeight, VOL.short_video_header ? 3 : 1, 31);

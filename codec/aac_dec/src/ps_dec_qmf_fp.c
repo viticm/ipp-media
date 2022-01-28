@@ -9,7 +9,7 @@
 */
 
 #include <math.h>
-#include "ippac.h"
+#include "ippac90legacy.h" //#include "ippac.h"
 
 //--------------------------------------------------------
 

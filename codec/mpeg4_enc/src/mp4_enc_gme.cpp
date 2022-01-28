@@ -4,21 +4,21 @@
 //  This software is supplied under the terms of a license agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in accordance with the terms of that agreement.
-//        Copyright (c) 2003-2007 Intel Corporation. All Rights Reserved.
+//        Copyright (c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 //  Description:    GME
 //
 */
 
-#include "umc_defs.h"
-
-#if defined (UMC_ENABLE_MPEG4_VIDEO_ENCODER)
+#include "umc_config.h"
+#ifdef UMC_ENABLE_MPEG4_VIDEO_ENCODER
 
 #include <math.h>
-#include "mp4_enc.hpp"
 #ifdef USE_CV_GME
 #include <float.h>
 #endif
+
+#include "mp4_enc.h"
 
 namespace MPEG4_ENC
 {
@@ -855,7 +855,7 @@ ownGetRTMatrix_RANSAC(IppiPoint_32f* A, IppiPoint_32f* B,
     return max_inlier_count;
 }
 
-void ippVideoEncoderMPEG4::PyramidCalc(const Ipp8u* img, IppiPyramid* pyramid)
+void VideoEncoderMPEG4::PyramidCalc(const Ipp8u* img, IppiPyramid* pyramid)
 {
     pyramid->pImage[0] = (Ipp8u*)img;
     pyramid->pStep[0] = mStepLuma;
@@ -867,7 +867,7 @@ void ippVideoEncoderMPEG4::PyramidCalc(const Ipp8u* img, IppiPyramid* pyramid)
 
 #endif // USE_CV_GME
 
-bool ippVideoEncoderMPEG4::FindTransformGMC()
+bool VideoEncoderMPEG4::FindTransformGMC()
 {
     // only translation is implemented
     if (VOL.no_of_sprite_warping_points == 1) {
@@ -891,8 +891,8 @@ bool ippVideoEncoderMPEG4::FindTransformGMC()
         mbStep = 4;
         mbW = ((mNumMacroBlockPerRow - 3) / mbStep) + 1;
         mbH = ((mNumMacroBlockPerCol - 3) / mbStep) + 1;
-        shX = ippsMalloc_32s(mbW * mbH);
-        shY = ippsMalloc_32s(mbW * mbH);
+        shX = (Ipp32s*)ippMalloc(mbW * mbH * sizeof(Ipp32s));
+        shY = (Ipp32s*)ippMalloc(mbW * mbH * sizeof(Ipp32s));
         yIndx = 1;
         for (i = 0; i < mbH; i ++) {
             meData.yT = -IPP_MIN(yIndx * 16 + 16, mPVOPsearchVer);
@@ -925,8 +925,8 @@ bool ippVideoEncoderMPEG4::FindTransformGMC()
         ippsSortAscend_32s_I(shY, mbW * mbH);
         VOP.warping_mv_code_du[0] = shX[mbW * mbH >> 1];
         VOP.warping_mv_code_dv[0] = shY[mbW * mbH >> 1];
-        ippsFree(shX);
-        ippsFree(shY);
+        ippFree(shX);
+        ippFree(shY);
     }
 #ifdef USE_CV_GME
     else if (VOL.no_of_sprite_warping_points > 1) {

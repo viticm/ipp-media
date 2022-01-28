@@ -4,22 +4,18 @@
 //  This software is supplied under the terms of a license  agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in  accordance  with the terms of that agreement.
-//        Copyright (c) 2003-2008 Intel Corporation. All Rights Reserved.
+//        Copyright (c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 //
 */
 
-#include "umc_defs.h"
-#if defined(UMC_ENABLE_H264_VIDEO_ENCODER)
-
 #ifndef __UMC_H264_DEBLOCKING_H
 #define __UMC_H264_DEBLOCKING_H
 
-#include "ippdefs.h"
 #include "umc_h264_video_encoder.h"
 
-namespace UMC_H264_ENCODER
-{
+#include "ippdefs.h"
+
 
 #if defined(_MSC_VER) && !defined(_WIN32_WCE)
 #define __align(value) __declspec(align(value))
@@ -74,7 +70,7 @@ extern
 Ipp32u ENCODER_INTERNAL_BLOCKS_MASK[NUMBER_OF_DIRECTION][12];
 
 #define CONVERT_TO_16U(size_alpha, size_clipping)   \
-    Ipp32s i;\
+    Ipp32u i;\
     Ipp32s bitDepthScale = 1 << (bit_depth - 8);\
     \
     Ipp16u pAlpha_16u[size_alpha];\
@@ -110,20 +106,60 @@ Ipp32u ENCODER_INTERNAL_BLOCKS_MASK[NUMBER_OF_DIRECTION][12];
     info.pBs = pBS;
 
 
-#define PIXBITS 8
-#include "umc_h264_deblocking_tmpl.h"
-#undef PIXBITS
 
-#if defined (BITDEPTH_9_12)
 
-#define PIXBITS 16
-#include "umc_h264_deblocking_tmpl.h"
-#undef PIXBITS
+#pragma pack(16)
 
-#endif // BITDEPTH_9_12
+template<typename PIXTYPE>
+struct DeblockingParameters
+{
+    Ipp8u    Strength[NUMBER_OF_DIRECTION][16];                   // (PixType [][]) arrays of deblocking sthrengths
+    Ipp32u   DeblockingFlag[NUMBER_OF_DIRECTION];                 // (Ipp32s []) flags to do deblocking
+    Ipp32u   ExternalEdgeFlag[NUMBER_OF_DIRECTION];               // (Ipp32s []) flags to do deblocking on external edges
+    Ipp32s   nMBAddr;                                             // (Ipp32s) macroblock number
+    Ipp32s   nMaxMVector;                                         // (Ipp32s) maximum vertical motion vector
+    Ipp32s   nNeighbour[NUMBER_OF_DIRECTION];                     // (Ipp32s) neighbour macroblock addres
+    Ipp32s   MBFieldCoded;                                        // (Ipp32s) flag means macroblock is field coded (picture may not)
+    Ipp32s   nAlphaC0Offset;                                      // (Ipp32s) alpha c0 offset
+    Ipp32s   nBetaOffset;                                         // (Ipp32s) beta offset
+    PIXTYPE *pY;                                                  // (PixType *) pointer to Y data
+    PIXTYPE *pU;                                                  // (PixType *) pointer to U data
+    PIXTYPE *pV;                                                  // (PixType *) pointer to V data
+    Ipp32s   pitchPixels;                                         // (Ipp32s) working pitch in pixels
+};
 
-} // namespace UMC_H264_ENCODER
+template<typename PIXTYPE>
+struct DeblockingParametersMBAFF
+{
+    DeblockingParameters<PIXTYPE> m_base;
+    Ipp8u  StrengthComplex[16];                                 // (Ipp8u) arrays of deblocking sthrengths
+    Ipp8u  StrengthExtra[16];                                   // (Ipp8u) arrays of deblocking sthrengths
+    Ipp32s UseComplexVerticalDeblocking;                        // (Ipp32u) flag to do complex deblocking on external vertical edge
+    Ipp32s ExtraHorizontalEdge;                                 // (Ipp32u) flag to do deblocking on extra horizontal edge
+    Ipp32s nLeft[2];                                            // (Ipp32u []) left couple macroblock numbers
+};
+
+inline
+Ipp8u getEncoderBethaTable(
+    Ipp32s index)
+{
+    return(ENCODER_BETA_TABLE_8u[index]);
+}
+
+inline
+Ipp8u getEncoderAlphaTable(
+    Ipp32s index)
+{
+    return(ENCODER_ALPHA_TABLE_8u[index]);
+}
+
+inline
+Ipp8u* getEncoderClipTab(
+    Ipp32s index)
+{
+    return(ENCODER_CLIP_TAB_8u[index]);
+}
+
+#pragma pack()
 
 #endif // __UMC_H264_DEBLOCKING_H
-
-#endif //UMC_ENABLE_H264_VIDEO_ENCODER

@@ -4,12 +4,14 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//          Copyright(c) 2003-2007 Intel Corporation. All Rights Reserved.
+//          Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
 #ifndef __BSTREAM_H
 #define __BSTREAM_H
+
+#include "vm_types.h"
 
 #include "ippdefs.h"
 
@@ -38,7 +40,11 @@ typedef struct
 #ifdef _BIG_ENDIAN_
 #define BSWAP(x) (x)
 #else
+# ifdef __INTEL_COMPILER
+#define BSWAP(x) _bswap(x)
+#else
 #define BSWAP(x) (Ipp32u)(((x) << 24) | (((x)&0xff00) << 8) | (((x) >> 8)&0xff00) | ((x&0xff000000) >> 24));
+#endif
 #endif
 
 /*******************************************************************/
@@ -61,7 +67,7 @@ typedef struct
 {                                                                   \
   Ipp8u *tmp_ptr = (Ipp8u*)ptr;                                     \
   (pBS)->pBuffer = (Ipp32u *)_ALIGN_PTR(tmp_ptr, 4);                \
-  (pBS)->nBit_offset = 32 - (_OFFSET_PTR(tmp_ptr, 4) << 3);         \
+  (pBS)->nBit_offset = 32 - ((Ipp32s)_OFFSET_PTR(tmp_ptr, 4) << 3);         \
   (pBS)->init_nBit_offset = (pBS)->nBit_offset;                     \
   (pBS)->pCurrent_dword = (pBS)->pBuffer;                           \
   LOAD_DWORD(pBS)                                                   \
@@ -80,7 +86,7 @@ typedef struct
 {                                                                   \
   Ipp8u *tmp_ptr = (Ipp8u*)ptr;                                     \
   (pBS)->pBuffer = (Ipp32u *)_ALIGN_PTR(tmp_ptr, 4);                \
-  (pBS)->nBit_offset = 32 - (_OFFSET_PTR(tmp_ptr, 4) << 3);         \
+  (pBS)->nBit_offset = 32 - ((Ipp32s)_OFFSET_PTR(tmp_ptr, 4) << 3);         \
   (pBS)->init_nBit_offset = (pBS)->nBit_offset;                     \
   (pBS)->pCurrent_dword = (pBS)->pBuffer;                           \
   GET_LOAD_DWORD(pBS)                                               \
@@ -170,8 +176,8 @@ typedef struct
 /*******************************************************************/
 
 #define GET_BITS_COUNT(pBS, size)                                   \
-  size =(((pBS)->pCurrent_dword) - ((pBS)->pBuffer)) * 32 +         \
-          (pBS)->init_nBit_offset - ((pBS)->nBit_offset);
+  size =(Ipp32s)((((pBS)->pCurrent_dword) - ((pBS)->pBuffer)) * 32 +         \
+          (pBS)->init_nBit_offset - ((pBS)->nBit_offset));
 
 /*******************************************************************/
 

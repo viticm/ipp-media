@@ -11,19 +11,25 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\umc_audio_codec.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\umc_audio_render.cpp">
+    <ClCompile Include="src\umc_audio_data.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\umc_base_codec.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\umc_bitstream_reader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\umc_default_frame_allocator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\umc_default_memory_allocator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\umc_dual_thread_codec.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\umc_frame_data.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\umc_index.cpp">
@@ -35,13 +41,7 @@
     <ClCompile Include="src\umc_media_data.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\umc_media_data_ex.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\umc_muxer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\umc_par_reader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\umc_splitter.cpp">
@@ -53,18 +53,15 @@
     <ClCompile Include="src\umc_video_data.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\umc_video_decoder.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\umc_video_encoder.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\umc_video_render.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\umc_audio_codec.h">
+    <ClInclude Include="include\umc_audio_data.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\umc_audio_decoder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\umc_audio_encoder.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\umc_audio_render.h">
@@ -73,13 +70,19 @@
     <ClInclude Include="include\umc_base_codec.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\umc_base_color_space_converter.h">
+    <ClInclude Include="include\umc_bitstream_reader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\umc_config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\umc_data_reader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\umc_data_writer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\umc_default_frame_allocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\umc_default_memory_allocator.h">
@@ -91,7 +94,10 @@
     <ClInclude Include="include\umc_dual_thread_codec.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\umc_dynamic_cast.h">
+    <ClInclude Include="include\umc_frame_allocator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\umc_frame_data.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\umc_index.h">
@@ -106,31 +112,22 @@
     <ClInclude Include="include\umc_media_data.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\umc_media_data_ex.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\umc_media_receiver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\umc_memory_allocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\umc_module_context.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\umc_muxer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\umc_par_reader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\umc_splitter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\umc_splitter_ex.h">
+    <ClInclude Include="include\umc_structures.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\umc_structures.h">
+    <ClInclude Include="include\umc_system_context.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\umc_video_data.h">

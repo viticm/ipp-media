@@ -4,22 +4,24 @@
 //  This software is supplied under the terms of a license agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in accordance with the terms of that agreement.
-//        Copyright (c) 2003-2007 Intel Corporation. All Rights Reserved.
+//        Copyright (c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
-//  Description:    class ippVideoEncoderMPEG4 (encode VOPs)
+//  Description:    class VideoEncoderMPEG4 (encode VOPs)
 //
 */
 
-#include "umc_defs.h"
-
-#if defined (UMC_ENABLE_MPEG4_VIDEO_ENCODER)
+#include "umc_config.h"
+#ifdef UMC_ENABLE_MPEG4_VIDEO_ENCODER
 
 #include <stdio.h>
-#include "mp4_enc.hpp"
 
+#include "mp4_enc.h"
+
+#if defined(_MSC_VER)
 #pragma warning(disable : 981)      // operands are evaluated in unspecified order
 #pragma warning(disable : 279)      // controlling expression is constant
 #pragma warning(disable : 4127)     // conditional expression is constant
+#endif
 
 #define VIDEOPACKETS_LE_MAX
 
@@ -124,32 +126,37 @@ inline void mp4_NonZeroCount(Ipp16s *coeff, Ipp32s *nzCount)
 
 static int mp4_TrellisQuant(Ipp16s* tcoeff, Ipp16s* qcoeff, int quant, Ipp8u* qMatrix, const Ipp8u* scan, int nzc)
 {
+    tcoeff = tcoeff;
+    qcoeff = qcoeff;
+    quant = quant;
+    qMatrix = qMatrix;
+    scan = scan;
     return nzc;
 }
 
 
-inline void mp4_EncodeZeroBitsAlign(ippBitStream &cBS)
+inline void mp4_EncodeZeroBitsAlign(BitStream &cBS)
 {
     if (cBS.mBitOff != 0)
         cBS.PutBits(0, 8 - cBS.mBitOff);
 }
 
-inline void mp4_EncodeStuffingBitsAlign(ippBitStream &cBS)
+inline void mp4_EncodeStuffingBitsAlign(BitStream &cBS)
 {
     cBS.PutBits(0xFF >> (cBS.mBitOff + 1), 8 - cBS.mBitOff);
 }
 
-inline void mp4_EncodeMarkerDC(ippBitStream &cBS)
+inline void mp4_EncodeMarkerDC(BitStream &cBS)
 {
     cBS.PutBits(0x6B001, 19); // 110 1011 0000 0000 0001
 }
 
-inline void mp4_EncodeMarkerMV(ippBitStream &cBS)
+inline void mp4_EncodeMarkerMV(BitStream &cBS)
 {
     cBS.PutBits(0x1F001, 17); //   1 1111 0000 0000 0001
 }
 
-inline void mp4_EncodeDquant(ippBitStream &cBS, Ipp32s dquant)
+inline void mp4_EncodeDquant(BitStream &cBS, Ipp32s dquant)
 {
     if (dquant != -2)
         cBS.PutBits(dquant + 1, 2);
@@ -157,7 +164,7 @@ inline void mp4_EncodeDquant(ippBitStream &cBS, Ipp32s dquant)
         cBS.PutBits(1, 2);
 }
 
-inline void mp4_EncodeMCBPC_I(ippBitStream &cBS, Ipp32s mbtype, Ipp32s mcbpc)
+inline void mp4_EncodeMCBPC_I(BitStream &cBS, Ipp32s mbtype, Ipp32s mcbpc)
 {
     if (mbtype == IPPVC_MBTYPE_INTRA) {
         if (mcbpc == 0)
@@ -172,24 +179,24 @@ inline void mp4_EncodeMCBPC_I(ippBitStream &cBS, Ipp32s mbtype, Ipp32s mcbpc)
     }
 }
 
-inline void mp4_EncodeCBPY_I(ippBitStream &cBS, Ipp32s pat)
+inline void mp4_EncodeCBPY_I(BitStream &cBS, Ipp32s pat)
 {
     cBS.PutBits(mp4_VLC_CBPY_TB8[pat].code, mp4_VLC_CBPY_TB8[pat].len);
 }
 
-inline void mp4_EncodeMCBPC_P(ippBitStream &cBS, Ipp32s mbtype, Ipp32s pat)
+inline void mp4_EncodeMCBPC_P(BitStream &cBS, Ipp32s mbtype, Ipp32s pat)
 {
     cBS.PutBits(mp4_VLC_MCBPC_TB7[mbtype*4+pat].code, mp4_VLC_MCBPC_TB7[mbtype*4+pat].len);
 }
 
-inline void mp4_EncodeCBPY_P(ippBitStream &cBS, Ipp32s mbtype, Ipp32s pat)
+inline void mp4_EncodeCBPY_P(BitStream &cBS, Ipp32s mbtype, Ipp32s pat)
 {
     if (mbtype <= IPPVC_MBTYPE_INTER4V)
         pat = 15 - pat;
     cBS.PutBits(mp4_VLC_CBPY_TB8[pat].code, mp4_VLC_CBPY_TB8[pat].len);
 }
 
-static void mp4_EncodeMV(ippBitStream &cBS, IppMotionVector *mv, Ipp32s fcode, Ipp32s mbType)
+static void mp4_EncodeMV(BitStream &cBS, IppMotionVector *mv, Ipp32s fcode, Ipp32s mbType)
 {
     Ipp32s  i, nMV = (mbType == IPPVC_MBTYPE_INTER4V) ? 4 : 1;
 
@@ -233,7 +240,7 @@ static void mp4_EncodeMV(ippBitStream &cBS, IppMotionVector *mv, Ipp32s fcode, I
     }
 }
 
-inline void mp4_EncodeMacroBlockIntra_H263(ippBitStream &cBS, Ipp16s *coeffMB, Ipp32s pattern, Ipp32s *nzCount)
+inline void mp4_EncodeMacroBlockIntra_H263(BitStream &cBS, Ipp16s *coeffMB, Ipp32s pattern, Ipp32s *nzCount)
 {
     Ipp32s  i, pm = 32;
 
@@ -245,7 +252,7 @@ inline void mp4_EncodeMacroBlockIntra_H263(ippBitStream &cBS, Ipp16s *coeffMB, I
     }
 }
 
-inline void mp4_EncodeMacroBlockInter_H263(ippBitStream &cBS, Ipp16s *coeffMB, Ipp32s pattern, Ipp32s *nzCount)
+inline void mp4_EncodeMacroBlockInter_H263(BitStream &cBS, Ipp16s *coeffMB, Ipp32s pattern, Ipp32s *nzCount)
 {
     Ipp32s  i, pm = 32;
 
@@ -256,7 +263,7 @@ inline void mp4_EncodeMacroBlockInter_H263(ippBitStream &cBS, Ipp16s *coeffMB, I
     }
 }
 
-inline void mp4_EncodeMacroBlockIntra_MPEG4(ippBitStream &cBS, Ipp16s *coeffMB, Ipp32s pattern, Ipp32s *nzCount, Ipp32s *predDir, Ipp32s use_intra_dc_vlc, Ipp32s alternate_vertical_scan_flag)
+inline void mp4_EncodeMacroBlockIntra_MPEG4(BitStream &cBS, Ipp16s *coeffMB, Ipp32s pattern, Ipp32s *nzCount, Ipp32s *predDir, Ipp32s use_intra_dc_vlc, Ipp32s alternate_vertical_scan_flag)
 {
     Ipp32s  i, nzc, pm = 32;
 
@@ -273,7 +280,7 @@ inline void mp4_EncodeMacroBlockIntra_MPEG4(ippBitStream &cBS, Ipp16s *coeffMB, 
     }
 }
 
-inline void mp4_EncodeMacroBlockInter_MPEG4(ippBitStream &cBS, Ipp16s *coeffMB, Ipp32s pattern, Ipp32s *nzCount, Ipp32s reversible_vlc, Ipp32s alternate_vertical_scan_flag)
+inline void mp4_EncodeMacroBlockInter_MPEG4(BitStream &cBS, Ipp16s *coeffMB, Ipp32s pattern, Ipp32s *nzCount, Ipp32s reversible_vlc, Ipp32s alternate_vertical_scan_flag)
 {
     Ipp32s  i, pm = 32;
 
@@ -284,7 +291,7 @@ inline void mp4_EncodeMacroBlockInter_MPEG4(ippBitStream &cBS, Ipp16s *coeffMB, 
     }
 }
 
-inline void mp4_EncodeMacroBlockIntra_DC_MPEG4(ippBitStream &cBS, Ipp16s *coeffMB)
+inline void mp4_EncodeMacroBlockIntra_DC_MPEG4(BitStream &cBS, Ipp16s *coeffMB)
 {
     Ipp32s  i;
 
@@ -293,7 +300,7 @@ inline void mp4_EncodeMacroBlockIntra_DC_MPEG4(ippBitStream &cBS, Ipp16s *coeffM
     }
 }
 
-inline void mp4_EncodeMacroBlockIntra_AC_MPEG4(ippBitStream &cBS, Ipp16s *coeffMB, Ipp32s pattern, Ipp32s *nzCount, Ipp32s *predDir, Ipp32s use_intra_dc_vlc, Ipp32s reversible_vlc)
+inline void mp4_EncodeMacroBlockIntra_AC_MPEG4(BitStream &cBS, Ipp16s *coeffMB, Ipp32s pattern, Ipp32s *nzCount, Ipp32s *predDir, Ipp32s use_intra_dc_vlc, Ipp32s reversible_vlc)
 {
     Ipp32s  i, nzc, pm = 32;
 
@@ -308,7 +315,7 @@ inline void mp4_EncodeMacroBlockIntra_AC_MPEG4(ippBitStream &cBS, Ipp16s *coeffM
     }
 }
 
-Ipp32s ippVideoEncoderMPEG4::EncodeFrame(Ipp32s noMoreData)
+Ipp32s VideoEncoderMPEG4::EncodeFrame(Ipp32s noMoreData)
 {
     Ipp32s isIVOP, isBVOP = 0, nt;
 
@@ -628,7 +635,7 @@ Ipp32s ippVideoEncoderMPEG4::EncodeFrame(Ipp32s noMoreData)
 }
 
 /*
-Ipp32s ippVideoEncoderMPEG4::EncodeFrame(Ipp32s noMoreData, Ipp32s vop_type, Ipp64s vop_time)
+Ipp32s VideoEncoderMPEG4::EncodeFrame(Ipp32s noMoreData, Ipp32s vop_type, Ipp64s vop_time)
 {
     Ipp32s isIVOP, isBVOP, nt;
 
@@ -786,24 +793,26 @@ Ipp32s ippVideoEncoderMPEG4::EncodeFrame(Ipp32s noMoreData, Ipp32s vop_type, Ipp
 }
 */
 
-static void mp4_MergeBuffersDP(ippBitStream &cBS, ippBitStream &cBS_1, ippBitStream &cBS_2)
+static void mp4_MergeBuffersDP(BitStream &cBS, BitStream &cBS_1, BitStream &cBS_2)
 {
     Ipp32s   nBits_1, nBits_2;
 
     // merge buffer with dp_buff_1
     nBits_1 = cBS_1.GetNumBits();
-    ippsCopy_1u(cBS_1.mBuffer, 0, cBS.mPtr, cBS.mBitOff, nBits_1);
+    //ippsCopy_1u(cBS_1.mBuffer, 0, cBS.mPtr, cBS.mBitOff, nBits_1);
+    ippsCopyLE_1u(cBS_1.mBuffer, 0, cBS.mPtr, cBS.mBitOff, nBits_1);
     cBS.MovePtr(nBits_1);
     cBS_1.Reset();
     // merge buffer with dp_buff_2
     nBits_2 = cBS_2.GetNumBits();
-    ippsCopy_1u(cBS_2.mBuffer, 0, cBS.mPtr, cBS.mBitOff, nBits_2);
+    //ippsCopy_1u(cBS_2.mBuffer, 0, cBS.mPtr, cBS.mBitOff, nBits_2);
+    ippsCopyLE_1u(cBS_2.mBuffer, 0, cBS.mPtr, cBS.mBitOff, nBits_2);
     cBS.MovePtr(nBits_2);
     cBS_2.Reset();
 }
 
 // used for short_viseo_header
-void ippVideoEncoderMPEG4::PredictMV(mp4_MacroBlock *MBcurr, Ipp32s i, Ipp32s j, IppMotionVector *mvPred)
+void VideoEncoderMPEG4::PredictMV(mp4_MacroBlock *MBcurr, Ipp32s i, Ipp32s j, IppMotionVector *mvPred)
 {
     IppMotionVector *mvLeft, *mvTop, *mvRight;
 
@@ -828,7 +837,7 @@ void ippVideoEncoderMPEG4::PredictMV(mp4_MacroBlock *MBcurr, Ipp32s i, Ipp32s j,
     }
 }
 
-void ippVideoEncoderMPEG4::Predict1MV(mp4_MacroBlock *MBcurr, Ipp32s i, Ipp32s j, IppMotionVector *mvPred)
+void VideoEncoderMPEG4::Predict1MV(mp4_MacroBlock *MBcurr, Ipp32s i, Ipp32s j, IppMotionVector *mvPred)
 {
     IppMotionVector *mvLeft, *mvTop, *mvRight;
 
@@ -899,7 +908,7 @@ void ippVideoEncoderMPEG4::Predict1MV(mp4_MacroBlock *MBcurr, Ipp32s i, Ipp32s j
     }
 }
 
-void ippVideoEncoderMPEG4::Predict3MV(mp4_MacroBlock *MBcurr, Ipp32s i, Ipp32s j, IppMotionVector *mvPred, IppMotionVector *mvCurr)
+void VideoEncoderMPEG4::Predict3MV(mp4_MacroBlock *MBcurr, Ipp32s i, Ipp32s j, IppMotionVector *mvPred, IppMotionVector *mvCurr)
 {
     IppMotionVector *mvLeft, *mvTop, *mvRight;
 
@@ -975,7 +984,7 @@ void ippVideoEncoderMPEG4::Predict3MV(mp4_MacroBlock *MBcurr, Ipp32s i, Ipp32s j
     }
 }
 
-void ippVideoEncoderMPEG4::Predict3MV(mp4_MacroBlock *MBcurr, Ipp32s i, Ipp32s j, IppMotionVector *mvPred, Ipp32s nB)
+void VideoEncoderMPEG4::Predict3MV(mp4_MacroBlock *MBcurr, Ipp32s i, Ipp32s j, IppMotionVector *mvPred, Ipp32s nB)
 {
     IppMotionVector *mvLeft, *mvTop, *mvRight, *mvCurr;
 
@@ -1054,7 +1063,7 @@ void ippVideoEncoderMPEG4::Predict3MV(mp4_MacroBlock *MBcurr, Ipp32s i, Ipp32s j
     }
 }
 
-void ippVideoEncoderMPEG4::PredictIntraDCAC(mp4_MacroBlock *MBcurr, Ipp16s *dcCurr, Ipp32s quant, Ipp32s *predictDir, Ipp32s predAC, Ipp32s *pSum0, Ipp32s *pSum1, Ipp32s *nzCount, Ipp32s nRow)
+void VideoEncoderMPEG4::PredictIntraDCAC(mp4_MacroBlock *MBcurr, Ipp16s *dcCurr, Ipp32s quant, Ipp32s *predictDir, Ipp32s predAC, Ipp32s *pSum0, Ipp32s *pSum1, Ipp32s *nzCount, Ipp32s nRow)
 {
     Ipp32s      predDir, dc, k, zC, zA, predQuantA, predQuantC, dcScaler, sum0 = 0, sum1 = 0, i;
     Ipp16s      dcA, dcB, dcC, dcP;
@@ -1169,7 +1178,7 @@ static void mp4_RestoreIntraAC(mp4_MacroBlock *MBcurr, Ipp16s *dcCurr, Ipp32s *p
     }
 }
 
-Ipp32s ippVideoEncoderMPEG4::TransMacroBlockIntra_H263(Ipp8u *pY, Ipp8u *pU, Ipp8u *pV, Ipp16s *coeffMB, Ipp32s *nzCount, Ipp32s quant)
+Ipp32s VideoEncoderMPEG4::TransMacroBlockIntra_H263(Ipp8u *pY, Ipp8u *pU, Ipp8u *pV, Ipp16s *coeffMB, Ipp32s *nzCount, Ipp32s quant)
 {
     Ipp32s   pattern;
 
@@ -1189,7 +1198,7 @@ Ipp32s ippVideoEncoderMPEG4::TransMacroBlockIntra_H263(Ipp8u *pY, Ipp8u *pU, Ipp
     return pattern;
 }
 
-Ipp32s ippVideoEncoderMPEG4::TransMacroBlockInter_H263(Ipp8u *pYc, Ipp8u *pUc, Ipp8u *pVc, Ipp16s *coeffMB, Ipp32s *nzCount, Ipp32s quant, Ipp8u *mcPred, Ipp32s lumaErr)
+Ipp32s VideoEncoderMPEG4::TransMacroBlockInter_H263(Ipp8u *pYc, Ipp8u *pUc, Ipp8u *pVc, Ipp16s *coeffMB, Ipp32s *nzCount, Ipp32s quant, Ipp8u *mcPred, Ipp32s lumaErr)
 {
     Ipp32s   pattern, sU, sV, sL0, sL1, sL2, sL3, lim;
 
@@ -1252,7 +1261,7 @@ Ipp32s ippVideoEncoderMPEG4::TransMacroBlockInter_H263(Ipp8u *pYc, Ipp8u *pUc, I
 }
 
 
-int ippVideoEncoderMPEG4::TransMacroBlockIntra_MPEG4(Ipp8u *pY, Ipp8u *pU, Ipp8u *pV, Ipp16s *coeffMB, Ipp32s *nzCount, int quant, int row, int col, int *dct_type, int use_intra_dc_vlc, mp4_MacroBlock *MBcurr, int *predDir, int startRow, int *ac_pred, int *pat, int *costRD)
+int VideoEncoderMPEG4::TransMacroBlockIntra_MPEG4(Ipp8u *pY, Ipp8u *pU, Ipp8u *pV, Ipp16s *coeffMB, Ipp32s *nzCount, int quant, int row, int col, int *dct_type, int use_intra_dc_vlc, mp4_MacroBlock *MBcurr, int *predDir, int startRow, int *ac_pred, int *pat, int *costRD)
 {
     int  pattern, yOff23, yStep, dctt = 0;
     int  ac_pred_flag, acPredSum0, acPredSum1, pattern1;
@@ -1282,7 +1291,7 @@ int ippVideoEncoderMPEG4::TransMacroBlockIntra_MPEG4(Ipp8u *pY, Ipp8u *pU, Ipp8u
     ippiDCT8x8Fwd_8u16s_C1R(pV, mStepChroma, coeffMB+5*64);
     // copy DCT coeff for RD mode decision
     if (costRD != NULL)
-        ippsCopy_16s(coeffMB, coeffFDCT, 64 * 6);
+        ippsCopy_8u((Ipp8u*)coeffMB, (Ipp8u*)coeffFDCT, 64 * 6 * sizeof(Ipp16s));
     ippiQuantIntra_MPEG4_16s_C1I(coeffMB+0*64, mQuantIntraSpec, quant, &nzCount[0], IPPVC_BLOCK_LUMA);
     ippiQuantIntra_MPEG4_16s_C1I(coeffMB+1*64, mQuantIntraSpec, quant, &nzCount[1], IPPVC_BLOCK_LUMA);
     ippiQuantIntra_MPEG4_16s_C1I(coeffMB+2*64, mQuantIntraSpec, quant, &nzCount[2], IPPVC_BLOCK_LUMA);
@@ -1333,7 +1342,7 @@ int ippVideoEncoderMPEG4::TransMacroBlockIntra_MPEG4(Ipp8u *pY, Ipp8u *pU, Ipp8u
 }
 
 
-int ippVideoEncoderMPEG4::TransMacroBlockInter_MPEG4(Ipp8u *pYc, Ipp8u *pUc, Ipp8u *pVc, Ipp16s *coeffMB, Ipp32s *nzCount, int quant, Ipp8u *mcPred, int row, int col, int *dct_type, int trellis, int *costRD)
+int VideoEncoderMPEG4::TransMacroBlockInter_MPEG4(Ipp8u *pYc, Ipp8u *pUc, Ipp8u *pVc, Ipp16s *coeffMB, Ipp32s *nzCount, int quant, Ipp8u *mcPred, int row, int col, int *dct_type, int trellis, int *costRD)
 {
     int   pattern, sE[6], lim, b, costInter;
     Ipp8u *qmat = VOL.quant_type ? VOL.nonintra_quant_mat : NULL;
@@ -1376,7 +1385,7 @@ int ippVideoEncoderMPEG4::TransMacroBlockInter_MPEG4(Ipp8u *pYc, Ipp8u *pUc, Ipp
             } else {
                 ippiDCT8x8Fwd_16s_C1R(coeff+off[b], s, coeffMB+b*64);
                 if (trellis || (costRD != NULL))
-                    ippsCopy_16s(coeffMB+b*64, coeffFDCT, 64);
+                    ippsCopy_8u((Ipp8u*)(coeffMB+b*64), (Ipp8u*)coeffFDCT, 64 * sizeof(Ipp16s));
                 ippiQuantInter_MPEG4_16s_C1I(coeffMB+b*64, mQuantInterSpec, quant, &nzCount[b]);
                 if (trellis && (nzCount[b] != 0))
                     nzCount[b] = mp4_TrellisQuant(coeffFDCT, coeffMB+b*64, quant, qmat, scan, nzCount[b]);
@@ -1407,7 +1416,7 @@ int ippVideoEncoderMPEG4::TransMacroBlockInter_MPEG4(Ipp8u *pYc, Ipp8u *pUc, Ipp
             } else {
                 ippiDCT8x8Fwd_16s_C1I(coeffMB+b*64);
                 if (trellis || (costRD != NULL))
-                    ippsCopy_16s(coeffMB+b*64, coeffFDCT, 64);
+                    ippsCopy_8u((Ipp8u*)(coeffMB+b*64), (Ipp8u*)coeffFDCT, 64 * sizeof(Ipp16s));
                 ippiQuantInter_MPEG4_16s_C1I(coeffMB+b*64, mQuantInterSpec, quant, &nzCount[b]);
                 if (trellis && (nzCount[b] != 0))
                     nzCount[b] = mp4_TrellisQuant(coeffFDCT, coeffMB+b*64, quant, qmat, scan, nzCount[b]);
@@ -1435,7 +1444,7 @@ int ippVideoEncoderMPEG4::TransMacroBlockInter_MPEG4(Ipp8u *pYc, Ipp8u *pUc, Ipp
         } else {
             ippiDCT8x8Fwd_16s_C1I(coeffMB+b*64);
             if (trellis || (costRD != NULL))
-                ippsCopy_16s(coeffMB+b*64, coeffFDCT, 64);
+                ippsCopy_8u((Ipp8u*)(coeffMB+b*64), (Ipp8u*)coeffFDCT, 64 * sizeof(Ipp16s));
             ippiQuantInter_MPEG4_16s_C1I(coeffMB+b*64, mQuantInterSpec, quant, &nzCount[b]);
             if (trellis && (nzCount[b] != 0))
                 nzCount[b] = mp4_TrellisQuant(coeffFDCT, coeffMB+b*64, quant, qmat, scan, nzCount[b]);
@@ -1583,14 +1592,14 @@ int ippVideoEncoderMPEG4::TransMacroBlockInter_MPEG4(Ipp8u *pYc, Ipp8u *pUc, Ipp
     return pattern;
 }
 
-inline void ippVideoEncoderMPEG4::ReconMacroBlockNotCoded(Ipp8u *pYc, Ipp8u *pUc, Ipp8u *pVc, Ipp8u *mcPred)
+inline void VideoEncoderMPEG4::ReconMacroBlockNotCoded(Ipp8u *pYc, Ipp8u *pUc, Ipp8u *pVc, Ipp8u *mcPred)
 {
     ippiCopy16x16_8u_C1R(mcPred, 16, pYc, mStepLuma);
     ippiCopy8x8_8u_C1R(mcPred+64*4, 8, pUc, mStepChroma);
     ippiCopy8x8_8u_C1R(mcPred+64*5, 8, pVc, mStepChroma);
 }
 
-void ippVideoEncoderMPEG4::ReconMacroBlockIntra_H263(Ipp8u *pY, Ipp8u *pU, Ipp8u *pV, Ipp16s *coeffMB, Ipp32s quant, Ipp32s pattern)
+void VideoEncoderMPEG4::ReconMacroBlockIntra_H263(Ipp8u *pY, Ipp8u *pU, Ipp8u *pV, Ipp16s *coeffMB, Ipp32s quant, Ipp32s pattern)
 {
     if (pattern & 32) {
         ippiQuantInvIntra_H263_16s_C1I(coeffMB+0*64, 63, quant, 0, 0);
@@ -1630,7 +1639,7 @@ void ippVideoEncoderMPEG4::ReconMacroBlockIntra_H263(Ipp8u *pY, Ipp8u *pU, Ipp8u
     }
 }
 
-void ippVideoEncoderMPEG4::ReconMacroBlockInter_H263(Ipp8u *pYc, Ipp8u *pUc, Ipp8u *pVc, Ipp8u *mcPred, Ipp16s *coeffMB, Ipp32s quant, Ipp32s pattern)
+void VideoEncoderMPEG4::ReconMacroBlockInter_H263(Ipp8u *pYc, Ipp8u *pUc, Ipp8u *pVc, Ipp8u *mcPred, Ipp16s *coeffMB, Ipp32s quant, Ipp32s pattern)
 {
     if (pattern & 32) {
         ippiQuantInvInter_H263_16s_C1I(coeffMB+0*64, 63, quant, 0);
@@ -1667,7 +1676,7 @@ void ippVideoEncoderMPEG4::ReconMacroBlockInter_H263(Ipp8u *pYc, Ipp8u *pUc, Ipp
     ippiCopy8x8_8u_C1R(mcPred+64*5, 8, pVc, mStepChroma);
 }
 
-void ippVideoEncoderMPEG4::ReconMacroBlockIntra_MPEG4(Ipp8u *pY, Ipp8u *pU, Ipp8u *pV, Ipp16s *coeffMB, Ipp32s quant, mp4_MacroBlock *MBcurr, Ipp32s pattern, Ipp32s dct_type)
+void VideoEncoderMPEG4::ReconMacroBlockIntra_MPEG4(Ipp8u *pY, Ipp8u *pU, Ipp8u *pV, Ipp16s *coeffMB, Ipp32s quant, mp4_MacroBlock *MBcurr, Ipp32s pattern, Ipp32s dct_type)
 {
     Ipp32s   yOff23, yStep, dc;
 
@@ -1740,7 +1749,7 @@ void ippVideoEncoderMPEG4::ReconMacroBlockIntra_MPEG4(Ipp8u *pY, Ipp8u *pU, Ipp8
     }
 }
 
-void ippVideoEncoderMPEG4::ReconMacroBlockInter_MPEG4(Ipp8u *pYc, Ipp8u *pUc, Ipp8u *pVc, Ipp8u *mcPred, Ipp16s *coeffMB, Ipp32s quant, Ipp32s pattern, Ipp32s dct_type)
+void VideoEncoderMPEG4::ReconMacroBlockInter_MPEG4(Ipp8u *pYc, Ipp8u *pUc, Ipp8u *pVc, Ipp8u *mcPred, Ipp16s *coeffMB, Ipp32s quant, Ipp32s pattern, Ipp32s dct_type)
 {
     Ipp32s  yOff23, yStep;
 
@@ -1839,7 +1848,7 @@ static void mp4_CopyCoeffsInter(Ipp16s *s, Ipp16s *d, Ipp32s pat)
 #endif // _OMP_KARABAS
 
 #ifdef _OMP_KARABAS
-void ippVideoEncoderMPEG4::EncodeIRowSH(Ipp32s curRow, Ipp32s threadNum, Ipp32s *nmb)
+void VideoEncoderMPEG4::EncodeIRowSH(Ipp32s curRow, Ipp32s threadNum, Ipp32s *nmb)
 {
     __ALIGN16(Ipp16s, coeffMB, 64*6);
     Ipp8u  *pY, *pU, *pV;
@@ -1873,7 +1882,7 @@ void ippVideoEncoderMPEG4::EncodeIRowSH(Ipp32s curRow, Ipp32s threadNum, Ipp32s 
     }
     for (j = 0; j < mNumMacroBlockPerRow; j ++) {
         // for RTP support
-        mMBpos[nmbf] = 8 * (cBS.mPtr - cBS.mBuffer) + cBS.mBitOff;
+        mMBpos[nmbf] = 8 * (Ipp32u)(cBS.mPtr - cBS.mBuffer) + cBS.mBitOff;
         mMBquant[nmbf] = (Ipp8u)quant;
         nmbf ++;
         pattern = pMBinfoMT->pat;
@@ -1896,7 +1905,7 @@ void ippVideoEncoderMPEG4::EncodeIRowSH(Ipp32s curRow, Ipp32s threadNum, Ipp32s 
 }
 #endif // _OMP_KARABAS
 
-void ippVideoEncoderMPEG4::EncodeISliceSH(mp4_Slice *slice)
+void VideoEncoderMPEG4::EncodeISliceSH(mp4_Slice *slice)
 {
     __ALIGN16(Ipp16s, coeffMB, 64*6);
     Ipp8u  *pY, *pU, *pV;
@@ -1956,7 +1965,7 @@ void ippVideoEncoderMPEG4::EncodeISliceSH(mp4_Slice *slice)
     mp4_EncodeZeroBitsAlign(slice->cBS);
 }
 
-void ippVideoEncoderMPEG4::EncodeIVOPSH()
+void VideoEncoderMPEG4::EncodeIVOPSH()
 {
 #ifdef _OMP_KARABAS
     if (mNumThreads >= 2) {
@@ -2023,7 +2032,7 @@ void ippVideoEncoderMPEG4::EncodeIVOPSH()
 }
 
 #ifdef _OMP_KARABAS
-void ippVideoEncoderMPEG4::EncodePRowSH(Ipp32s curRow, Ipp32s threadNum, Ipp32s *nmb)
+void VideoEncoderMPEG4::EncodePRowSH(Ipp32s curRow, Ipp32s threadNum, Ipp32s *nmb)
 {
     __ALIGN16(Ipp16s, coeffMB, 64*6);
     __ALIGN16(Ipp8u, mcPred, 64*6);
@@ -2083,7 +2092,7 @@ void ippVideoEncoderMPEG4::EncodePRowSH(Ipp32s curRow, Ipp32s threadNum, Ipp32s 
     }
     for (j = 0; j < mNumMacroBlockPerRow; j ++) {
         // for RTP support
-        mMBpos[nmbf] = 8 * (cBS.mPtr - cBS.mBuffer) + cBS.mBitOff;
+        mMBpos[nmbf] = 8 * (Ipp32u)(cBS.mPtr - cBS.mBuffer) + cBS.mBitOff;
         mMBquant[nmbf] = (Ipp8u)quant;
         if (MBcurr->not_coded) {
             cBS.PutBit(1);
@@ -2123,7 +2132,7 @@ void ippVideoEncoderMPEG4::EncodePRowSH(Ipp32s curRow, Ipp32s threadNum, Ipp32s 
 }
 #endif // _OMP_KARABAS
 
-void ippVideoEncoderMPEG4::EncodePSliceSH(mp4_Slice *slice)
+void VideoEncoderMPEG4::EncodePSliceSH(mp4_Slice *slice)
 {
     __ALIGN16(Ipp16s, coeffMB, 64*6);
     __ALIGN16(Ipp8u, mcPred, 64*6);
@@ -2154,7 +2163,7 @@ void ippVideoEncoderMPEG4::EncodePSliceSH(mp4_Slice *slice)
         pVf = mFrameF->pV + i * 8 * mStepChroma;
         for (j = 0; j < mNumMacroBlockPerRow; j ++) {
             // for RTP support
-            mMBpos[nmbf] = 8 * (slice->cBS.mPtr - slice->cBS.mBuffer) + slice->cBS.mBitOff;
+            mMBpos[nmbf] = (Ipp32u)(8 * (slice->cBS.mPtr - slice->cBS.mBuffer) + slice->cBS.mBitOff);
             mMBquant[nmbf] = (Ipp8u)quant;
             quant += dquant;
             slice->quantSum += quant;
@@ -2249,7 +2258,7 @@ void ippVideoEncoderMPEG4::EncodePSliceSH(mp4_Slice *slice)
     mp4_EncodeZeroBitsAlign(slice->cBS);
 }
 
-void ippVideoEncoderMPEG4::EncodePVOPSH()
+void VideoEncoderMPEG4::EncodePVOPSH()
 {
 #ifdef _OMP_KARABAS
     if (mNumThreads >= 2) {
@@ -2339,7 +2348,7 @@ void ippVideoEncoderMPEG4::EncodePVOPSH()
 }
 
 #ifdef _OMP_KARABAS
-void ippVideoEncoderMPEG4::EncodeIRow(Ipp32s curRow, Ipp32s threadNum)
+void VideoEncoderMPEG4::EncodeIRow(Ipp32s curRow, Ipp32s threadNum)
 {
     __ALIGN16(Ipp16s, coeffMB, 64*6);
     Ipp8u  *pY, *pU, *pV;
@@ -2398,7 +2407,7 @@ void ippVideoEncoderMPEG4::EncodeIRow(Ipp32s curRow, Ipp32s threadNum)
 }
 #endif // _OMP_KARABAS
 
-void ippVideoEncoderMPEG4::EncodeISlice(mp4_Slice *slice)
+void VideoEncoderMPEG4::EncodeISlice(mp4_Slice *slice)
 {
     __ALIGN16(Ipp16s, coeffMB, 64*6);
     Ipp8u  *pY, *pU, *pV, *sPtr;
@@ -2471,6 +2480,7 @@ void ippVideoEncoderMPEG4::EncodeISlice(mp4_Slice *slice)
                             slice->cBS_1.SetPos(cPtr_1, cBitOff_1);
                             slice->cBS_2.SetPos(cPtr_2, cBitOff_2);
                         }
+                        dquant = 0;
                         pY -= 16; pU -= 8; pV -= 8;
                         j --;
                         if (j < 0) {
@@ -2528,7 +2538,7 @@ void ippVideoEncoderMPEG4::EncodeISlice(mp4_Slice *slice)
     mp4_EncodeStuffingBitsAlign(slice->cBS);
 }
 
-void ippVideoEncoderMPEG4::EncodeIVOP()
+void VideoEncoderMPEG4::EncodeIVOP()
 {
 #ifdef _OMP_KARABAS
     if (mNumThreads >= 2) {
@@ -2590,7 +2600,7 @@ void ippVideoEncoderMPEG4::EncodeIVOP()
 }
 
 #ifdef _OMP_KARABAS
-void ippVideoEncoderMPEG4::EncodePRow(Ipp32s curRow, Ipp32s threadNum, Ipp32s *numNotCodedMB)
+void VideoEncoderMPEG4::EncodePRow(Ipp32s curRow, Ipp32s threadNum, Ipp32s *numNotCodedMB)
 {
     __ALIGN16(Ipp16s, coeffMB, 64*6);
     __ALIGN16(Ipp8u, mcPred, 64*6);
@@ -2813,7 +2823,7 @@ void ippVideoEncoderMPEG4::EncodePRow(Ipp32s curRow, Ipp32s threadNum, Ipp32s *n
 }
 #endif // _OMP_KARABAS
 
-void ippVideoEncoderMPEG4::EncodePSlice(mp4_Slice *slice)
+void VideoEncoderMPEG4::EncodePSlice(mp4_Slice *slice)
 {
     __ALIGN16(Ipp16s, coeffMB, 64*6);
     __ALIGN16(Ipp8u, mcPred, 64*6);
@@ -2922,9 +2932,9 @@ void ippVideoEncoderMPEG4::EncodePSlice(mp4_Slice *slice)
                             }
                         } else {
                             IppMotionVector *mvRight, *mvLeft, *mvUpper;
-                            mvRight = (j == mNumMacroBlockPerRow - 1) ? &mvLuma4[1] : (MBcurr[1].type == IPPVC_MBTYPE_INTRA || MBcurr[1].type == IPPVC_MBTYPE_INTRA_Q) ? &mvLuma4[1] : MBcurr[1].mv;
-                            mvLeft = (j == 0) ? mvLuma4 - 1 : (MBcurr[-1].type == IPPVC_MBTYPE_INTRA || MBcurr[-1].type == IPPVC_MBTYPE_INTRA_Q) ? mvLeft = mvLuma4 - 1 : MBcurr[-1].mv;
-                            mvUpper = (i == 0) ? mvLuma4 - 2 : (MBcurr[-mNumMacroBlockPerRow].type == IPPVC_MBTYPE_INTRA || MBcurr[-mNumMacroBlockPerRow].type == IPPVC_MBTYPE_INTRA_Q) ? mvLuma4 - 2 : MBcurr[-mNumMacroBlockPerRow].mv;
+                            mvRight = ((j == mNumMacroBlockPerRow - 1) ? &mvLuma4[1] : ((MBcurr[1].type == IPPVC_MBTYPE_INTRA || MBcurr[1].type == IPPVC_MBTYPE_INTRA_Q) ? &mvLuma4[1] : MBcurr[1].mv));
+                            mvLeft = ((j == 0) ? (mvLuma4 - 1) : ((MBcurr[-1].type == IPPVC_MBTYPE_INTRA || MBcurr[-1].type == IPPVC_MBTYPE_INTRA_Q) ? (mvLeft = mvLuma4 - 1) : MBcurr[-1].mv));
+                            mvUpper = ((i == 0) ? (mvLuma4 - 2) : ((MBcurr[-mNumMacroBlockPerRow].type == IPPVC_MBTYPE_INTRA || MBcurr[-mNumMacroBlockPerRow].type == IPPVC_MBTYPE_INTRA_Q) ? (mvLuma4 - 2) : MBcurr[-mNumMacroBlockPerRow].mv));
                             if (VOL.quarter_sample) {
                                 ippiOBMC8x8QP_MPEG4_8u_C1R(pYf, mStepLuma, mcPred, 16, &mvLuma4[0], &mvLeft[1], &mvLuma4[1], &mvUpper[2], &mvLuma4[2], rt);
                                 ippiOBMC8x8QP_MPEG4_8u_C1R(pYf+8, mStepLuma, mcPred+8, 16, &mvLuma4[1], &mvLuma4[0], &mvRight[0], &mvUpper[3], &mvLuma4[3], rt);
@@ -3064,6 +3074,7 @@ void ippVideoEncoderMPEG4::EncodePSlice(mp4_Slice *slice)
                             slice->cBS_1.SetPos(cPtr_1, cBitOff_1);
                             slice->cBS_2.SetPos(cPtr_2, cBitOff_2);
                         }
+                        dquant = 0;
                         pYc -= 16; pUc -= 8; pVc -= 8;
                         pYf -= 16; pUf -= 8; pVf -= 8;
                         j --;
@@ -3124,7 +3135,7 @@ void ippVideoEncoderMPEG4::EncodePSlice(mp4_Slice *slice)
     mp4_EncodeStuffingBitsAlign(slice->cBS);
 }
 
-void ippVideoEncoderMPEG4::EncodePVOP()
+void VideoEncoderMPEG4::EncodePVOP()
 {
 #ifdef _OMP_KARABAS
     if (mNumThreads >= 2) {
@@ -3226,7 +3237,7 @@ void ippVideoEncoderMPEG4::EncodePVOP()
 }
 
 #ifdef _OMP_KARABAS
-void ippVideoEncoderMPEG4::EncodeBRow(Ipp32s curRow, Ipp32s threadNum)
+void VideoEncoderMPEG4::EncodeBRow(Ipp32s curRow, Ipp32s threadNum)
 {
     // only frame MC implemented for FORWARD, BACKWARD and INTERPOLATE
     __ALIGN16(Ipp16s, coeffMB, 64*6);
@@ -3640,7 +3651,7 @@ void ippVideoEncoderMPEG4::EncodeBRow(Ipp32s curRow, Ipp32s threadNum)
 }
 #endif // _OMP_KARABAS
 
-void ippVideoEncoderMPEG4::EncodeBSlice(mp4_Slice *slice)
+void VideoEncoderMPEG4::EncodeBSlice(mp4_Slice *slice)
 {
     // only frame MC implemented for FORWARD, BACKWARD and INTERPOLATE
     __ALIGN16(Ipp16s, coeffMB, 64*6);
@@ -3994,10 +4005,12 @@ void ippVideoEncoderMPEG4::EncodeBSlice(mp4_Slice *slice)
                         slice->cBS.PutBits(pattern, 6);
                     // code dbquant
                     if (mb_type != IPPVC_MBTYPE_DIRECT && pattern != 0)
+                    {
                         if (dbquant == 0)
                             slice->cBS.PutBit(0);
                         else
                             slice->cBS.PutBits(dbquant < 0 ? 2 : 3, 2);
+                    }
                     if (VOL.interlaced) {
                         // encode dct_type
                         if (pattern)
@@ -4084,7 +4097,7 @@ void ippVideoEncoderMPEG4::EncodeBSlice(mp4_Slice *slice)
     mp4_EncodeStuffingBitsAlign(slice->cBS);
 }
 
-void ippVideoEncoderMPEG4::EncodeBVOP()
+void VideoEncoderMPEG4::EncodeBVOP()
 {
 #ifdef _OMP_KARABAS
     if (mNumThreads >= 2) {
@@ -4144,7 +4157,7 @@ void ippVideoEncoderMPEG4::EncodeBVOP()
 }
 
 #ifdef _OMP_KARABAS
-void ippVideoEncoderMPEG4::EncodeSRow(Ipp32s curRow, Ipp32s threadNum)
+void VideoEncoderMPEG4::EncodeSRow(Ipp32s curRow, Ipp32s threadNum)
 {
     __ALIGN16(Ipp16s, coeffMB, 64*6);
     __ALIGN16(Ipp8u, mcPred, 64*6);
@@ -4383,7 +4396,7 @@ if (!MBcurr->mcsel) {
 }
 #endif // _OMP_KARABAS
 
-void ippVideoEncoderMPEG4::EncodeSSlice(mp4_Slice *slice)
+void VideoEncoderMPEG4::EncodeSSlice(mp4_Slice *slice)
 {
     __ALIGN16(Ipp16s, coeffMB, 64*6);
     __ALIGN16(Ipp8u, mcPred, 64*6);
@@ -4482,9 +4495,9 @@ void ippVideoEncoderMPEG4::EncodeSSlice(mp4_Slice *slice)
                         }
                     } else {
                         IppMotionVector *mvRight, *mvLeft, *mvUpper;
-                        mvRight = (j == mNumMacroBlockPerRow - 1) ? &mvLuma4[1] : (MBcurr[1].type == IPPVC_MBTYPE_INTRA || MBcurr[1].type == IPPVC_MBTYPE_INTRA_Q || MBcurr[1].mcsel) ? &mvLuma4[1] : MBcurr[1].mv;
-                        mvLeft = (j == 0) ? mvLuma4 - 1 : (MBcurr[-1].type == IPPVC_MBTYPE_INTRA || MBcurr[-1].type == IPPVC_MBTYPE_INTRA_Q || MBcurr[-1].mcsel) ? mvLeft = mvLuma4 - 1 : MBcurr[-1].mv;
-                        mvUpper = (i == 0) ? mvLuma4 - 2 : (MBcurr[-mNumMacroBlockPerRow].type == IPPVC_MBTYPE_INTRA || MBcurr[-mNumMacroBlockPerRow].type == IPPVC_MBTYPE_INTRA_Q || MBcurr[-mNumMacroBlockPerRow].mcsel) ? mvLuma4 - 2 : MBcurr[-mNumMacroBlockPerRow].mv;
+                        mvRight = ((j == mNumMacroBlockPerRow - 1) ? &mvLuma4[1] : ((MBcurr[1].type == IPPVC_MBTYPE_INTRA || MBcurr[1].type == IPPVC_MBTYPE_INTRA_Q || MBcurr[1].mcsel) ? &mvLuma4[1] : MBcurr[1].mv));
+                        mvLeft = ((j == 0) ? (mvLuma4 - 1) : ((MBcurr[-1].type == IPPVC_MBTYPE_INTRA || MBcurr[-1].type == IPPVC_MBTYPE_INTRA_Q || MBcurr[-1].mcsel) ? (mvLeft = mvLuma4 - 1) : MBcurr[-1].mv));
+                        mvUpper = ((i == 0) ? (mvLuma4 - 2) : ((MBcurr[-mNumMacroBlockPerRow].type == IPPVC_MBTYPE_INTRA || MBcurr[-mNumMacroBlockPerRow].type == IPPVC_MBTYPE_INTRA_Q || MBcurr[-mNumMacroBlockPerRow].mcsel) ? (mvLuma4 - 2) : MBcurr[-mNumMacroBlockPerRow].mv));
                         if (VOL.quarter_sample) {
                             ippiOBMC8x8QP_MPEG4_8u_C1R(pYf, mStepLuma, mcPred, 16, &mvLuma4[0], &mvLeft[1], &mvLuma4[1], &mvUpper[2], &mvLuma4[2], rt);
                             ippiOBMC8x8QP_MPEG4_8u_C1R(pYf+8, mStepLuma, mcPred+8, 16, &mvLuma4[1], &mvLuma4[0], &mvRight[0], &mvUpper[3], &mvLuma4[3], rt);
@@ -4644,6 +4657,7 @@ if (!MBcurr->mcsel) {
                             slice->cBS_1.SetPos(cPtr_1, cBitOff_1);
                             slice->cBS_2.SetPos(cPtr_2, cBitOff_2);
                         }
+                        dquant = 0;
                         pYc -= 16; pUc -= 8; pVc -= 8;
                         pYf -= 16; pUf -= 8; pVf -= 8;
                         mbRectL.x -= 16;
@@ -4712,7 +4726,7 @@ if (!MBcurr->mcsel) {
     mp4_EncodeStuffingBitsAlign(slice->cBS);
 }
 
-void ippVideoEncoderMPEG4::EncodeSVOP()
+void VideoEncoderMPEG4::EncodeSVOP()
 {
     if (VOL.sprite_enable != MP4_SPRITE_GMC) {
         mp4_EncodeStuffingBitsAlign(cBS);

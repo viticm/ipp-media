@@ -4,7 +4,7 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//       Copyright(c) 2003-2008 Intel Corporation. All Rights Reserved.
+//       Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
@@ -13,8 +13,8 @@
 #include "vm_debug.h"
 #include <string.h>
 
-namespace UMC
-{
+using namespace UMC;
+
 
 SysInfo::SysInfo(vm_char *pProcessName)
 {
@@ -22,7 +22,8 @@ SysInfo::SysInfo(vm_char *pProcessName)
     if (!pProcessName)
     {
         vm_sys_info_get_program_name(m_sSystemInfo.program_name);
-    } else
+    }
+    else
     {
         vm_string_strcpy(m_sSystemInfo.program_name, pProcessName);
     }
@@ -35,11 +36,11 @@ SysInfo::SysInfo(vm_char *pProcessName)
     m_sSystemInfo.phys_mem = vm_sys_info_get_mem_size();
     m_sSystemInfo.num_proc = vm_sys_info_get_cpu_num();
     CpuUsageRelease();
-} // SysInfo::SysInfo(void)
+}
 
 SysInfo::~SysInfo(void)
 {
-} // SysInfo::~SysInfo(void)
+}
 
 Ipp64f SysInfo::GetCpuUsage(void)
 {
@@ -51,12 +52,13 @@ Ipp64f SysInfo::GetCpuUsage(void)
     {
         return cpu_use;
     }
-    if ((user_time) && (total_time)) {
+    if ((user_time) && (total_time))
+    {
         Ipp64f dUserTime = (Ipp64f)(Ipp64s)((user_time_cur - user_time));
         Ipp64f dTotalTime = (Ipp64f)(Ipp64s)((total_time_cur - total_time));
         Ipp64f dUserTimeAvg = (Ipp64f)(Ipp64s)((user_time_cur - user_time_start));
         Ipp64f dTotalTimeAvg = (Ipp64f)(Ipp64s)((total_time_cur - total_time_start));
-#if defined(_WIN32_WCE)
+#if defined _WIN32_WCE
         cpu_use = 100 - ((dUserTime) / (dTotalTime)) * 100;
         avg_cpuusage = 100 - ((dUserTimeAvg) / (dTotalTimeAvg)) * 100;
 #else
@@ -64,16 +66,19 @@ Ipp64f SysInfo::GetCpuUsage(void)
         avg_cpuusage = ((dUserTimeAvg) / (dTotalTimeAvg)) * 100;
 #endif
      }
-     else {
+     else
+     {
          user_time_start = user_time_cur;
          total_time_start = total_time_cur;
      }
+
      if ((cpu_use >= 0) && (cpu_use <= 100))
          last_cpuusage = cpu_use;
      else
          cpu_use = last_cpuusage;
      if (cpu_use > max_cpuusage)
          max_cpuusage = cpu_use;
+
     user_time = user_time_cur;
     total_time = total_time_cur;
     return cpu_use;
@@ -82,16 +87,14 @@ Ipp64f SysInfo::GetCpuUsage(void)
 sSystemInfo *SysInfo::GetSysInfo(void)
 {
     return &m_sSystemInfo;
-
-} // sSystemInfo *SysInfo::GetSysInfo(void)
+}
 
 void SysInfo::GetCpuUseTime(vm_char* proc_name, vm_tick* process_use, vm_tick* total_use)
 {
-#if (defined(_WIN32) || defined(_WIN64)) || defined(_WIN32_WCE)
-#if (defined(_WIN32_WCE))
+#if defined _WIN32_WCE
     *process_use = GetIdleTime();
     *total_use = GetTickCount();
-#else //(defined(_WIN32_WCE))
+#elif defined WINDOWS
     NTSTATUS Status;
     PSYSTEM_PROCESSES pProcesses;
     HINSTANCE hNtDll;
@@ -100,7 +103,7 @@ void SysInfo::GetCpuUseTime(vm_char* proc_name, vm_tick* process_use, vm_tick* t
     PVOID pBuffer = NULL;
 #ifndef UNICODE
     vm_char szProcessName[MAX_PATH];
-#endif // UNICODE
+#endif
 
     NTSTATUS (WINAPI * _ZwQuerySystemInformation)(UINT, PVOID, ULONG, PULONG);
 
@@ -147,8 +150,7 @@ void SysInfo::GetCpuUseTime(vm_char* proc_name, vm_tick* process_use, vm_tick* t
 #ifdef UNICODE
         pProcessName = pszProcessName;
 #else
-        WideCharToMultiByte(CP_ACP, 0, pszProcessName, -1,
-            szProcessName, MAX_PATH, NULL, NULL);
+        WideCharToMultiByte(CP_ACP, 0, pszProcessName, -1, szProcessName, MAX_PATH, NULL, NULL);
         pProcessName = szProcessName;
 #endif
 
@@ -169,9 +171,8 @@ void SysInfo::GetCpuUseTime(vm_char* proc_name, vm_tick* process_use, vm_tick* t
     }
 
     HeapFree(hHeap, 0, pBuffer);
-#endif //(defined(_WIN32_WCE))
-#endif //#if (defined(_WIN32) || defined(_WIN64)) && !defined(_WIN32_WCE)
-}/* GetCpuUseTime */
+#endif
+}
 
 void SysInfo::CpuUsageRelease(void)
 {
@@ -181,5 +182,3 @@ void SysInfo::CpuUsageRelease(void)
     total_time = 0;
     last_cpuusage = 0;
 }
-
-} // namespace UMC

@@ -4,7 +4,7 @@
 //  This software is supplied under the terms of a license  agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in  accordance  with the terms of that agreement.
-//    Copyright (c) 2003-2007 Intel Corporation. All Rights Reserved.
+//    Copyright (c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 //
 */
@@ -19,26 +19,25 @@ namespace UMC
 
 class VideoBufferParams : public MediaBufferParams
 {
+public:
     DYNAMIC_CAST_DECL(VideoBufferParams, MediaBufferParams)
 
-public:
-    // Default constructor
-    VideoBufferParams(void);
-    // Destructor
-    virtual ~VideoBufferParams(void);
+    VideoBufferParams(void)
+    {
+        m_lIPDistance = 0;
+        m_lGOPSize    = 0;
+    }
 
-    Ipp32u m_lIPDistance;         // (Ipp32u) distance between I,P & B frames
-    Ipp32u m_lGOPSize;            // (Ipp32u) size of GOP
+    Ipp32u m_lIPDistance;         // distance between I,P & B frames
+    Ipp32u m_lGOPSize;            // size of GOP
 };
 
 class VideoBuffer : public SampleBuffer
 {
+public:
     DYNAMIC_CAST_DECL(VideoBuffer, SampleBuffer)
 
-public:
-    // Default constructor
     VideoBuffer(void);
-    // Destructor
     virtual ~VideoBuffer(void);
 
     // Initialize buffer

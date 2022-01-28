@@ -8,6 +8,7 @@
 //
 */
 #include "umc_defs.h"
+#include "umc_config.h"
 
 #if defined (UMC_ENABLE_H263_VIDEO_ENCODER)
 

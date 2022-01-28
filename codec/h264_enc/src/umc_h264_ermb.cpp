@@ -3,26 +3,31 @@
 //  This software is supplied under the terms of a license agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in accordance with the terms of that agreement.
-//        Copyright (c) 2004 - 2008 Intel Corporation. All Rights Reserved.
+//        Copyright (c) 2004 - 2012 Intel Corporation. All Rights Reserved.
 //
 
+#include "umc_config.h"
+#ifdef UMC_ENABLE_H264_VIDEO_ENCODER
 
 #include <math.h>
-#include "umc_defs.h"
-#if defined(UMC_ENABLE_H264_VIDEO_ENCODER)
 
 #include "umc_h264_video_encoder.h"
 #include "umc_h264_tables.h"
 #include "umc_h264_to_ipp.h"
 #include "umc_h264_bme.h"
+
 #include "ippdefs.h"
-#include "ippvc.h"
 
 //#define TRACE_INTRA 50
 //#define TRACE_INTER 5
 //#define TRACE_INTRA_16X16 185
 
-#define MAX_CAVLC_LEVEL 2063
+#ifdef INTRINSIC_OPT
+#define TRANS4x4_OPT
+#endif
+
+#define MAX_CAVLC_LEVEL 2064
+#define MIN_CAVLC_LEVEL -2063
 
 #define LUMA_MB_MAX_COST 6
 #define CHROMA_COEFF_MAX_COST 7
@@ -31,55 +36,55 @@
 #define LUMA_COEFF_8X8_MAX_COST 4
 #define LUMA_COEFF_MB_8X8_MAX_COST 6
 
-    static const __ALIGN16 Ipp16s FwdQuantTable_16s[6][16] = {
-        {13107, 8066, 13107, 8066, 8066, 5243,  8066, 5243, 13107, 8066, 13107, 8066, 8066, 5243,  8066, 5243},
-        {11916, 7490, 11916, 7490, 7490, 4660,  7490, 4660, 11916, 7490, 11916, 7490, 7490, 4660,  7490, 4660},
-        {10082, 6554, 10082, 6554, 6554, 4194,  6554, 4194, 10082, 6554, 10082, 6554, 6554, 4194,  6554, 4194},
-        {9362, 5825, 9362, 5825, 5825, 3647, 5825, 3647, 9362, 5825, 9362, 5825, 5825, 3647, 5825, 3647},
-        {8192, 5243, 8192, 5243, 5243, 3355, 5243, 3355, 8192, 5243, 8192, 5243, 5243, 3355, 5243, 3355},
-        {7282, 4559, 7282, 4559, 4559, 2893, 4559, 2893, 7282, 4559, 7282, 4559, 4559, 2893, 4559, 2893}
-    };
+static const __ALIGN16 Ipp16s FwdQuantTable_16s[6][16] = {
+    {13107, 8066, 13107, 8066, 8066, 5243,  8066, 5243, 13107, 8066, 13107, 8066, 8066, 5243,  8066, 5243},
+    {11916, 7490, 11916, 7490, 7490, 4660,  7490, 4660, 11916, 7490, 11916, 7490, 7490, 4660,  7490, 4660},
+    {10082, 6554, 10082, 6554, 6554, 4194,  6554, 4194, 10082, 6554, 10082, 6554, 6554, 4194,  6554, 4194},
+    {9362, 5825, 9362, 5825, 5825, 3647, 5825, 3647, 9362, 5825, 9362, 5825, 5825, 3647, 5825, 3647},
+    {8192, 5243, 8192, 5243, 5243, 3355, 5243, 3355, 8192, 5243, 8192, 5243, 5243, 3355, 5243, 3355},
+    {7282, 4559, 7282, 4559, 4559, 2893, 4559, 2893, 7282, 4559, 7282, 4559, 4559, 2893, 4559, 2893}
+};
 
-    static const __ALIGN16 Ipp16s InvLevelScale_4x4_default[6][16] = {
-        {160, 208, 160, 208, 208, 256, 208, 256, 160, 208, 160, 208, 208, 256, 208, 256},
-        {176, 224, 176, 224, 224, 288, 224, 288, 176, 224, 176, 224, 224, 288, 224, 288},
-        {208, 256, 208, 256, 256, 320, 256, 320, 208, 256, 208, 256, 256, 320, 256, 320},
-        {224, 288, 224, 288, 288, 368, 288, 368, 224, 288, 224, 288, 288, 368, 288, 368},
-        {256, 320, 256, 320, 320, 400, 320, 400, 256, 320, 256, 320, 320, 400, 320, 400},
-        {288, 368, 288, 368, 368, 464, 368, 464, 288, 368, 288, 368, 368, 464, 368, 464}
-    };
+static const __ALIGN16 Ipp16s InvLevelScale_4x4_default[6][16] = {
+    {160, 208, 160, 208, 208, 256, 208, 256, 160, 208, 160, 208, 208, 256, 208, 256},
+    {176, 224, 176, 224, 224, 288, 224, 288, 176, 224, 176, 224, 224, 288, 224, 288},
+    {208, 256, 208, 256, 256, 320, 256, 320, 208, 256, 208, 256, 256, 320, 256, 320},
+    {224, 288, 224, 288, 288, 368, 288, 368, 224, 288, 224, 288, 288, 368, 288, 368},
+    {256, 320, 256, 320, 320, 400, 320, 400, 256, 320, 256, 320, 320, 400, 320, 400},
+    {288, 368, 288, 368, 368, 464, 368, 464, 288, 368, 288, 368, 368, 464, 368, 464}
+};
 
-    static const __ALIGN16 Ipp16s InvScale4x4[6][16] = {
-        { 2560, 4160, 2560, 4160, 4160, 6400, 4160, 6400, 2560, 4160, 2560, 4160, 4160, 6400, 4160, 6400, },
-        { 2816, 4480, 2816, 4480, 4480, 7200, 4480, 7200, 2816, 4480, 2816, 4480, 4480, 7200, 4480, 7200, },
-        { 3328, 5120, 3328, 5120, 5120, 8000, 5120, 8000, 3328, 5120, 3328, 5120, 5120, 8000, 5120, 8000, },
-        { 3584, 5760, 3584, 5760, 5760, 9200, 5760, 9200, 3584, 5760, 3584, 5760, 5760, 9200, 5760, 9200, },
-        { 4096, 6400, 4096, 6400, 6400, 10000, 6400, 10000, 4096, 6400, 4096, 6400, 6400, 10000, 6400, 10000, },
-        { 4608, 7360, 4608, 7360, 7360, 11600, 7360, 11600, 4608, 7360, 4608, 7360, 7360, 11600, 7360, 11600 }
-    };
+static const __ALIGN16 Ipp16s InvScale4x4[6][16] = {
+    { 2560, 4160, 2560, 4160, 4160, 6400, 4160, 6400, 2560, 4160, 2560, 4160, 4160, 6400, 4160, 6400, },
+    { 2816, 4480, 2816, 4480, 4480, 7200, 4480, 7200, 2816, 4480, 2816, 4480, 4480, 7200, 4480, 7200, },
+    { 3328, 5120, 3328, 5120, 5120, 8000, 5120, 8000, 3328, 5120, 3328, 5120, 5120, 8000, 5120, 8000, },
+    { 3584, 5760, 3584, 5760, 5760, 9200, 5760, 9200, 3584, 5760, 3584, 5760, 5760, 9200, 5760, 9200, },
+    { 4096, 6400, 4096, 6400, 6400, 10000, 6400, 10000, 4096, 6400, 4096, 6400, 6400, 10000, 6400, 10000, },
+    { 4608, 7360, 4608, 7360, 7360, 11600, 7360, 11600, 4608, 7360, 4608, 7360, 7360, 11600, 7360, 11600 }
+};
 
-    static const __ALIGN16 Ipp8u h264_qp_rem[90]= {
-        0,   1,   2,   3,   4,   5,   0,   1,   2,   3,   4,   5,   0,   1,   2,  3,   4,   5,
-        0,   1,   2,   3,   4,   5,   0,   1,   2,   3,   4,   5,   0,   1,   2,  3,   4,   5,
-        0,   1,   2,   3,   4,   5,   0,   1,   2,   3,   4,   5,   0,   1,   2,  3,   4,   5,
-        0,   1,   2,   3,   4,   5,   0,   1,   2,   3,   4,   5,   0,   1,   2,  3,   4,   5,
-        0,   1,   2,   3,   4,   5,   0,   1,   2,   3,   4,   5,   0,   1,   2,  3,   4,   5
-    };
+static const __ALIGN16 Ipp8u h264_qp_rem[90]= {
+    0,   1,   2,   3,   4,   5,   0,   1,   2,   3,   4,   5,   0,   1,   2,  3,   4,   5,
+    0,   1,   2,   3,   4,   5,   0,   1,   2,   3,   4,   5,   0,   1,   2,  3,   4,   5,
+    0,   1,   2,   3,   4,   5,   0,   1,   2,   3,   4,   5,   0,   1,   2,  3,   4,   5,
+    0,   1,   2,   3,   4,   5,   0,   1,   2,   3,   4,   5,   0,   1,   2,  3,   4,   5,
+    0,   1,   2,   3,   4,   5,   0,   1,   2,   3,   4,   5,   0,   1,   2,  3,   4,   5
+};
 
-    static const __ALIGN16 Ipp8u h264_qp6[90] = {
-        0,   0,   0,   0,   0,   0,   1,   1,   1,   1,   1,   1,   2,   2,   2,  2,   2,   2,
-        3,   3,   3,   3,   3,   3,   4,   4,   4,   4,   4,   4,   5,   5,   5,  5,   5,   5,
-        6,   6,   6,   6,   6,   6,   7,   7,   7,   7,   7,   7,   8,   8,   8,  8,   8,   8,
-        9,   9,   9,   9,   9,   9,  10,  10,  10,  10,  10,  10,  11,  11,  11, 11,  11,  11,
-       12,  12,  12,  12,  12,  12,  13,  13,  13,  13,  13,  13,  14,  14,  14, 14,  14,  14
-    };
+static const __ALIGN16 Ipp8u h264_qp6[90] = {
+    0,   0,   0,   0,   0,   0,   1,   1,   1,   1,   1,   1,   2,   2,   2,  2,   2,   2,
+    3,   3,   3,   3,   3,   3,   4,   4,   4,   4,   4,   4,   5,   5,   5,  5,   5,   5,
+    6,   6,   6,   6,   6,   6,   7,   7,   7,   7,   7,   7,   8,   8,   8,  8,   8,   8,
+    9,   9,   9,   9,   9,   9,  10,  10,  10,  10,  10,  10,  11,  11,  11, 11,  11,  11,
+    12,  12,  12,  12,  12,  12,  13,  13,  13,  13,  13,  13,  14,  14,  14, 14,  14,  14
+};
 
-    static const __ALIGN16 Ipp8u CorrMatrix[16] = {
-        16, 20, 16, 20,
-        20, 25, 20, 25,
-        16, 20, 16, 20,
-        20, 25, 20, 25
-    };
+static const __ALIGN16 Ipp8u CorrMatrix[16] = {
+    16, 20, 16, 20,
+    20, 25, 20, 25,
+    16, 20, 16, 20,
+    20, 25, 20, 25
+};
 
 static const Ipp32s ctx_neq1p1[8] = { 1,2,3,4,0,0,0,0};
 static const Ipp32s ctx_ngt1[8] =   { 5,5,5,5,6,7,8,9};
@@ -131,9 +136,8 @@ void transform4x4(Ipp16s* pSrc, Ipp16s* pDst)
     }
 }
 
-Ipp16s quant(Ipp16s coeff, Ipp32s pos, Ipp32s QP, Ipp32s intra)
+Ipp16s quant(Ipp16s coeff, Ipp32s pos, Ipp32s QP, Ipp32s)
 {
-    H264ENC_UNREFERENCED_PARAMETER(intra);
     Ipp32s  qp_rem, qp6;
     const   Ipp16s*  quantTbl;
     Ipp16s sign;
@@ -176,29 +180,18 @@ Ipp16s dequant(Ipp16s coeff,Ipp32s pos, Ipp32s QP)
 }
 
 IppStatus TransformQuantOptFwd4x4_H264_16s32s_C1(
-    Ipp16s* pSrc,
-    Ipp32s* pDst,
-    Ipp32s  Qp,
-    Ipp32s* pNumLevels,
-    Ipp32s  intra,
-    const Ipp16s* pScanMatrix,
-    Ipp32s* pLastCoeff,
-    const Ipp16s* pLevelScales,
-    const H264Slice_16u32s* curr_slice,
-    Ipp32s uBlock,
-    CabacStates* cbSt)
+    Ipp16s*,
+    Ipp32s*,
+    Ipp32s,
+    Ipp32s*,
+    Ipp32s,
+    const Ipp16s*,
+    Ipp32s*,
+    const Ipp16s*,
+    const H264Slice<Ipp32s, Ipp16u>*,
+    Ipp32s,
+    CabacStates*)
 {
-    H264ENC_UNREFERENCED_PARAMETER(pSrc);
-    H264ENC_UNREFERENCED_PARAMETER(pDst);
-    H264ENC_UNREFERENCED_PARAMETER(Qp);
-    H264ENC_UNREFERENCED_PARAMETER(pNumLevels);
-    H264ENC_UNREFERENCED_PARAMETER(intra);
-    H264ENC_UNREFERENCED_PARAMETER(pScanMatrix);
-    H264ENC_UNREFERENCED_PARAMETER(pLastCoeff);
-    H264ENC_UNREFERENCED_PARAMETER(pLevelScales);
-    H264ENC_UNREFERENCED_PARAMETER(curr_slice);
-    H264ENC_UNREFERENCED_PARAMETER(uBlock);
-    H264ENC_UNREFERENCED_PARAMETER(cbSt);
     return ippStsNoErr;
 }
 
@@ -598,45 +591,7 @@ typedef struct _coeff_n{
 
 #define P_BITS
 
-/* int( (pow(2.0,MAX(0,(iQP-12))/3.0)*0.85) + 0.5) */
-static const Ipp32u lambda_sq[87] = {
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    2, 2, 3, 3, 4, 5, 7, 9, 11, 14, 17, 22, 27,
-    34, 43, 54, 69, 86, 109, 137, 173, 218, 274,
-    345, 435, 548, 691, 870, 1097, 1382, 1741,
-    2193, 2763, 3482, 4387, 5527, 6963, 8773,
-    11053, 13926, 17546, 22107, 27853, 35092,
-    44214, 55706, 70185, 88427, 111411, 140369,
-    176854, 222822, 280739, 353709, 445645, 561477,
-    707417, 891290, 1122955, 1414834, 1782579,
-    2245909, 2829668, 3565158, 4491818, 5659336,
-    7130317, 8983636, 11318672, 14260634, 17967272,
-    22637345,
-};
-/* Inter: int(pow(2.0,(double)qp/3)*0.84*400/16+0.5)
-   Intra: int(pow(2.0,(double)qp/3)*0.84*0.9*400/16+0.5)
-*/
-/*const Ipp32s lambda_t[2][52] = {
-{ //Inter
-   21,    26,    33,    42,    53,    67,    84,   106,
-  133,   168,   212,   267,   336,   423,   533,   672,
-  847,  1067,  1344,  1693,  2133,  2688,  3387,  4267,
- 5376,  6773,  8534, 10752, 13547, 17068, 21504, 27093,
-34135, 43008, 54187, 68271, 86016, 108373, 136542, 172032,
-216747, 273084, 344064, 433493, 546168, 688128, 866987, 1092335,
-1376256, 1733974, 2184670, 2752512,
-},
-{ //Intra
-   19,    24,    30,    38,    48,    60,    76,    95,
-  120,   151,   191,   240,   302,   381,   480,   605,
-  762,   960,  1210,  1524,  1920,  2419,  3048,  3840,
- 4838,  6096,  7680,  9677, 12192, 15361, 19354, 24384,
-30722, 38707, 48768, 61444, 77414, 97536, 122888, 154829,
-195072, 245775, 309658, 390144, 491551, 619315, 780288, 983102,
-1238630, 1560577, 1966203, 2477261,
-}
-};
-*/
+
 #if 1
 const Ipp32s lambda_t[2][52] = {
 {
@@ -694,13 +649,6 @@ const Ipp32s lambda_t[2][52] = {
 };
 #endif
 
-
-#undef TRANS4x4_OPT
-#ifdef INTRINSIC_OPT
-    #define TRANS4x4_OPT
-#endif
-
-
 static __ALIGN16 const Ipp8u enc_scan[2][16] = {
     {0,1,5,6,2,4,7,12,3,8,11,13,9,10,14,15},
     {0,2,8,12,1,5,9,13,3,6,10,14,4,7,11,15}
@@ -722,12 +670,12 @@ IppStatus TransformQuantOptFwd4x4_H264_16s_C1(
     Ipp16s* pScanMatrix,
     Ipp32s* pLastCoeff,
     Ipp16s* pScaleLevels,
-    const H264Slice_8u16s* curr_slice,
+    const H264Slice<Ipp16s, Ipp8u>* curr_slice,
     Ipp32s sCoeff,
     CabacStates* cbSt)
 {
-    H264ENC_UNREFERENCED_PARAMETER(pScaleLevels);
-    H264ENC_UNREFERENCED_PARAMETER(pScanMatrix);
+    pScaleLevels = pScaleLevels;
+    pScanMatrix = pScanMatrix;
     Ipp32s i;
     __ALIGN16 Ipp16s t[16];
     const Ipp32s isField = curr_slice->m_is_cur_mb_field;
@@ -737,7 +685,9 @@ IppStatus TransformQuantOptFwd4x4_H264_16s_C1(
 
     //Ipp64u lambda = 400*curr_slice->m_cur_mb.lambda;
     const Ipp32s* dec_scan = dec_single_scan[isField];
+#ifdef TRANS4x4_OPT
     const Ipp8u*  escan = enc_scan[isField];
+#endif
     const Ipp32s qp_rem = h264_qp_rem[Qp];
     const Ipp32s qp6 = h264_qp6[Qp];
     const Ipp16s* quantTbl = FwdQuantTable_16s[qp_rem];
@@ -945,7 +895,7 @@ IppStatus TransformQuantOptFwd4x4_H264_16s_C1(
     *pLastCoeff =  _mm_cvtsi128_si32(p3) & 0xff;
 //Dequant
 /*
-            Ipp32s d = (tcoeff<<6) + 32; //*64
+            Ipp32s d = (tcoeff<<6) + 32; *64
             if( Qp >= 24 )
                 d = (d - (c*invQuantTbl[pos]<<shift_dq)*CorrMatrix[pos])>>6;
             else
@@ -1062,7 +1012,7 @@ IppStatus TransformQuantOptFwd4x4_H264_16s_C1(
         Ipp32u tcoeff = t[pos];
 #else
         Ipp32u tcoeff = t[pos];
-        if( sign[pos] < 0 ) tcoeff = -tcoeff;
+        if( sign[pos] < 0 ) tcoeff = IPP_MAX_32U - tcoeff + 1;
 #endif
 
         //Exchange layers
@@ -1254,7 +1204,7 @@ IppStatus TransformQuantOptFwd4x4_H264_16s_C1(
 
 Ipp16s quant8x8(Ipp16s coeff,Ipp32s pos, Ipp32s Qp6, Ipp32s intra, const Ipp16s* pScaleLevels)
 {
-    H264ENC_UNREFERENCED_PARAMETER(intra);
+    intra = intra;
     Ipp16s sign;
     Ipp32s scale;
     Ipp32s scaleOffset;
@@ -1368,11 +1318,11 @@ void QuantOptLuma8x8_H264_16s_C1_8u16s(
     const Ipp16s* pScaleLevels,
     Ipp32s* pNumLevels,
     Ipp32s* pLastCoeff,
-    const H264Slice_8u16s* curr_slice,
+    const H264Slice<Ipp16s, Ipp8u>* curr_slice,
     CabacStates* cbSt,
     const Ipp16s* pInvLevelScale)
 {
-    H264ENC_UNREFERENCED_PARAMETER(pInvLevelScale);
+    pInvLevelScale = pInvLevelScale;
     __ALIGN16 Ipp16s qcoeff[64];
     Ipp32s i;
     Ipp32s isField = curr_slice->m_is_cur_mb_field;
@@ -1619,9 +1569,6 @@ void QuantOptLuma8x8_H264_16s_C1_8u16s(
         *pNumLevels = -*pNumLevels;
 }
 
-namespace UMC_H264_ENCODER
-{
-
 #define PRINT 0
 
 static Ipp32s chromaPredInc[3][16] = {
@@ -1636,7 +1583,7 @@ static Ipp32s chromaDCOffset[3][16] = {
     { 0, 1, 4, 5, 2, 3, 6, 7, 8, 9, 12, 13, 10, 11, 14, 15}
 };
 
-inline void ippiCalcNonZero(const Ipp16s *coeffs, Ipp32s  m, Ipp32s *numCoeffs)
+inline void ownCalcNonZero(const Ipp16s *coeffs, Ipp32s  m, Ipp32s *numCoeffs)
 {
     Ipp32s n = 0;
     for (Ipp32s i = 0; i < m; i ++) {
@@ -1646,7 +1593,7 @@ inline void ippiCalcNonZero(const Ipp16s *coeffs, Ipp32s  m, Ipp32s *numCoeffs)
     *numCoeffs = (coeffs[0] != 0)? -n: n;
 }
 
-inline void ippiCalcNonZero(const Ipp32s *coeffs, Ipp32s  m, Ipp32s *numCoeffs)
+inline void ownCalcNonZero(const Ipp32s *coeffs, Ipp32s  m, Ipp32s *numCoeffs)
 {
     Ipp32s n = 0;
     for (Ipp32s i = 0; i < m; i ++) {
@@ -1656,7 +1603,7 @@ inline void ippiCalcNonZero(const Ipp32s *coeffs, Ipp32s  m, Ipp32s *numCoeffs)
     *numCoeffs = (coeffs[0] != 0)? -n: n;
 }
 
-inline void ippiCountCoeffs(const Ipp32s *coeffs, Ipp32s *numCoeffs, const Ipp16s *enc_scan, Ipp32s *lastCoeff, Ipp32s  m)
+inline void ownCountCoeffs(const Ipp32s *coeffs, Ipp32s *numCoeffs, const Ipp16s *enc_scan, Ipp32s *lastCoeff, Ipp32s  m)
 {
     // m can take the following values: 16, 64.
     Ipp32s l = 0;
@@ -1673,7 +1620,7 @@ inline void ippiCountCoeffs(const Ipp32s *coeffs, Ipp32s *numCoeffs, const Ipp16
     *lastCoeff = l;
 }
 
-inline void ippiCountCoeffs(const Ipp16s *coeffs, Ipp32s *numCoeffs, const Ipp16s *enc_scan, Ipp32s *lastCoeff, Ipp32s  m)
+inline void ownCountCoeffs(const Ipp16s *coeffs, Ipp32s *numCoeffs, const Ipp16s *enc_scan, Ipp32s *lastCoeff, Ipp32s  m)
 {
     // m can take the following values: 16, 64.
     Ipp32s l = 0;
@@ -1689,19 +1636,3347 @@ inline void ippiCountCoeffs(const Ipp16s *coeffs, Ipp32s *numCoeffs, const Ipp16
     *lastCoeff = l;
 }
 
-#define PIXBITS 8
-#include "umc_h264_ermb_tmpl.cpp.h"
-#undef PIXBITS
 
-#if defined BITDEPTH_9_12
 
-#define PIXBITS 16
-#include "umc_h264_ermb_tmpl.cpp.h"
-#undef PIXBITS
 
-#endif // BITDEPTH_9_12
 
-} //namespace UMC_H264_ENCODER
+
+//////////////////////////////
+
+
+////////////////////////////////////////////////////////////////////////////////
+// CEncAndRec4x4IntraBlock
+//
+// Encode and Reconstruct one blocks in an Intra macroblock with 4x4 prediction
+//
+////////////////////////////////////////////////////////////////////////////////
+template<typename COEFFSTYPE, typename PIXTYPE>
+void H264CoreEncoder_Encode4x4IntraBlock(void* state, H264Slice<COEFFSTYPE, PIXTYPE> *curr_slice, Ipp32s block)
+{
+    H264CoreEncoder<COEFFSTYPE, PIXTYPE>* core_enc = (H264CoreEncoder<COEFFSTYPE, PIXTYPE>*)state;
+    Ipp32s      iNumCoeffs = 0;
+    Ipp32s      iLastCoeff = 0;
+    __ALIGN16 Ipp16s pDiffBuf[16];
+    COEFFSTYPE*  pTransformResult;
+    H264CurrentMacroblockDescriptor<COEFFSTYPE, PIXTYPE> &cur_mb = curr_slice->m_cur_mb;
+    Ipp32u uMBQP       = cur_mb.lumaQP;
+    Ipp32s pitchPixels = cur_mb.mbPitchPixels;
+    Ipp32u uCBPLuma     = cur_mb.m_uIntraCBP4x4;
+    PIXTYPE* pBlockData = cur_mb.mbPtr + xoff[block] + yoff[block]*pitchPixels;
+    PIXTYPE* pPredBuf = cur_mb.mb4x4.prediction + xoff[block] + yoff[block]*16;
+    PIXTYPE* pReconBuf = cur_mb.mb4x4.reconstruct + xoff[block] + yoff[block]*16;
+    __ALIGN16 COEFFSTYPE pTransRes[16];
+    bool transform_bypass = (core_enc->m_SeqParamSet.qpprime_y_zero_transform_bypass_flag && uMBQP == 0);
+
+    pTransformResult = &cur_mb.mb4x4.transform[block*16];
+    Diff4x4(pPredBuf, pBlockData, pitchPixels, pDiffBuf);
+
+    if(!transform_bypass)
+    {
+        ownTransformQuantResidual_H264(pDiffBuf, pTransformResult, uMBQP, &iNumCoeffs, 1,
+            enc_single_scan[curr_slice->m_is_cur_mb_field], &iLastCoeff, NULL, NULL, 0, NULL); //Always use f for INTRA
+        if (!iNumCoeffs)
+        {
+            Copy4x4(pPredBuf, 16, pReconBuf, 16);
+            uCBPLuma &= ~CBP4x4Mask[block];
+        }
+        else
+        {
+            memcpy( pTransRes, pTransformResult, 16*sizeof( COEFFSTYPE ));
+            ownDequantTransformResidualAndAdd_H264(pPredBuf, pTransRes, NULL, pReconBuf, 16, 16, uMBQP,
+                ((iNumCoeffs < -1) || (iNumCoeffs > 0)), core_enc->m_PicParamSet.bit_depth_luma, NULL);
+        }
+    }
+    else
+    {
+        Copy4x4(pBlockData, pitchPixels, pReconBuf, 16);
+        for( Ipp32s i = 0; i < 16; i++)
+            pTransformResult[i] = pDiffBuf[i];
+        ownCountCoeffs(pTransformResult, &iNumCoeffs, enc_single_scan[curr_slice->m_is_cur_mb_field], &iLastCoeff, 16);
+        if (iNumCoeffs == 0)
+        {
+            uCBPLuma &= ~CBP4x4Mask[block];
+            Copy4x4(pBlockData, pitchPixels, pPredBuf, 16);
+        }
+    }
+    cur_mb.m_iNumCoeffs4x4[ block ] = iNumCoeffs;
+    cur_mb.m_iLastCoeff4x4[ block ] = iLastCoeff;
+    cur_mb.m_uIntraCBP4x4 = uCBPLuma;
+}
+
+template<typename COEFFSTYPE, typename PIXTYPE>
+void H264CoreEncoder_Encode8x8IntraBlock(void* state, H264Slice<COEFFSTYPE, PIXTYPE> *curr_slice, Ipp32s block)
+{
+    H264CoreEncoder<COEFFSTYPE, PIXTYPE>* core_enc = (H264CoreEncoder<COEFFSTYPE, PIXTYPE>*)state;
+    Ipp32s     iNumCoeffs;
+    Ipp32s     iLastCoeff;
+    H264CurrentMacroblockDescriptor<COEFFSTYPE, PIXTYPE> &cur_mb = curr_slice->m_cur_mb;
+    Ipp32u uMBQP       = cur_mb.lumaQP;
+    Ipp32s pitchPixels = cur_mb.mbPitchPixels;
+
+    PIXTYPE* pBlockData = cur_mb.mbPtr + xoff[4*block] + yoff[4*block]*pitchPixels;
+    // loop over all 8x8 blocks in Y plane for the MB
+    PIXTYPE* pPredBuf = cur_mb.mb8x8.prediction + xoff[block<<2] + yoff[block<<2]*16;
+    PIXTYPE* pReconBuf = cur_mb.mb8x8.reconstruct + xoff[block<<2] + yoff[block<<2]*16;
+
+    Ipp32u uCBPLuma     = cur_mb.m_uIntraCBP8x8;
+    COEFFSTYPE* pTransformResult = &cur_mb.mb8x8.transform[block*64];
+    __ALIGN16 Ipp16s pDiffBuf[64];
+    __ALIGN16 COEFFSTYPE pTransRes[64];
+    bool transform_bypass = (core_enc->m_SeqParamSet.qpprime_y_zero_transform_bypass_flag && uMBQP == 0);
+
+    Diff8x8(pPredBuf, pBlockData, pitchPixels, pDiffBuf);
+
+    if(!transform_bypass)
+    {
+        ownTransformLuma8x8Fwd_H264(pDiffBuf, pTransformResult);
+        ownQuantLuma8x8_H264(pTransformResult, pTransformResult, QP_DIV_6[uMBQP], 1, enc_single_scan_8x8[curr_slice->m_is_cur_mb_field],
+            core_enc->m_SeqParamSet.seq_scaling_matrix_8x8[0][QP_MOD_6[uMBQP]], &iNumCoeffs, &iLastCoeff, NULL, NULL, NULL);
+        if (!iNumCoeffs)
+        {
+            Copy8x8(pPredBuf, 16, pReconBuf, 16);
+            uCBPLuma &= ~CBP8x8Mask[block];
+        }
+        else
+        {
+            memcpy( pTransRes, pTransformResult, 64*sizeof( COEFFSTYPE ));
+            ownQuantLuma8x8Inv_H264(pTransRes, QP_DIV_6[uMBQP], core_enc->m_SeqParamSet.seq_scaling_inv_matrix_8x8[0][QP_MOD_6[uMBQP]]);
+            ownTransformLuma8x8InvAddPred_H264(pPredBuf, 16, pTransRes, pReconBuf, 16, core_enc->m_PicParamSet.bit_depth_luma);
+        }
+    }
+    else
+    {
+        Copy8x8(pBlockData, pitchPixels, pReconBuf, 16);
+        for (Ipp32s i = 0; i < 64; i++)
+            pTransformResult[i] = pDiffBuf[i];
+        ownCountCoeffs(pTransformResult, &iNumCoeffs, enc_single_scan_8x8[curr_slice->m_is_cur_mb_field], &iLastCoeff, 64);
+        if (iNumCoeffs == 0)
+        {
+            uCBPLuma &= ~CBP8x8Mask[block];
+            Copy8x8(pBlockData, pitchPixels, pPredBuf, 16);
+        }
+    }
+    cur_mb.m_iNumCoeffs8x8[ block ] = iNumCoeffs;
+    cur_mb.m_iLastCoeff8x8[ block ] = iLastCoeff;
+    cur_mb.m_uIntraCBP8x8 = uCBPLuma;
+}
+
+template<typename COEFFSTYPE, typename PIXTYPE>
+void H264CoreEncoder_TransQuantIntra16x16_RD(void* state, H264Slice<COEFFSTYPE, PIXTYPE> *curr_slice)
+{
+    H264CoreEncoder<COEFFSTYPE, PIXTYPE>* core_enc = (H264CoreEncoder<COEFFSTYPE, PIXTYPE>*)state;
+    Ipp32u  uBlock;     // block number, 0 to 23
+    Ipp32u  uMBQP;          // QP of current MB
+    Ipp32u  uMB;
+    Ipp32u  uCBPLuma;        // coded flags for all 4x4 blocks
+    COEFFSTYPE* pDCBuf;     // chroma & luma dc coeffs pointer
+    PIXTYPE*  pPredBuf;       // prediction block pointer
+    PIXTYPE*  pReconBuf;       // prediction block pointer
+    Ipp16s* pDiffBuf;       // difference block pointer
+    Ipp16s* pTempDiffBuf;       // difference block pointer
+    COEFFSTYPE *pTransformResult; // for transform results.
+    Ipp16s* pMassDiffBuf;   // difference block pointer
+    COEFFSTYPE* pQBuf;          // quantized block pointer
+    Ipp32s  pitchPixels;     // buffer pitch in pixels
+    Ipp8u   bCoded; // coded block flag
+    Ipp32s  iNumCoeffs; // Number of nonzero coeffs after quant (negative if DC is nonzero)
+    Ipp32s  iLastCoeff; // Number of nonzero coeffs after quant (negative if DC is nonzero)
+    H264CurrentMacroblockDescriptor<COEFFSTYPE, PIXTYPE> &cur_mb = curr_slice->m_cur_mb;
+    Ipp32s is_cur_mb_field = curr_slice->m_is_cur_mb_field;
+
+    pitchPixels = cur_mb.mbPitchPixels;
+    uCBPLuma    = cur_mb.LocalMacroblockInfo->cbp_luma;
+    uMBQP       = cur_mb.lumaQP;
+    pDiffBuf    = (Ipp16s*) (curr_slice->m_pMBEncodeBuffer + 512);
+    pTransformResult = (COEFFSTYPE*)(pDiffBuf + 16);
+    pQBuf       = (COEFFSTYPE*) (pTransformResult + 16);
+    pDCBuf      = (COEFFSTYPE*) (pQBuf + 16);   // Used for both luma and chroma DC blocks
+    pMassDiffBuf = (Ipp16s*) (pDCBuf + 16);
+    uMB = cur_mb.uMB;
+
+    //--------------------------------------------------------------------------
+    // encode Y plane blocks (0-15)
+    //--------------------------------------------------------------------------
+
+    // initialize pointers and offset
+    pPredBuf    = cur_mb.mb16x16.prediction; // 16-byte aligned work buffer
+    pReconBuf    = cur_mb.mb16x16.reconstruct; // 16-byte aligned work buffer
+    Ipp32s pitchPix = 16;
+
+    cur_mb.MacroblockCoeffsInfo->lumaAC = 0;
+    ownSumsDiff16x16Blocks4x4(cur_mb.mbPtr, pitchPixels, pPredBuf, 16, pDCBuf, pMassDiffBuf); // compute the 4x4 luma DC transform coeffs
+
+    // apply second transform on the luma DC transform coeffs
+    ownTransformQuantLumaDC_H264(
+        pDCBuf,
+        pQBuf,
+        uMBQP,
+        &iNumCoeffs,
+        1,
+        enc_single_scan[is_cur_mb_field],&iLastCoeff,
+        NULL);
+
+    if (core_enc->m_PicParamSet.entropy_coding_mode)
+    {
+        T_Block_CABAC_Data<COEFFSTYPE>* c_data = &cur_mb.cabac_data[Y_DC_RLE];
+        bCoded = c_data->uNumSigCoeffs /* = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock]*/ = ABS(iNumCoeffs);
+        c_data->uLastSignificant = iLastCoeff;
+        c_data->CtxBlockCat = BLOCK_LUMA_DC_LEVELS;
+        c_data->uFirstCoeff = 0;
+        c_data->uLastCoeff = 15;
+        H264CoreEncoder_MakeSignificantLists_CABAC(pDCBuf,dec_single_scan[is_cur_mb_field], c_data);
+    }
+    else
+    {
+        ownEncodeCoeffsCAVLC_H264(pDCBuf,0, dec_single_scan[is_cur_mb_field],iLastCoeff,
+                                   &curr_slice->Block_RLE[Y_DC_RLE].uTrailing_Ones,
+                                   &curr_slice->Block_RLE[Y_DC_RLE].uTrailing_One_Signs,
+                                   &curr_slice->Block_RLE[Y_DC_RLE].uNumCoeffs,
+                                   &curr_slice->Block_RLE[Y_DC_RLE].uTotalZeros,
+                                   curr_slice->Block_RLE[Y_DC_RLE].iLevels,
+                                   curr_slice->Block_RLE[Y_DC_RLE].uRuns);
+        bCoded = curr_slice->Block_RLE[Y_DC_RLE].uNumCoeffs;
+    }
+
+    ownTransformDequantLumaDC_H264(
+        pDCBuf,
+        uMBQP,
+        NULL);
+
+    // loop over all 4x4 blocks in Y plane for the MB
+    for (uBlock = 0; uBlock < 16; uBlock++ ){
+        pPredBuf = cur_mb.mb16x16.prediction + xoff[uBlock] + yoff[uBlock]*16;
+        pReconBuf = cur_mb.mb16x16.reconstruct + xoff[uBlock] + yoff[uBlock]*16;
+
+        cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = 0;        // This will be updated if the block is coded
+        if (core_enc->m_PicParamSet.entropy_coding_mode) {
+            cur_mb.cabac_data[uBlock].uNumSigCoeffs = 0;
+        } else {
+            curr_slice->Block_RLE[uBlock].uNumCoeffs = 0;
+            curr_slice->Block_RLE[uBlock].uTrailing_Ones = 0;
+            curr_slice->Block_RLE[uBlock].uTrailing_One_Signs = 0;
+            curr_slice->Block_RLE[uBlock].uTotalZeros = 15;
+        }
+
+        bCoded = ((uCBPLuma & CBP4x4Mask[uBlock])?(1):(0)); // check if block is coded
+
+        if (!bCoded){
+            Copy4x4(pPredBuf, 16, pReconBuf, pitchPix); // update reconstruct frame for the empty block
+        }else{   // block not declared empty, encode
+            pTempDiffBuf = pMassDiffBuf+ xoff[uBlock]*4 + yoff[uBlock]*16;
+            ownTransformQuantResidual_H264(
+                pTempDiffBuf,
+                pTransformResult,
+                uMBQP,
+                &iNumCoeffs,
+                1,
+                enc_single_scan[is_cur_mb_field],
+                &iLastCoeff,
+                NULL,
+                NULL,
+                0,
+                NULL); //Always use f for INTRA
+
+            cur_mb.MacroblockCoeffsInfo->lumaAC |= ((iNumCoeffs < -1) || (iNumCoeffs > 0));
+
+            if (!iNumCoeffs){
+                bCoded = 0;
+            } else {
+                if (core_enc->m_PicParamSet.entropy_coding_mode)
+                {
+                    T_Block_CABAC_Data<COEFFSTYPE>* c_data = &cur_mb.cabac_data[uBlock];
+                    c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)((iNumCoeffs < 0) ? -(iNumCoeffs+1) : iNumCoeffs);
+                    c_data->uLastSignificant = iLastCoeff;
+                    c_data->CtxBlockCat = BLOCK_LUMA_AC_LEVELS;
+                    c_data->uFirstCoeff = 1;
+                    c_data->uLastCoeff = 15;
+                    H264CoreEncoder_MakeSignificantLists_CABAC(pTransformResult, dec_single_scan[is_cur_mb_field], c_data);
+                    bCoded = c_data->uNumSigCoeffs;
+                }
+                else
+                {
+                    ownEncodeCoeffsCAVLC_H264(pTransformResult, 1, dec_single_scan[is_cur_mb_field], iLastCoeff,
+                                               &curr_slice->Block_RLE[uBlock].uTrailing_Ones,
+                                               &curr_slice->Block_RLE[uBlock].uTrailing_One_Signs,
+                                               &curr_slice->Block_RLE[uBlock].uNumCoeffs,
+                                               &curr_slice->Block_RLE[uBlock].uTotalZeros,
+                                               curr_slice->Block_RLE[uBlock].iLevels,
+                                               curr_slice->Block_RLE[uBlock].uRuns);
+                    cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = bCoded = curr_slice->Block_RLE[uBlock].uNumCoeffs;
+                }
+            }
+
+            if (!bCoded) uCBPLuma &= ~CBP4x4Mask[uBlock];
+
+            // If the block wasn't coded and the DC coefficient is zero
+            if (!bCoded && !pDCBuf[block_subblock_mapping_[uBlock]]){
+                Copy4x4(pPredBuf, 16, pReconBuf, pitchPix);
+            } else {
+                ownDequantTransformResidualAndAdd_H264(
+                    pPredBuf,
+                    pTransformResult,
+                    &pDCBuf[block_subblock_mapping_[uBlock]],
+                    pReconBuf,
+                    16,
+                    pitchPix,
+                    uMBQP,
+                    ((iNumCoeffs < -1) || (iNumCoeffs > 0)),
+                    core_enc->m_PicParamSet.bit_depth_luma,
+                    NULL);
+            }
+        }
+    }
+
+    cur_mb.LocalMacroblockInfo->cbp_luma = uCBPLuma;
+    if (cur_mb.MacroblockCoeffsInfo->lumaAC > 1)
+        cur_mb.MacroblockCoeffsInfo->lumaAC = 1;
+
+}
+
+template<typename COEFFSTYPE, typename PIXTYPE>
+void H264CoreEncoder_EncodeChroma(void* state, H264Slice<COEFFSTYPE, PIXTYPE> *curr_slice)
+{
+    H264CoreEncoder<COEFFSTYPE, PIXTYPE>* core_enc = (H264CoreEncoder<COEFFSTYPE, PIXTYPE>*)state;
+    Ipp32u  uBlock;         // block number, 0 to 23
+    Ipp32u  uOffset;        // to upper left corner of block from start of plane
+    Ipp32u  uMBQP;          // QP of current MB
+    PIXTYPE*  pSrcPlane;    // start of plane to encode
+    Ipp32s    pitchPixels;  // buffer pitch
+    COEFFSTYPE *pDCBuf;     // chroma & luma dc coeffs pointer
+    PIXTYPE*  pPredBuf;     // prediction block pointer
+    PIXTYPE*  pReconBuf;     // prediction block pointer
+    PIXTYPE*  pPredBuf_copy;     // prediction block pointer
+    PIXTYPE*  pReconBuf_copy;     // prediction block pointer
+    COEFFSTYPE* pQBuf;      // quantized block pointer
+    Ipp16s* pMassDiffBuf;   // difference block pointer
+    Ipp32u   uCBPChroma;    // coded flags for all chroma blocks
+    Ipp32s   bCoded;        // coded block flag
+    Ipp32s   iNumCoeffs = 0;    // Number of nonzero coeffs after quant (negative if DC is nonzero)
+    Ipp32s   iLastCoeff;    // Number of nonzero coeffs after quant (negative if DC is nonzero)
+    Ipp32s   RLE_Offset;    // Index into BlockRLE array
+
+    H264CurrentMacroblockDescriptor<COEFFSTYPE, PIXTYPE> &cur_mb = curr_slice->m_cur_mb;
+    Ipp32s is_cur_mb_field = curr_slice->m_is_cur_mb_field;
+    EnumSliceType slice_type = curr_slice->m_slice_type;
+    COEFFSTYPE *pTransformResult;
+    COEFFSTYPE *pTransform;
+    Ipp32s QPy = cur_mb.lumaQP;
+    Ipp32s pitchPix;
+
+    pitchPix = pitchPixels = cur_mb.mbPitchPixels;
+    uMBQP       = cur_mb.chromaQP;
+    pTransform = (COEFFSTYPE*)curr_slice->m_pMBEncodeBuffer;
+    pQBuf       = (COEFFSTYPE*) (pTransform + 64*2);
+    pDCBuf      = (COEFFSTYPE*) (pQBuf + 16);   // Used for both luma and chroma DC blocks
+    pMassDiffBuf= (Ipp16s*) (pDCBuf+ 16);
+    Ipp16s*  pTempDiffBuf;
+    Ipp32u  uMB = cur_mb.uMB;
+    Ipp32u  mbOffset;
+
+    // initialize pointers and offset
+    mbOffset = uOffset = core_enc->m_pMBOffsets[uMB].uChromaOffset[core_enc->m_is_cur_pic_afrm][is_cur_mb_field];
+    bool transform_bypass = (core_enc->m_SeqParamSet.qpprime_y_zero_transform_bypass_flag && QPy == 0);
+    uCBPChroma  = cur_mb.LocalMacroblockInfo->cbp_chroma;
+    bool intra = (cur_mb.GlobalMacroblockInfo->mbtype == MBTYPE_INTRA) || (cur_mb.GlobalMacroblockInfo->mbtype == MBTYPE_INTRA_16x16);
+
+    if (intra) {
+        pPredBuf = cur_mb.mbChromaIntra.prediction;
+        pReconBuf = cur_mb.mbChromaIntra.reconstruct;
+    } else {
+        cur_mb.MacroblockCoeffsInfo->chromaNC = 0;
+        pPredBuf = cur_mb.mbChromaInter.prediction;
+        pReconBuf = cur_mb.mbChromaInter.reconstruct;
+    }
+
+    // initialize pointers for the U plane blocks
+    Ipp32s num_blocks = 2 << core_enc->m_PicParamSet.chroma_format_idc;
+    Ipp32s startBlock;
+    startBlock = uBlock = 16;
+    Ipp32u uLastBlock = uBlock+num_blocks;
+    Ipp32u uFinalBlock = uBlock+2*num_blocks;
+    PIXTYPE* pPredBufV = pPredBuf+8;
+
+    do
+    {
+        if (uBlock == uLastBlock)
+        {
+            startBlock = uBlock;
+            uOffset = mbOffset;
+            pSrcPlane = core_enc->m_pCurrentFrame->m_pVPlane;
+            pPredBuf = pPredBufV;
+            pReconBuf = core_enc->m_pReconstructFrame->m_pVPlane+uOffset;
+            RLE_Offset = V_DC_RLE;
+            uLastBlock += num_blocks;
+        }
+        else
+        {
+            RLE_Offset = U_DC_RLE;
+            pSrcPlane = core_enc->m_pCurrentFrame->m_pUPlane;
+            pReconBuf = core_enc->m_pReconstructFrame->m_pUPlane+uOffset;
+        }
+
+        ownSumsDiff8x8Blocks4x4(pSrcPlane + uOffset, pitchPixels, pPredBuf, 16, pDCBuf, pMassDiffBuf);
+        if (core_enc->m_PicParamSet.chroma_format_idc == 2)
+             ownSumsDiff8x8Blocks4x4(pSrcPlane + uOffset+8*pitchPixels, pitchPixels, pPredBuf+8*16, 16, pDCBuf+4, pMassDiffBuf+64);
+        // Code chromaDC
+        if (!transform_bypass)  {
+            switch (core_enc->m_PicParamSet.chroma_format_idc) {
+                case 1:
+                    ownTransformQuantChromaDC_H264(pDCBuf, pQBuf, uMBQP, &iNumCoeffs, (slice_type == INTRASLICE), 1, NULL);
+                    break;
+                case 2:
+                    ownTransformQuantChroma422DC_H264(pDCBuf, pQBuf, uMBQP, &iNumCoeffs, (slice_type == INTRASLICE), 1, NULL);
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            Ipp32s i,j;
+            Ipp32s num_rows, num_cols;
+            Ipp32s bPitch;
+            num_cols = ((core_enc->m_PicParamSet.chroma_format_idc - 1) & 0x2) ? 4 : 2;
+            num_rows = (core_enc->m_PicParamSet.chroma_format_idc & 0x2) ? 4 : 2;
+            bPitch = num_cols * 16;
+            for(i = 0; i < num_rows; i++) {
+                for(j = 0; j < num_cols; j++) {
+                    pDCBuf[i*num_cols+j] = pMassDiffBuf[i*bPitch + j*16];
+                }
+            }
+            ownCalcNonZero(pDCBuf, num_blocks, &iNumCoeffs);
+        }
+        // DC values in this block if iNonEmpty is 1.
+        cur_mb.MacroblockCoeffsInfo->chromaNC |= (iNumCoeffs != 0);
+        // record RLE info
+        if (core_enc->m_PicParamSet.entropy_coding_mode){
+            Ipp32s ctxIdxBlockCat = BLOCK_CHROMA_DC_LEVELS;
+            switch (core_enc->m_PicParamSet.chroma_format_idc) {
+                case 1:
+                    H264CoreEncoder_ScanSignificant_CABAC(pDCBuf,ctxIdxBlockCat,4,dec_single_scan_p, &cur_mb.cabac_data[RLE_Offset]);
+                    break;
+                case 2:
+                    H264CoreEncoder_ScanSignificant_CABAC(pDCBuf,ctxIdxBlockCat,8,dec_single_scan_p422, &cur_mb.cabac_data[RLE_Offset]);
+                    break;
+                default:
+                    break;
+            }
+       }else{
+            switch( core_enc->m_PicParamSet.chroma_format_idc ){
+                case 1:
+                   ownEncodeChromaDcCoeffsCAVLC_H264(
+                       pDCBuf,
+                       &curr_slice->Block_RLE[RLE_Offset].uTrailing_Ones,
+                       &curr_slice->Block_RLE[RLE_Offset].uTrailing_One_Signs,
+                       &curr_slice->Block_RLE[RLE_Offset].uNumCoeffs,
+                       &curr_slice->Block_RLE[RLE_Offset].uTotalZeros,
+                       curr_slice->Block_RLE[RLE_Offset].iLevels,
+                       curr_slice->Block_RLE[RLE_Offset].uRuns);
+                    break;
+                case 2:
+                    ownEncodeChroma422DC_CoeffsCAVLC_H264(
+                        pDCBuf,
+                        &curr_slice->Block_RLE[RLE_Offset].uTrailing_Ones,
+                        &curr_slice->Block_RLE[RLE_Offset].uTrailing_One_Signs,
+                        &curr_slice->Block_RLE[RLE_Offset].uNumCoeffs,
+                        &curr_slice->Block_RLE[RLE_Offset].uTotalZeros,
+                        curr_slice->Block_RLE[RLE_Offset].iLevels,
+                        curr_slice->Block_RLE[RLE_Offset].uRuns);
+                    break;
+            }
+        }
+        // Inverse transform and dequantize for chroma DC
+        if (!transform_bypass ){
+            switch( core_enc->m_PicParamSet.chroma_format_idc ){
+             case 1:
+                 ownTransformDequantChromaDC_H264(pDCBuf, uMBQP, NULL);
+                 break;
+             case 2:
+                 ownTransformDequantChromaDC422_H264(pDCBuf, uMBQP, NULL);
+                 break;
+            default:
+                break;
+            }
+        }
+//Encode croma AC
+        Ipp32s coeffsCost = 0;
+        pPredBuf_copy = pPredBuf;
+        pReconBuf_copy = pReconBuf;
+        for (uBlock = startBlock; uBlock < uLastBlock; uBlock ++) {
+            cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = 0;     // This will be updated if the block is coded
+            if (core_enc->m_PicParamSet.entropy_coding_mode){
+                cur_mb.cabac_data[uBlock].uNumSigCoeffs = 0;
+            } else {
+                curr_slice->Block_RLE[uBlock].uNumCoeffs = 0;
+                curr_slice->Block_RLE[uBlock].uTrailing_Ones = 0;
+                curr_slice->Block_RLE[uBlock].uTrailing_One_Signs = 0;
+                curr_slice->Block_RLE[uBlock].uTotalZeros = 15;
+            }
+            // check if block is coded
+            bCoded = ((uCBPChroma & CBP4x4Mask[uBlock-16])?(1):(0));
+            if (!bCoded){ // update reconstruct frame for the empty block
+                Copy4x4(pPredBuf, 16, pReconBuf, pitchPix);
+            } else {   // block not declared empty, encode
+                pTempDiffBuf = pMassDiffBuf + (uBlock-startBlock)*16;
+                pTransformResult = pTransform + (uBlock-startBlock)*16;
+                if(!transform_bypass) {
+                    ownTransformQuantResidual_H264(
+                         pTempDiffBuf,
+                         pTransformResult,
+                         uMBQP,
+                         &iNumCoeffs,
+                         0,
+                         enc_single_scan[is_cur_mb_field],
+                         &iLastCoeff,
+                         NULL,
+                         NULL,
+                         9,
+                         NULL);//,NULL, curr_slice, 1, &cbSt);
+                    coeffsCost += CalculateCoeffsCost(pTransformResult, 15, &dec_single_scan[is_cur_mb_field][1]);
+                 }else {
+                    for(Ipp32s i = 0; i < 16; i++) {
+                        pTransformResult[i] = pTempDiffBuf[i];
+                    }
+                    ownCountCoeffs(pTempDiffBuf, &iNumCoeffs, enc_single_scan[is_cur_mb_field], &iLastCoeff, 16);
+                }
+                // if everything quantized to zero, skip RLE
+                cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)((iNumCoeffs < 0) ? -(iNumCoeffs+1) : iNumCoeffs);
+                if (cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock]){  // the block is empty so it is not coded
+                   if (core_enc->m_PicParamSet.entropy_coding_mode){
+                        T_Block_CABAC_Data<COEFFSTYPE>* c_data = &cur_mb.cabac_data[uBlock];
+                        c_data->uLastSignificant = iLastCoeff;
+                        c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock];
+                        c_data->CtxBlockCat = BLOCK_CHROMA_AC_LEVELS;
+                        c_data->uFirstCoeff = 1;
+                        c_data->uLastCoeff = 15;
+                        H264CoreEncoder_MakeSignificantLists_CABAC(pTransformResult,dec_single_scan[is_cur_mb_field], c_data);
+                        cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = c_data->uNumSigCoeffs;
+                    } else {
+                        ownEncodeCoeffsCAVLC_H264(
+                            pTransformResult,// pDiffBuf,
+                            1,
+                            dec_single_scan[is_cur_mb_field],
+                            iLastCoeff,
+                            &curr_slice->Block_RLE[uBlock].uTrailing_Ones,
+                            &curr_slice->Block_RLE[uBlock].uTrailing_One_Signs,
+                            &curr_slice->Block_RLE[uBlock].uNumCoeffs,
+                            &curr_slice->Block_RLE[uBlock].uTotalZeros,
+                            curr_slice->Block_RLE[uBlock].iLevels,
+                            curr_slice->Block_RLE[uBlock].uRuns);
+
+                        cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = curr_slice->Block_RLE[uBlock].uNumCoeffs;
+                    }
+                }
+            }
+            pPredBuf += chromaPredInc[core_enc->m_PicParamSet.chroma_format_idc-1][uBlock-startBlock]; //!!!
+            pReconBuf += core_enc->m_EncBlockOffsetInc[is_cur_mb_field][uBlock];
+        }
+
+        if(!transform_bypass && coeffsCost <= (CHROMA_COEFF_MAX_COST<<(core_enc->m_PicParamSet.chroma_format_idc-1)) ){ //Reset all ac coeffs
+//           if(cur_mb.MacroblockCoeffsInfo->chromaNC&1) //if we have DC coeffs
+//           memset( pTransform, 0, (64*sizeof(COEFFSTYPE))<<(core_enc->m_PicParamSet.chroma_format_idc-1));
+           for(uBlock = startBlock; uBlock < uLastBlock; uBlock++){
+                cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = 0;
+                if (core_enc->m_PicParamSet.entropy_coding_mode){
+                   cur_mb.cabac_data[uBlock].uNumSigCoeffs = 0;
+                } else {
+                    curr_slice->Block_RLE[uBlock].uNumCoeffs = 0;
+                    curr_slice->Block_RLE[uBlock].uTrailing_Ones = 0;
+                    curr_slice->Block_RLE[uBlock].uTrailing_One_Signs = 0;
+                    curr_slice->Block_RLE[uBlock].uTotalZeros = 15;
+                }
+            }
+        }
+
+        pPredBuf = pPredBuf_copy;
+        pReconBuf = pReconBuf_copy;
+        for (uBlock = startBlock; uBlock < uLastBlock; uBlock ++) {
+            cur_mb.MacroblockCoeffsInfo->chromaNC |= 2*(cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock]!=0);
+            if (!cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] && !pDCBuf[ chromaDCOffset[core_enc->m_PicParamSet.chroma_format_idc-1][uBlock-startBlock] ]){
+                uCBPChroma &= ~CBP4x4Mask[uBlock-16];
+                Copy4x4(pPredBuf, 16, pReconBuf, pitchPix);
+            }else if(!transform_bypass){
+                    ownDequantTransformResidualAndAdd_H264(
+                        pPredBuf,
+                        pTransform + (uBlock-startBlock)*16,
+                        &pDCBuf[ chromaDCOffset[core_enc->m_PicParamSet.chroma_format_idc-1][uBlock-startBlock] ],
+                        pReconBuf,
+                        16,
+                        pitchPix,
+                        uMBQP,
+                        (cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock]!=0),
+                        core_enc->m_SeqParamSet.bit_depth_chroma,
+                        NULL);
+            }
+            pPredBuf += chromaPredInc[core_enc->m_PicParamSet.chroma_format_idc-1][uBlock-startBlock]; //!!!
+            pReconBuf += core_enc->m_EncBlockOffsetInc[is_cur_mb_field][uBlock];
+        }   // for uBlock in chroma plane
+    } while (uBlock < uFinalBlock);
+    //Reset other chroma
+    uCBPChroma &= ~(0xffffffff<<(uBlock-16));
+    cur_mb.LocalMacroblockInfo->cbp_chroma = uCBPChroma;
+    if (cur_mb.MacroblockCoeffsInfo->chromaNC == 3)
+        cur_mb.MacroblockCoeffsInfo->chromaNC = 2;
+}
+
+template<typename COEFFSTYPE, typename PIXTYPE>
+Ipp32u H264CoreEncoder_CEncAndRec4x4IntraMB(void* state, H264Slice<COEFFSTYPE, PIXTYPE> *curr_slice)
+{
+    H264CoreEncoder<COEFFSTYPE, PIXTYPE>* core_enc = (H264CoreEncoder<COEFFSTYPE, PIXTYPE>*)state;
+    Ipp32u  uBlock;     // block number, 0 to 23
+    Ipp32u  uOffset;        // to upper left corner of block from start of plane
+    Ipp32u  uMBQP;          // QP of current MB
+    Ipp32u  uMBType;        // current MB type
+    Ipp32u  uMB;
+    Ipp32u  uCBPLuma;        // coded flags for all 4x4 blocks
+    Ipp32u  uIntraSAD;      // intra MB SAD
+    Ipp16s* pMassDiffBuf;   // difference block pointer
+
+    COEFFSTYPE* pDCBuf;     // chroma & luma dc coeffs pointer
+    PIXTYPE*  pPredBuf;       // prediction block pointer
+    PIXTYPE*  pReconBuf;       // prediction block pointer
+    Ipp16s*   pDiffBuf;       // difference block pointer
+    COEFFSTYPE* pTransformResult; // Result of the transformation.
+    COEFFSTYPE* pQBuf;          // quantized block pointer
+    PIXTYPE*  pSrcPlane;      // start of plane to encode
+    Ipp32s    pitchPixels;     // buffer pitch
+    Ipp32s    iMBCost;        // recode MB cost counter
+    Ipp32s    iBlkCost[2];    // coef removal counter for left/right 8x8 luma blocks
+    Ipp8u     bCoded; // coded block flag
+    Ipp32s    iNumCoeffs;    // Number of nonzero coeffs after quant (negative if DC is nonzero)
+    Ipp32s    iLastCoeff;    // Number of nonzero coeffs after quant (negative if DC is nonzero)
+    Ipp32u    uTotalCoeffs = 0;    // Used to detect single expensive coeffs.
+
+    H264CurrentMacroblockDescriptor<COEFFSTYPE, PIXTYPE> &cur_mb = curr_slice->m_cur_mb;
+    Ipp32s is_cur_mb_field = curr_slice->m_is_cur_mb_field;
+    __ALIGN16 CabacStates cbSt;
+
+    uMB = cur_mb.uMB;
+
+    pitchPixels = cur_mb.mbPitchPixels;
+    uCBPLuma     = cur_mb.LocalMacroblockInfo->cbp_luma;
+    uMBQP       = cur_mb.lumaQP;
+    uMBType     = cur_mb.GlobalMacroblockInfo->mbtype;
+    pDiffBuf    = (Ipp16s*) (curr_slice->m_pMBEncodeBuffer + 512);
+    pTransformResult = (COEFFSTYPE*)(pDiffBuf + 64);
+    pQBuf       = (COEFFSTYPE*) (pTransformResult + 64);
+    pDCBuf      = (COEFFSTYPE*) (pQBuf + 16);   // Used for both luma and chroma DC blocks
+    pMassDiffBuf= (Ipp16s*) (pDCBuf+ 16);
+//  uIntraSAD   = rd_quant_intra[uMBQP] * 24;   // TODO ADB 'handicap' using reconstructed data
+    uIntraSAD   = 0;
+    iMBCost     = 0;
+    iBlkCost[0] = 0;
+    iBlkCost[1] = 0;
+
+    //--------------------------------------------------------------------------
+    // encode Y plane blocks (0-15)
+    //--------------------------------------------------------------------------
+
+    // initialize pointers and offset
+    pSrcPlane = core_enc->m_pCurrentFrame->m_pYPlane;
+    uOffset = core_enc->m_pMBOffsets[uMB].uLumaOffset[core_enc->m_is_cur_pic_afrm][is_cur_mb_field];
+    bool transform_bypass = (core_enc->m_SeqParamSet.qpprime_y_zero_transform_bypass_flag && uMBQP == 0);
+
+    Ipp32s pitchPix;
+    pitchPix = pitchPixels;
+
+    if(pGetMB8x8TSPackFlag(cur_mb.GlobalMacroblockInfo))
+    {
+        if( core_enc->m_params.quant_opt_level > OPT_QUANT_INTRA8x8 )
+        {
+            uCBPLuma = 0xffff;
+            memcpy( cbSt.absLevelM1, &curr_slice->m_pbitstream->context_array[426], 10*sizeof(CABAC_CONTEXT));
+            if( !is_cur_mb_field )
+            {
+                //memcpy( cbSt.sig, &curr_slice->m_pbitstream->context_array[402], 15*sizeof(CABAC_CONTEXT));
+                //memcpy( cbSt.last, &curr_slice->m_pbitstream->context_array[417], 9*sizeof(CABAC_CONTEXT));
+                cbSt.sig = &curr_slice->m_pbitstream->context_array[402];
+                cbSt.last = &curr_slice->m_pbitstream->context_array[417];
+            }
+            else
+            {
+                //memcpy( cbSt.sig, &curr_slice->m_pbitstream->context_array[436], 15*sizeof(CABAC_CONTEXT));
+                //memcpy( cbSt.last, &curr_slice->m_pbitstream->context_array[451], 9*sizeof(CABAC_CONTEXT));
+                cbSt.sig = &curr_slice->m_pbitstream->context_array[436];
+                cbSt.last = &curr_slice->m_pbitstream->context_array[451];
+            }
+        }
+        pSetMB8x8TSFlag(cur_mb.GlobalMacroblockInfo, 1);
+        //loop over all 8x8 blocks in Y plane for the MB
+        for (uBlock = 0; uBlock < 4; uBlock ++)
+        {
+            Ipp32s idxb, idx, idxe;
+
+            idxb = uBlock<<2;
+            idxe = idxb+4;
+            pPredBuf = cur_mb.mb8x8.prediction + xoff[4*uBlock] + yoff[4*uBlock]*16;
+            pReconBuf = core_enc->m_pReconstructFrame->m_pYPlane + uOffset;
+
+            if(core_enc->m_PicParamSet.entropy_coding_mode)
+            {
+                cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = 0;        // These will be updated if the block is coded
+                cur_mb.cabac_data[uBlock].uNumSigCoeffs = 0;
+            }
+            else
+            {
+                for( idx = idxb; idx<idxe; idx++ )
+                {
+                    curr_slice->Block_RLE[idx].uNumCoeffs = 0;
+                    curr_slice->Block_RLE[idx].uTrailing_Ones = 0;
+                    curr_slice->Block_RLE[idx].uTrailing_One_Signs = 0;
+                    curr_slice->Block_RLE[idx].uTotalZeros = 16;
+                    cur_mb.MacroblockCoeffsInfo->numCoeff[idx] = 0;
+                }
+            }
+
+            if (!curr_slice->m_use_transform_for_intra_decision)
+            {
+                uIntraSAD += H264CoreEncoder_AIModeSelectOneMB_8x8(state, curr_slice, pSrcPlane + uOffset, pReconBuf, uBlock, cur_mb.intra_types, pPredBuf);
+            }
+
+            // check if block is coded
+            bCoded = ((uCBPLuma & CBP8x8Mask[uBlock])?(1):(0));
+
+            if (!bCoded)
+            {  // update reconstruct frame for the empty block
+                Copy8x8(pPredBuf, 16, pReconBuf, pitchPix);
+            }
+            else
+            {
+                // block not declared empty, encode
+                // compute difference of predictor and source pels
+                // note: asm version does not use pDiffBuf
+                //       output is being passed in the mmx registers
+                if (!curr_slice->m_use_transform_for_intra_decision ||  core_enc->m_params.quant_opt_level > OPT_QUANT_INTRA8x8)
+                {
+                    Diff8x8(pPredBuf, pSrcPlane + uOffset, pitchPixels, pDiffBuf);
+                    if(!transform_bypass)
+                    {
+                        if(core_enc->m_params.quant_opt_level > OPT_QUANT_INTRA8x8)
+                        {
+                            __ALIGN16 PIXTYPE pred[64];
+                            PIXTYPE pred_pels[25]; //Sources for prediction
+                            Ipp32u pred_pels_mask = 0;
+                            Ipp32s i;
+                            bool top_avbl;
+                            bool left_avbl;
+                            bool left_above_avbl = curr_slice->m_cur_mb.BlockNeighbours.mb_above_left.mb_num >= 0;
+                            bool right_above_avbl = curr_slice->m_cur_mb.BlockNeighbours.mb_above_right.mb_num >= 0;
+
+                            if( uBlock & 0x2)
+                                top_avbl = true;
+                            else
+                                top_avbl = curr_slice->m_cur_mb.BlockNeighbours.mb_above.mb_num >= 0;
+
+                            if( uBlock & 0x1 )
+                                left_avbl = true;
+                            else
+                                left_avbl = curr_slice->m_cur_mb.BlockNeighbours.mbs_left[0].mb_num >= 0;
+
+                            //Copy pels
+                            //TOP
+                            if( top_avbl )
+                            {
+                                for( i=0; i<8; i++ )
+                                    pred_pels[1+i] = *(pReconBuf-pitchPixels+i);
+                                pred_pels_mask |= 0x000001fe;
+                            }
+
+                            //LEFT
+                            if( left_avbl )
+                            {
+                                for( i=0; i<8; i++ )
+                                    pred_pels[17+i] = *(pReconBuf+i*pitchPixels-1);
+                                pred_pels_mask |= 0x1fe0000;
+                            }
+
+                            //LEFT_ABOVE
+                            if((uBlock == 0 && left_above_avbl) || uBlock == 3 || (uBlock == 1 && top_avbl) || ( uBlock == 2 && left_avbl))
+                            {
+                                pred_pels[0] = *(pReconBuf-pitchPixels-1);
+                                pred_pels_mask |= 0x01;
+                            }
+
+                            //RIGHT_ABOVE
+                            if( (uBlock == 2) || (uBlock == 0 && top_avbl) || (uBlock == 1 && right_above_avbl) )
+                            {
+                                for( i=0; i<8; i++ )
+                                    pred_pels[9+i] = *(pReconBuf-pitchPixels+i+8);
+                                pred_pels_mask |= 0x0001fe00;
+                            }
+
+                            if(!((pred_pels_mask & 0x0001FE00)==0x0001FE00) && (pred_pels_mask & 0x00000100))
+                            {
+                                pred_pels_mask |= 0x0001FE00;
+                                for( i=0; i<8; i++ )
+                                    pred_pels[9+i] = pred_pels[1+7];
+                            }
+
+                            H264CoreEncoder_Filter8x8Pels(pred_pels, pred_pels_mask);
+                            H264CoreEncoder_GetPrediction8x8<COEFFSTYPE, PIXTYPE>(state, cur_mb.intra_types[uBlock<<2], pred_pels, pred_pels_mask, pred );
+                            PIXTYPE* p = pPredBuf;
+                            for( i=0; i<8; i++)
+                            {
+                                memcpy(p, &pred[i*8], 8*sizeof(PIXTYPE));
+                                p += 16; //pitch = 16
+                            }
+                            Diff8x8(pPredBuf, pSrcPlane + uOffset, pitchPixels, pDiffBuf);
+                            ownTransformLuma8x8Fwd_H264(pDiffBuf, pTransformResult);
+                            ownQuantLuma8x8_H264(pTransformResult, pTransformResult, uMBQP, 1, enc_single_scan_8x8[is_cur_mb_field],
+                                core_enc->m_SeqParamSet.seq_scaling_matrix_8x8[0][QP_MOD_6[uMBQP]], &iNumCoeffs, &iLastCoeff, curr_slice,
+                                &cbSt, core_enc->m_SeqParamSet.seq_scaling_inv_matrix_8x8[0][QP_MOD_6[uMBQP]]); //Use scaling matrix for INTRA
+                        }
+                        else
+                        {
+                            // forward transform and quantization, in place in pDiffBuf
+                            ownTransformLuma8x8Fwd_H264(pDiffBuf, pTransformResult);
+                            ownQuantLuma8x8_H264(pTransformResult, pTransformResult, QP_DIV_6[uMBQP], 1, enc_single_scan_8x8[is_cur_mb_field],
+                                core_enc->m_SeqParamSet.seq_scaling_matrix_8x8[0][QP_MOD_6[uMBQP]], &iNumCoeffs, &iLastCoeff, NULL, NULL, NULL); //Use scaling matrix for INTRA
+                        }
+                    }
+                    else
+                    {
+                        for(Ipp32s i = 0; i < 64; i++)
+                            pTransformResult[i] = pDiffBuf[i];
+                        ownCountCoeffs(pTransformResult, &iNumCoeffs, enc_single_scan_8x8[is_cur_mb_field], &iLastCoeff, 64);
+                    }
+                }
+                else
+                {
+                        iNumCoeffs = cur_mb.m_iNumCoeffs8x8[ uBlock ];
+                        iLastCoeff = cur_mb.m_iLastCoeff8x8[ uBlock ];
+                        pTransformResult = &cur_mb.mb8x8.transform[ uBlock*64 ];
+                }
+
+                // if everything quantized to zero, skip RLE
+                if (!iNumCoeffs ) // the block is empty so it is not coded
+                    bCoded = 0;
+                else
+                {
+                    uTotalCoeffs += ((iNumCoeffs < 0) ? -(iNumCoeffs*2) : iNumCoeffs);
+
+                    // record RLE info
+                    if (core_enc->m_PicParamSet.entropy_coding_mode)
+                    {
+                        T_Block_CABAC_Data<COEFFSTYPE>* c_data = &cur_mb.cabac_data[uBlock];
+                        c_data->uLastSignificant = iLastCoeff;
+                        c_data->CtxBlockCat = BLOCK_LUMA_64_LEVELS;
+//                        c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)((iNumCoeffs < 0) ? -(iNumCoeffs+1) : iNumCoeffs);
+                        c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)ABS(iNumCoeffs);
+                        c_data->uFirstCoeff = 0;
+                        c_data->uLastCoeff = 63;
+                        H264CoreEncoder_MakeSignificantLists_CABAC(pTransformResult,dec_single_scan_8x8[is_cur_mb_field], c_data);
+                        bCoded = c_data->uNumSigCoeffs;
+                    }
+                    else
+                    {
+                        COEFFSTYPE buf4x4[4][16];
+                        Ipp32s i4x4;
+                        Ipp32s i;
+
+                        //Reorder 8x8 block for coding with CAVLC
+                        for(i4x4=0; i4x4<4; i4x4++ )
+                        {
+                            for(i = 0; i<16; i++ )
+                                buf4x4[i4x4][dec_single_scan[is_cur_mb_field][i]] = pTransformResult[dec_single_scan_8x8[is_cur_mb_field][4*i+i4x4]];
+                        }
+
+                        bCoded = 0;
+                        //Encode each block with CAVLC 4x4
+                        for(i4x4 = 0; i4x4<4; i4x4++ )
+                        {
+                            Ipp32s i;
+                            iLastCoeff = 0;
+                            idx = idxb + i4x4;
+
+                            //Check for last coeff
+                            for(i = 0; i<16; i++ )
+                            {
+                                if( buf4x4[i4x4][dec_single_scan[is_cur_mb_field][i]] != 0 )
+                                    iLastCoeff=i;
+                            }
+
+                            ownEncodeCoeffsCAVLC_H264(buf4x4[i4x4], 0, dec_single_scan[is_cur_mb_field], iLastCoeff,
+                                &curr_slice->Block_RLE[idx].uTrailing_Ones, &curr_slice->Block_RLE[idx].uTrailing_One_Signs, &curr_slice->Block_RLE[idx].uNumCoeffs,
+                                &curr_slice->Block_RLE[idx].uTotalZeros, curr_slice->Block_RLE[idx].iLevels, curr_slice->Block_RLE[idx].uRuns);
+
+                            bCoded += curr_slice->Block_RLE[idx].uNumCoeffs;
+                            cur_mb.MacroblockCoeffsInfo->numCoeff[idx] = curr_slice->Block_RLE[idx].uNumCoeffs;
+                        }
+                    }
+                }
+
+                // update flags if block quantized to empty
+                if (curr_slice->m_use_transform_for_intra_decision && core_enc->m_params.quant_opt_level < OPT_QUANT_INTRA8x8 + 1 )
+                {
+                    if (!bCoded)
+                    {
+                        uCBPLuma &= ~CBP8x8Mask[uBlock];
+                        //Copy  prediction
+                        Copy8x8(pPredBuf, 16, pReconBuf, pitchPix);
+                    }
+                    else //Copy reconstruct
+                        Copy8x8(pPredBuf + 256, 16, pReconBuf, pitchPix);
+                }
+                else
+                {
+                    // update flags if block quantized to empty
+                    if (!bCoded)
+                    {
+                        uCBPLuma &= ~CBP8x8Mask[uBlock];
+                        // update reconstruct frame with prediction
+                        Copy8x8(pPredBuf, 16, pReconBuf, pitchPix);
+                    }
+                    else if(!transform_bypass)
+                    {
+                        // inverse transform for reconstruct AND...
+                        // add inverse transformed coefficients to original predictor
+                        // to obtain reconstructed block, store in reconstruct frame
+                        // buffer
+                        if(iNumCoeffs != 0)
+                        {
+                            ownQuantLuma8x8Inv_H264(pTransformResult, QP_DIV_6[uMBQP], core_enc->m_SeqParamSet.seq_scaling_inv_matrix_8x8[0][QP_MOD_6[uMBQP]]);
+                            ownTransformLuma8x8InvAddPred_H264(pPredBuf, 16, pTransformResult, pReconBuf, pitchPix, core_enc->m_PicParamSet.bit_depth_luma);
+                        }
+                    }/*
+                    else
+                    {
+                        // Transform bypass => lossless
+                        // RecPlane == SrcPlane => there is no need to copy.
+                    }*/
+                }   // block not declared empty
+            } //curr_slice->m_use_transform_for_intra_decision
+            uOffset += core_enc->m_EncBlockOffsetInc[is_cur_mb_field][uBlock] * 2;
+        }  // for uBlock in luma plane
+    }
+    else
+    {
+        // loop over all 4x4 blocks in Y plane for the MB
+        if(core_enc->m_params.quant_opt_level > OPT_QUANT_INTRA4x4)
+        {
+            uCBPLuma = 0xffff;
+            memcpy( cbSt.absLevelM1, &curr_slice->m_pbitstream->context_array[227+20], 10*sizeof(CABAC_CONTEXT));
+            if( !is_cur_mb_field )
+            {
+                //memcpy( cbSt.sig, &curr_slice->m_pbitstream->context_array[105+29], 15*sizeof(CABAC_CONTEXT));
+                //memcpy( cbSt.last, &curr_slice->m_pbitstream->context_array[166+29], 15*sizeof(CABAC_CONTEXT));
+                cbSt.sig = &curr_slice->m_pbitstream->context_array[105+29];
+                cbSt.last = &curr_slice->m_pbitstream->context_array[166+29];
+            }
+            else
+            {
+                //memcpy( cbSt.sig, &curr_slice->m_pbitstream->context_array[105+172+29], 15*sizeof(CABAC_CONTEXT));
+                //memcpy( cbSt.last, &curr_slice->m_pbitstream->context_array[166+172+29], 15*sizeof(CABAC_CONTEXT));
+                cbSt.sig = &curr_slice->m_pbitstream->context_array[105+172+29];
+                cbSt.last = &curr_slice->m_pbitstream->context_array[166+172+29];
+            }
+        }
+
+        for (uBlock = 0; uBlock < 16; uBlock++ )
+        {
+            pPredBuf = cur_mb.mb4x4.prediction + xoff[uBlock] + yoff[uBlock]*16;
+            pReconBuf = core_enc->m_pReconstructFrame->m_pYPlane + uOffset;
+
+            cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = 0; // These will be updated if the block is coded
+            if (core_enc->m_PicParamSet.entropy_coding_mode)
+                cur_mb.cabac_data[uBlock].uNumSigCoeffs = 0;
+            else
+            {
+                curr_slice->Block_RLE[uBlock].uNumCoeffs = 0;
+                curr_slice->Block_RLE[uBlock].uTrailing_Ones = 0;
+                curr_slice->Block_RLE[uBlock].uTrailing_One_Signs = 0;
+                curr_slice->Block_RLE[uBlock].uTotalZeros = 16;
+            }
+
+            // find advanced intra prediction block, store in PredBuf
+            // Select best AI mode for the block, using reconstructed
+            // predictor pels. This function also stores the block
+            // predictor pels at pPredBuf.
+            if (!curr_slice->m_use_transform_for_intra_decision)
+            {
+                uIntraSAD += H264CoreEncoder_AIModeSelectOneBlock(state, curr_slice, pSrcPlane + uOffset, pReconBuf, uBlock, cur_mb.intra_types, pPredBuf);
+            }
+
+            // check if block is coded
+            bCoded = ((uCBPLuma & CBP4x4Mask[uBlock])?(1):(0));
+
+            if(!bCoded)
+            {
+                // update reconstruct frame for the empty block
+                Copy4x4(pPredBuf, 16, pReconBuf, pitchPix);
+            }
+            else
+            {
+                // block not declared empty, encode
+                // compute difference of predictor and source pels
+                // note: asm version does not use pDiffBuf
+                //       output is being passed in the mmx registers
+                if (!curr_slice->m_use_transform_for_intra_decision || core_enc->m_params.quant_opt_level > OPT_QUANT_INTRA4x4 )
+                {
+                    Diff4x4(pPredBuf, pSrcPlane + uOffset, pitchPixels, pDiffBuf);
+
+                    if(!transform_bypass)
+                    {
+                        if(core_enc->m_params.quant_opt_level > OPT_QUANT_INTRA4x4)
+                        {
+                            PIXTYPE PredPel[13];
+                            //We need to calculate new prediction
+                            H264CoreEncoder_GetBlockPredPels(state, curr_slice, pReconBuf, pitchPixels, pReconBuf, pitchPixels, pReconBuf, pitchPixels, uBlock, PredPel);
+                            H264CoreEncoder_GetPredBlock(cur_mb.intra_types[uBlock], pPredBuf, PredPel);
+                            Diff4x4(pPredBuf, pSrcPlane + uOffset, pitchPixels, pDiffBuf);
+
+                            ownTransformQuantResidual_H264(pDiffBuf, pTransformResult, uMBQP, &iNumCoeffs, 1,
+                                enc_single_scan[is_cur_mb_field], &iLastCoeff, NULL, curr_slice, 0, &cbSt); //Always use f for INTRA 
+                        }
+                        else
+                        {
+                            ownTransformQuantResidual_H264(pDiffBuf, pTransformResult, uMBQP, &iNumCoeffs, 1,
+                                enc_single_scan[is_cur_mb_field], &iLastCoeff, NULL, NULL, 0, NULL); //Always use f for INTRA
+                        }
+                    }
+                    else
+                    {
+                        for(Ipp32s i = 0; i < 16; i++)
+                            pTransformResult[i] = pDiffBuf[i];
+                        ownCountCoeffs(pTransformResult, &iNumCoeffs, enc_single_scan[is_cur_mb_field],&iLastCoeff, 16);
+                    }
+                }
+                else
+                {
+                    iNumCoeffs = cur_mb.m_iNumCoeffs4x4[ uBlock ];
+                    iLastCoeff = cur_mb.m_iLastCoeff4x4[ uBlock ];
+                    pTransformResult = &cur_mb.mb4x4.transform[ uBlock*16 ];
+                }
+
+                // if everything quantized to zero, skip RLE
+                if(!iNumCoeffs)
+                {
+                    // the block is empty so it is not coded
+                    bCoded = 0;
+                }
+                else
+                {
+                    // Preserve the absolute number of coeffs.
+                    if(core_enc->m_PicParamSet.entropy_coding_mode)
+                    {
+                        T_Block_CABAC_Data<COEFFSTYPE>* c_data = &cur_mb.cabac_data[uBlock];
+//                        c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)((iNumCoeffs < 0) ? -(iNumCoeffs+1) : iNumCoeffs);
+                        c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)ABS(iNumCoeffs);
+                        c_data->uLastSignificant = iLastCoeff;
+                        c_data->CtxBlockCat = BLOCK_LUMA_LEVELS;
+                        c_data->uFirstCoeff = 0;
+                        c_data->uLastCoeff = 15;
+                        H264CoreEncoder_MakeSignificantLists_CABAC(pTransformResult,dec_single_scan[is_cur_mb_field], c_data);
+                        bCoded = c_data->uNumSigCoeffs;
+                    }
+                    else
+                    {
+                        // record RLE info
+                        cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)ABS(iNumCoeffs);
+                        ownEncodeCoeffsCAVLC_H264(pTransformResult, 0, dec_single_scan[is_cur_mb_field], iLastCoeff,
+                            &curr_slice->Block_RLE[uBlock].uTrailing_Ones, &curr_slice->Block_RLE[uBlock].uTrailing_One_Signs, &curr_slice->Block_RLE[uBlock].uNumCoeffs,
+                            &curr_slice->Block_RLE[uBlock].uTotalZeros, curr_slice->Block_RLE[uBlock].iLevels, curr_slice->Block_RLE[uBlock].uRuns);
+                        cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = bCoded = curr_slice->Block_RLE[uBlock].uNumCoeffs;
+                    }
+                }
+
+                // update flags if block quantized to empty
+                if (curr_slice->m_use_transform_for_intra_decision && core_enc->m_params.quant_opt_level < OPT_QUANT_INTRA4x4+1 )
+                {
+                    if (!bCoded)
+                    {
+                        uCBPLuma &= ~CBP4x4Mask[uBlock]; //Copy predition
+                        Copy4x4(pPredBuf, 16, pReconBuf, pitchPix);
+                    }
+                    else //Copy reconstruct
+                        Copy4x4(pPredBuf + 256, 16, pReconBuf, pitchPix);
+                }
+                else
+                {
+                    if (!bCoded)
+                    {
+                        uCBPLuma &= ~CBP4x4Mask[uBlock];
+                        // update reconstruct frame for the empty block
+                        Copy4x4(pPredBuf, 16, pReconBuf, pitchPix);
+                    }
+                    else if(!transform_bypass)
+                    {
+                        // inverse transform for reconstruct AND...
+                        // add inverse transformed coefficients to original predictor
+                        // to obtain reconstructed block, store in reconstruct frame
+                        // buffer
+                        ownDequantTransformResidualAndAdd_H264(pPredBuf, pTransformResult, NULL, pReconBuf, 16, pitchPix, uMBQP,
+                            ((iNumCoeffs < -1) || (iNumCoeffs > 0)), core_enc->m_PicParamSet.bit_depth_luma, NULL);
+                    }
+                }
+            }   // block not declared empty
+
+            // proceed to the next block
+            uOffset += core_enc->m_EncBlockOffsetInc[is_cur_mb_field][uBlock];
+        }  // for uBlock in luma plane
+    }
+
+    // update coded block flags
+    cur_mb.LocalMacroblockInfo->cbp_luma = uCBPLuma;
+
+    // for each block of the MB initialize the AI mode (for INTER MB)
+    // or motion vectors (for INTRA MB) to values which will be
+    // correct predictors of that type. MV and AI mode prediction
+    // depend upon this instead of checking MB type.
+
+    return 1;
+}   // CEncAndRec4x4IntraMB
+
+////////////////////////////////////////////////////////////////////////////////
+// CEncAndRec16x16IntraMB
+//
+// Encode and Reconstruct all blocks in one 16x16 Intra macroblock
+//
+////////////////////////////////////////////////////////////////////////////////
+template<typename COEFFSTYPE, typename PIXTYPE>
+Ipp32u H264CoreEncoder_CEncAndRec16x16IntraMB(void* state, H264Slice<COEFFSTYPE, PIXTYPE> *curr_slice)
+{
+    H264CoreEncoder<COEFFSTYPE, PIXTYPE>* core_enc = (H264CoreEncoder<COEFFSTYPE, PIXTYPE>*)state;
+    Ipp32u  uBlock;     // block number, 0 to 23
+    Ipp32u  uOffset;        // to upper left corner of block from start of plane
+    Ipp32u  uMBQP;          // QP of current MB
+    Ipp32u  uMB;
+    Ipp32u  uCBPLuma;        // coded flags for all 4x4 blocks
+    Ipp32u  uCBPChroma;        // coded flags for all chroma blocks
+    Ipp32u  uIntraSAD;      // intra MB SAD
+    COEFFSTYPE* pDCBuf;     // chroma & luma dc coeffs pointer
+    PIXTYPE*  pPredBuf;       // prediction block pointer
+    PIXTYPE*  pReconBuf;       // prediction block pointer
+    Ipp16s* pDiffBuf;       // difference block pointer
+    Ipp16s* pTempDiffBuf;       // difference block pointer
+    COEFFSTYPE *pTransformResult; // for transform results.
+    Ipp16s* pMassDiffBuf;   // difference block pointer
+    COEFFSTYPE* pQBuf;          // quantized block pointer
+    PIXTYPE*  pSrcPlane;      // start of plane to encode
+    Ipp32s  pitchPixels;     // buffer pitch in pixels
+    Ipp8u   bCoded; // coded block flag
+    Ipp32s  iNumCoeffs; // Number of nonzero coeffs after quant (negative if DC is nonzero)
+    Ipp32s  iLastCoeff; // Number of nonzero coeffs after quant (negative if DC is nonzero)
+    Ipp32u  RLE_Offset;    // Index into BlockRLE array
+    H264CurrentMacroblockDescriptor<COEFFSTYPE, PIXTYPE> &cur_mb = curr_slice->m_cur_mb;
+    Ipp32s is_cur_mb_field = curr_slice->m_is_cur_mb_field;
+
+    pitchPixels = cur_mb.mbPitchPixels;
+    uCBPLuma    = cur_mb.LocalMacroblockInfo->cbp_luma;
+    uCBPChroma  = cur_mb.LocalMacroblockInfo->cbp_chroma;
+    uMBQP       = cur_mb.lumaQP;
+    pDiffBuf    = (Ipp16s*) (curr_slice->m_pMBEncodeBuffer + 512);
+    pTransformResult = (COEFFSTYPE*)(pDiffBuf + 16);
+    pQBuf       = (COEFFSTYPE*) (pTransformResult + 16);
+    pDCBuf      = (COEFFSTYPE*) (pQBuf + 16);   // Used for both luma and chroma DC blocks
+    pMassDiffBuf = (Ipp16s*) (pDCBuf + 16);
+//  uIntraSAD   = rd_quant_intra[uMBQP] * 24;   // 'handicap' using reconstructed data
+    uIntraSAD   = 0;
+    uMB = cur_mb.uMB;
+
+    bool transform_bypass = (core_enc->m_SeqParamSet.qpprime_y_zero_transform_bypass_flag && uMBQP == 0);
+    //--------------------------------------------------------------------------
+    // encode Y plane blocks (0-15)
+    //--------------------------------------------------------------------------
+
+    // initialize pointers and offset
+    pSrcPlane = core_enc->m_pCurrentFrame->m_pYPlane;
+    uOffset = core_enc->m_pMBOffsets[uMB].uLumaOffset[core_enc->m_is_cur_pic_afrm][is_cur_mb_field];
+    RLE_Offset = Y_DC_RLE;  // Used in 16x16 Intra mode only
+    pPredBuf    = cur_mb.mb16x16.prediction; // 16-byte aligned work buffer
+    Ipp32s pitchPix;
+    pReconBuf    = core_enc->m_pReconstructFrame->m_pYPlane; // 16-byte aligned work buffer
+    pitchPix = pitchPixels;
+
+    // for INTRA 16x16 MBs computation of luma prediction was done as
+    // a byproduct of sad calculation prior to this function being
+    // called; the predictor blocks are already at pPredBuf.
+
+    // Initialize the AC coeff flag value
+    cur_mb.MacroblockCoeffsInfo->lumaAC = 0;
+    // compute the 4x4 luma DC transform coeffs
+    ownSumsDiff16x16Blocks4x4(pSrcPlane + uOffset, pitchPixels, pPredBuf, 16, pDCBuf, pMassDiffBuf);
+
+    if(!transform_bypass)
+    {
+         // apply second transform on the luma DC transform coeffs
+        // check for CAVLC "level_prefix" overflow for baseline, main and extended profiles (see A.2.1, A.2.2, A.2.3)
+        if((core_enc->m_params.profile_idc == H264_PROFILE_BASELINE ||
+            core_enc->m_params.profile_idc == H264_PROFILE_MAIN ||
+            core_enc->m_params.profile_idc == H264_PROFILE_EXTENDED) &&
+            !core_enc->m_params.entropy_coding_mode_flag )
+        {
+            bool CAVLC_overflow;
+            COEFFSTYPE tmpLumaBuf[16];
+            COEFFSTYPE tmpChromaBuf[16];
+            Ipp32s i;
+
+            // chroma DC values for level check
+            PIXTYPE*    pSrcPlaneU    = core_enc->m_pCurrentFrame->m_pUPlane;      // start of plane to encode
+            PIXTYPE*    pSrcPlaneV    = core_enc->m_pCurrentFrame->m_pVPlane;      // start of plane to encode
+            PIXTYPE*    pPredBufU     = cur_mb.mbChromaIntra.prediction;            // prediction block pointer
+            PIXTYPE*    pPredBufV     = cur_mb.mbChromaIntra.prediction + 8;        // prediction block pointer
+            Ipp32u      uOffsetChroma = core_enc->m_pMBOffsets[uMB].uChromaOffset[core_enc->m_is_cur_pic_afrm][is_cur_mb_field];
+            COEFFSTYPE *pQBufChroma   = (COEFFSTYPE*)(((COEFFSTYPE*)curr_slice->m_pMBEncodeBuffer) + 64*2);
+            COEFFSTYPE *pDCBufU       = (COEFFSTYPE*)(pQBufChroma + 16);          // Used for both luma and chroma DC blocks
+            COEFFSTYPE *pDCBufV       = pDCBufU + 8;
+            Ipp16s*     pMassDiffBufChroma = (Ipp16s*)(pDCBufU + 16);
+            Ipp32s      iNumCoeffsChroma;
+
+            ippsCopy_8u((Ipp8u*)pDCBuf, (Ipp8u*)&tmpLumaBuf[0], 16*sizeof(COEFFSTYPE));
+
+            if( core_enc->m_PicParamSet.chroma_format_idc != 0 )
+            {
+                ownSumsDiff8x8Blocks4x4(pSrcPlaneU + uOffsetChroma, pitchPixels, pPredBufU, 16, pDCBufU, pMassDiffBufChroma);
+                ownSumsDiff8x8Blocks4x4(pSrcPlaneV + uOffsetChroma, pitchPixels, pPredBufV, 16, pDCBufV, pMassDiffBufChroma);
+                if (core_enc->m_PicParamSet.chroma_format_idc == 2)
+                {
+                    ownSumsDiff8x8Blocks4x4(pSrcPlaneU + uOffsetChroma+8*pitchPixels, pitchPixels, pPredBufU+8*16, 16, pDCBufU+4, pMassDiffBufChroma+64);
+                    ownSumsDiff8x8Blocks4x4(pSrcPlaneV + uOffsetChroma+8*pitchPixels, pitchPixels, pPredBufV+8*16, 16, pDCBufV+4, pMassDiffBufChroma+64);
+                }
+                ippsCopy_8u((Ipp8u*)pDCBufU, (Ipp8u*)&tmpChromaBuf[0], 16*sizeof(COEFFSTYPE));
+            }
+
+            do
+            {
+                ownTransformQuantLumaDC_H264(pDCBuf, pQBuf, uMBQP, &iNumCoeffs, 1, enc_single_scan[is_cur_mb_field], &iLastCoeff, NULL);
+                CAVLC_overflow = false;
+
+                for(i = 0; i < 16; i++)
+                {
+                    if( pDCBuf[i] > MAX_CAVLC_LEVEL || pDCBuf[i] < MIN_CAVLC_LEVEL )
+                    {
+                        CAVLC_overflow = true;
+                        break;
+                    }
+                }
+
+                // also check for chroma overflow
+                if( core_enc->m_PicParamSet.chroma_format_idc == 1 && !CAVLC_overflow )
+                {
+                    ownTransformQuantChromaDC_H264(pDCBufU, pQBufChroma, cur_mb.chromaQP, &iNumCoeffsChroma, 1, 1, NULL);
+                    for(i = 0; i < 4; i++)
+                    {
+                        if( pDCBufU[i] > MAX_CAVLC_LEVEL || pDCBufU[i] < MIN_CAVLC_LEVEL )
+                        {
+                            CAVLC_overflow = true;
+                            break;
+                        }
+                    }
+
+                    if(!CAVLC_overflow)
+                    {
+                        ownTransformQuantChromaDC_H264(pDCBufV, pQBufChroma, cur_mb.chromaQP, &iNumCoeffsChroma, 1, 1, NULL);
+                        for(i = 0; i < 4; i++)
+                        {
+                            if( pDCBufV[i] > MAX_CAVLC_LEVEL || pDCBufV[i] < MIN_CAVLC_LEVEL )
+                            {
+                                CAVLC_overflow = true;
+                                break;
+                            }
+                        }
+                    }
+
+                }
+                else if(core_enc->m_PicParamSet.chroma_format_idc == 2 && !CAVLC_overflow)
+                {
+                    ownTransformQuantChroma422DC_H264(pDCBufU, pQBufChroma, cur_mb.chromaQP, &iNumCoeffsChroma, 1, 1, NULL);
+                    for(i = 0; i < 8; i++)
+                    {
+                        if( pDCBufU[i] > MAX_CAVLC_LEVEL || pDCBufU[i] < MIN_CAVLC_LEVEL )
+                        {
+                            CAVLC_overflow = true;
+                            break;
+                        }
+                    }
+
+                    if(!CAVLC_overflow)
+                    {
+                        ownTransformQuantChroma422DC_H264(pDCBufV, pQBufChroma, cur_mb.chromaQP, &iNumCoeffsChroma, 1, 1, NULL);
+                        for(i = 0; i < 8; i++)
+                        {
+                            if( pDCBufV[i] > MAX_CAVLC_LEVEL || pDCBufV[i] < MIN_CAVLC_LEVEL )
+                            {
+                                CAVLC_overflow = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if( CAVLC_overflow )
+                {
+                    ippsCopy_8u((Ipp8u*)&tmpLumaBuf[0], (Ipp8u*)pDCBuf, 16*sizeof(COEFFSTYPE));
+                    if( core_enc->m_PicParamSet.chroma_format_idc != 0 )
+                        ippsCopy_8u((Ipp8u*)&tmpChromaBuf[0], (Ipp8u*)pDCBufU, 16*sizeof(COEFFSTYPE));
+                    cur_mb.LocalMacroblockInfo->QP++;
+                    uMBQP = cur_mb.lumaQP = getLumaQP(cur_mb.LocalMacroblockInfo->QP, core_enc->m_PicParamSet.bit_depth_luma);
+                    cur_mb.lumaQP51 = getLumaQP51(cur_mb.LocalMacroblockInfo->QP, core_enc->m_PicParamSet.bit_depth_luma);
+                    cur_mb.chromaQP = getChromaQP(cur_mb.LocalMacroblockInfo->QP, core_enc->m_PicParamSet.chroma_qp_index_offset, core_enc->m_SeqParamSet.bit_depth_chroma);
+                }
+            } while(CAVLC_overflow);
+        }
+        else
+        {
+            ownTransformQuantLumaDC_H264(pDCBuf, pQBuf, uMBQP, &iNumCoeffs, 1, enc_single_scan[is_cur_mb_field], &iLastCoeff, NULL);
+        }
+    }
+    else
+    {
+       for(Ipp32s i = 0; i < 4; i++)
+       {
+            for(Ipp32s j = 0; j < 4; j++)
+            {
+                Ipp32s x, y;
+                x = j*16;
+                y = i*64;
+                pDCBuf[i*4 + j] = pMassDiffBuf[x+y];
+            }
+        }
+        ownCountCoeffs(pDCBuf, &iNumCoeffs, enc_single_scan[is_cur_mb_field], &iLastCoeff, 16);
+    }
+
+    // insert the quantized luma Ipp64f transform DC coeffs into
+    // RLE buffer
+
+    // record RLE info
+    if (core_enc->m_PicParamSet.entropy_coding_mode)
+    {
+        T_Block_CABAC_Data<COEFFSTYPE>* c_data = &cur_mb.cabac_data[Y_DC_RLE];
+        bCoded = c_data->uNumSigCoeffs /* = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock]*/ = ABS(iNumCoeffs);
+        c_data->uLastSignificant = iLastCoeff;
+        c_data->CtxBlockCat = BLOCK_LUMA_DC_LEVELS;
+        c_data->uFirstCoeff = 0;
+        c_data->uLastCoeff = 15;
+        H264CoreEncoder_MakeSignificantLists_CABAC(pDCBuf,dec_single_scan[is_cur_mb_field], c_data);
+    }
+    else
+    {
+        ownEncodeCoeffsCAVLC_H264(pDCBuf, 0, dec_single_scan[is_cur_mb_field], iLastCoeff,
+            &curr_slice->Block_RLE[RLE_Offset].uTrailing_Ones,
+            &curr_slice->Block_RLE[RLE_Offset].uTrailing_One_Signs,
+            &curr_slice->Block_RLE[RLE_Offset].uNumCoeffs,
+            &curr_slice->Block_RLE[RLE_Offset].uTotalZeros,
+            curr_slice->Block_RLE[RLE_Offset].iLevels,
+            curr_slice->Block_RLE[RLE_Offset].uRuns);
+
+        bCoded = curr_slice->Block_RLE[RLE_Offset].uNumCoeffs;
+    }
+
+    if(!transform_bypass)
+    {
+        ownTransformDequantLumaDC_H264(pDCBuf, uMBQP, NULL);
+    }
+
+    CabacStates cbSt;
+    if( core_enc->m_params.quant_opt_level > OPT_QUANT_INTRA16x16 )
+    {
+        memcpy( cbSt.absLevelM1, &curr_slice->m_pbitstream->context_array[227+10], 10*sizeof(CABAC_CONTEXT));
+        if(!is_cur_mb_field )
+        {
+            //memcpy( cbSt.sig+1, &curr_slice->m_pbitstream->context_array[105+15], 14*sizeof(CABAC_CONTEXT));
+            //memcpy( cbSt.last+1, &curr_slice->m_pbitstream->context_array[166+15], 14*sizeof(CABAC_CONTEXT));
+            cbSt.sig = &curr_slice->m_pbitstream->context_array[105+14];
+            cbSt.last = &curr_slice->m_pbitstream->context_array[166+14];
+        }
+        else
+        {
+            //memcpy( cbSt.sig+1, &curr_slice->m_pbitstream->context_array[105+172+15], 14*sizeof(CABAC_CONTEXT));
+            //memcpy( cbSt.last+1, &curr_slice->m_pbitstream->context_array[166+172+15], 14*sizeof(CABAC_CONTEXT));
+            cbSt.sig = &curr_slice->m_pbitstream->context_array[105+172+14];
+            cbSt.last = &curr_slice->m_pbitstream->context_array[166+172+14];
+        }
+    }
+
+    // loop over all 4x4 blocks in Y plane for the MB
+    for (uBlock = 0; uBlock < 16; uBlock++ )
+    {
+        pPredBuf = cur_mb.mb16x16.prediction + xoff[uBlock] + yoff[uBlock]*16;
+        pReconBuf = core_enc->m_pReconstructFrame->m_pYPlane+uOffset;
+        cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = 0;        // This will be updated if the block is coded
+        if (core_enc->m_PicParamSet.entropy_coding_mode)
+            cur_mb.cabac_data[uBlock].uNumSigCoeffs = 0;
+        else
+        {
+            curr_slice->Block_RLE[uBlock].uNumCoeffs = 0;
+            curr_slice->Block_RLE[uBlock].uTrailing_Ones = 0;
+            curr_slice->Block_RLE[uBlock].uTrailing_One_Signs = 0;
+            curr_slice->Block_RLE[uBlock].uTotalZeros = 15;
+        }
+
+        // check if block is coded
+        bCoded = ((uCBPLuma & CBP4x4Mask[uBlock])?(1):(0));
+
+        if (!bCoded)
+        {
+            // update reconstruct frame for the empty block
+            Copy4x4(pPredBuf, 16, pReconBuf, pitchPix);
+        }
+        else
+        {   // block not declared empty, encode
+            pTempDiffBuf = pMassDiffBuf+ xoff[uBlock]*4 + yoff[uBlock]*16;
+            if(!transform_bypass)
+            {
+                if( core_enc->m_params.quant_opt_level > OPT_QUANT_INTRA16x16)
+                {
+                    ownTransformQuantResidual_H264(
+                        pTempDiffBuf,
+                        pTransformResult,
+                        uMBQP,
+                        &iNumCoeffs,
+                        1, //Always use f for INTRA
+                        enc_single_scan[is_cur_mb_field],
+                        &iLastCoeff,
+                        NULL,
+                        curr_slice,
+                        1,
+                        &cbSt);
+                }
+                else
+                {
+                    ownTransformQuantResidual_H264(
+                        pTempDiffBuf,
+                        pTransformResult,
+                        uMBQP,
+                        &iNumCoeffs,
+                        1, //Always use f for INTRA
+                        enc_single_scan[is_cur_mb_field],
+                        &iLastCoeff,
+                        NULL,
+                        NULL,
+                        0,
+                        NULL);
+                }
+            }
+            else
+            {
+                for(Ipp32s i = 0; i < 16; i++)
+                    pTransformResult[i] = pTempDiffBuf[i];
+                ownCountCoeffs(pTransformResult, &iNumCoeffs, enc_single_scan[is_cur_mb_field], &iLastCoeff, 16);
+            }
+
+            if( ((iNumCoeffs < -1) || (iNumCoeffs > 0)) )
+            {
+                cur_mb.MacroblockCoeffsInfo->lumaAC |= 1;
+                // Preserve the absolute number of coeffs.
+                if (core_enc->m_PicParamSet.entropy_coding_mode)
+                {
+                    T_Block_CABAC_Data<COEFFSTYPE>* c_data = &cur_mb.cabac_data[uBlock];
+                    c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)((iNumCoeffs < 0) ? -(iNumCoeffs+1) : iNumCoeffs);
+                    c_data->uLastSignificant = iLastCoeff;
+                    c_data->CtxBlockCat = BLOCK_LUMA_AC_LEVELS;
+                    c_data->uFirstCoeff = 1;
+                    c_data->uLastCoeff = 15;
+                    H264CoreEncoder_MakeSignificantLists_CABAC(pTransformResult,dec_single_scan[is_cur_mb_field], c_data);
+                    bCoded = c_data->uNumSigCoeffs;
+                }
+                else
+                {
+                    cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)((iNumCoeffs < 0) ? -(iNumCoeffs+1) : iNumCoeffs);
+                    ownEncodeCoeffsCAVLC_H264(
+                        pTransformResult,//pDiffBuf,
+                        1,
+                        dec_single_scan[is_cur_mb_field],
+                        iLastCoeff,
+                        &curr_slice->Block_RLE[uBlock].uTrailing_Ones,
+                        &curr_slice->Block_RLE[uBlock].uTrailing_One_Signs,
+                        &curr_slice->Block_RLE[uBlock].uNumCoeffs,
+                        &curr_slice->Block_RLE[uBlock].uTotalZeros,
+                        curr_slice->Block_RLE[uBlock].iLevels,
+                        curr_slice->Block_RLE[uBlock].uRuns);
+
+                    cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = bCoded = curr_slice->Block_RLE[uBlock].uNumCoeffs;
+                }
+            }
+            else
+            {
+               bCoded = 0;
+               uCBPLuma &= ~CBP4x4Mask[uBlock];
+            }
+
+            // If the block wasn't coded and the DC coefficient is zero
+            if (!bCoded && !pDCBuf[block_subblock_mapping_[uBlock]])
+            {
+                // update reconstruct frame for the empty block
+                Copy4x4(pPredBuf, 16, pReconBuf, pitchPix);
+            }
+            else if(!transform_bypass)
+            {
+                // inverse transform for reconstruct AND...
+                // add inverse transformed coefficients to original predictor
+                // to obtain reconstructed block, store in reconstruct frame
+                // buffer
+                ownDequantTransformResidualAndAdd_H264(
+                    pPredBuf,
+                    pTransformResult,
+                    &pDCBuf[block_subblock_mapping_[uBlock]],
+                    pReconBuf,
+                    16,
+                    pitchPix,
+                    uMBQP,
+                    ((iNumCoeffs < -1) || (iNumCoeffs > 0)),
+                    core_enc->m_PicParamSet.bit_depth_luma,
+                    NULL);
+            }
+        }   // block not declared empty
+
+        // proceed to the next block
+        uOffset += core_enc->m_EncBlockOffsetInc[is_cur_mb_field][uBlock];
+    }  // for uBlock in luma plane
+
+    // In JVT, Chroma is Intra if any part of luma is intra.
+    // update coded block flags
+    cur_mb.LocalMacroblockInfo->cbp_luma = uCBPLuma;
+
+    // Correct the value of nc if both chroma DC and AC coeffs will be coded.
+    if (cur_mb.MacroblockCoeffsInfo->lumaAC > 1)
+        cur_mb.MacroblockCoeffsInfo->lumaAC = 1;
+
+    // for each block of the MB initialize the AI mode (for INTER MB)
+    // or motion vectors (for INTRA MB) to values which will be
+    // correct predictors of that type. MV and AI mode prediction
+    // depend upon this instead of checking MB type.
+    cur_mb.intra_types[0] = cur_mb.LocalMacroblockInfo->intra_16x16_mode;
+    for (Ipp32s i=1; i<16; i++)
+        cur_mb.intra_types[i] = 2;
+
+    return 1;
+}
+
+template<typename COEFFSTYPE, typename PIXTYPE>
+Ipp32u H264CoreEncoder_CEncAndRecInterMB(
+    void* state,
+    H264Slice<COEFFSTYPE, PIXTYPE> *curr_slice)
+{
+    H264CoreEncoder<COEFFSTYPE, PIXTYPE>* core_enc = (H264CoreEncoder<COEFFSTYPE, PIXTYPE>*)state;
+    Ipp32u  uBlock;     // block number, 0 to 23
+    Ipp32u  uOffset;        // to upper left corner of block from start of plane
+    Ipp32u  uMBQP;          // QP of current MB
+    Ipp32u  uMBType;        // current MB type
+    Ipp32u  uMB;
+    Ipp32u  uCBPLuma;        // coded flags for all 4x4 blocks
+
+    COEFFSTYPE* pDCBuf;     // chroma & luma dc coeffs pointer
+    PIXTYPE*  pPredBuf;       // prediction block pointer
+    PIXTYPE*  pReconBuf;       // prediction block pointer
+    Ipp16s* pDiffBuf;       // difference block pointer
+    COEFFSTYPE *pTransform; // result of the transform.
+    COEFFSTYPE *pTransformResult; // result of the transform.
+    COEFFSTYPE* pQBuf;          // quantized block pointer
+    Ipp16s* pMassDiffBuf;   // difference block pointer
+    PIXTYPE*  pSrcPlane;      // start of plane to encode
+    Ipp32s    pitchPixels;     // buffer pitch in pixels
+    Ipp8u     bCoded;        // coded block flag
+    Ipp32s    iNumCoeffs;    // Number of nonzero coeffs after quant (negative if DC is nonzero)
+    Ipp32s    iLastCoeff;  // Number of nonzero coeffs after quant (negative if DC is nonzero)
+    H264CurrentMacroblockDescriptor<COEFFSTYPE, PIXTYPE> &cur_mb = curr_slice->m_cur_mb;
+    Ipp32s is_cur_mb_field = curr_slice->m_is_cur_mb_field;
+
+    uMBQP       = cur_mb.lumaQP;
+    bool transform_bypass = core_enc->m_SeqParamSet.qpprime_y_zero_transform_bypass_flag && uMBQP == 0;
+    __ALIGN16 CabacStates cbSt;
+
+    uCBPLuma    = cur_mb.LocalMacroblockInfo->cbp_luma;
+    pitchPixels = core_enc->m_pCurrentFrame->m_pitchPixels<<is_cur_mb_field;
+    uMBType     = cur_mb.GlobalMacroblockInfo->mbtype;
+    pTransform  = (COEFFSTYPE*)curr_slice->m_pMBEncodeBuffer;
+    pDiffBuf    = (Ipp16s*) (curr_slice->m_pMBEncodeBuffer + 512);
+    pQBuf       = (COEFFSTYPE*) (pDiffBuf+64);
+    pDCBuf      = (COEFFSTYPE*) (pQBuf + 16);   // Used for both luma and chroma DC blocks
+    pMassDiffBuf= (Ipp16s*) (pDCBuf+ 16);
+    uMB=cur_mb.uMB;
+
+    //--------------------------------------------------------------------------
+    // encode Y plane blocks (0-15)
+    //--------------------------------------------------------------------------
+
+    Ipp32s pitchPix;
+    pitchPix = pitchPixels;
+
+    // initialize pointers and offset
+    pSrcPlane = core_enc->m_pCurrentFrame->m_pYPlane;
+    uOffset = core_enc->m_pMBOffsets[uMB].uLumaOffset[core_enc->m_is_cur_pic_afrm][is_cur_mb_field];
+    pPredBuf = cur_mb.mbInter.prediction;
+
+    // Motion Compensate this MB
+    H264CoreEncoder_MCOneMBLuma(state, curr_slice, cur_mb.MVs[LIST_0]->MotionVectors, cur_mb.MVs[LIST_1]->MotionVectors, pPredBuf);
+
+    if (core_enc->m_PicParamSet.entropy_coding_mode){
+        for( uBlock = 0; uBlock<16; uBlock++ ){
+              cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = 0;        // These will be updated if the block is coded
+              cur_mb.cabac_data[uBlock].uNumSigCoeffs = 0;
+        }
+    } else {
+        for( uBlock = 0; uBlock<16; uBlock++ ){
+            cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = 0;        // These will be updated if the block is coded
+            curr_slice->Block_RLE[uBlock].uNumCoeffs = 0;
+            curr_slice->Block_RLE[uBlock].uTrailing_Ones = 0;
+            curr_slice->Block_RLE[uBlock].uTrailing_One_Signs = 0;
+            curr_slice->Block_RLE[uBlock].uTotalZeros = 16;
+        }
+    }
+
+    if(pGetMB8x8TSPackFlag(cur_mb.GlobalMacroblockInfo)) {
+        Ipp32s mbCost=0;
+
+    if( core_enc->m_params.quant_opt_level > OPT_QUANT_INTER ){
+        memcpy( cbSt.absLevelM1, &curr_slice->m_pbitstream->context_array[426], 10*sizeof(CABAC_CONTEXT));
+        if( !is_cur_mb_field ){
+            //memcpy( cbSt.sig, &curr_slice->m_pbitstream->context_array[402], 15*sizeof(CABAC_CONTEXT));
+            //memcpy( cbSt.last, &curr_slice->m_pbitstream->context_array[417], 9*sizeof(CABAC_CONTEXT));
+            cbSt.sig = &curr_slice->m_pbitstream->context_array[402];
+            cbSt.last = &curr_slice->m_pbitstream->context_array[417];
+        }else{
+            //memcpy( cbSt.sig, &curr_slice->m_pbitstream->context_array[436], 15*sizeof(CABAC_CONTEXT));
+            //memcpy( cbSt.last, &curr_slice->m_pbitstream->context_array[451], 9*sizeof(CABAC_CONTEXT));
+            cbSt.sig = &curr_slice->m_pbitstream->context_array[436];
+            cbSt.last = &curr_slice->m_pbitstream->context_array[451];
+        }
+    }
+        pSetMB8x8TSFlag(cur_mb.GlobalMacroblockInfo, 1);
+        //loop over all 8x8 blocks in Y plane for the MB
+        Ipp32s coeffCost = 0;
+        for (uBlock = 0; uBlock < 4; uBlock++){
+            pPredBuf = cur_mb.mbInter.prediction + xoff[uBlock*4] + yoff[uBlock*4]*16;
+            // check if block is coded
+            bCoded = ((uCBPLuma & CBP8x8Mask[uBlock])?(1):(0));
+
+            if (bCoded){
+                Diff8x8(pPredBuf, pSrcPlane + uOffset, pitchPixels, pDiffBuf);
+                pTransformResult = pTransform + uBlock*64;
+                if(!transform_bypass) {
+                    // forward transform and quantization, in place in pDiffBuf
+                    ownTransformLuma8x8Fwd_H264(pDiffBuf, pTransformResult);
+                    if( core_enc->m_params.quant_opt_level > OPT_QUANT_INTER ){
+                        ownQuantLuma8x8_H264(pTransformResult, pTransformResult, uMBQP, 0,
+                            enc_single_scan_8x8[is_cur_mb_field], core_enc->m_SeqParamSet.seq_scaling_matrix_8x8[1][QP_MOD_6[uMBQP]], // INTER scaling matrix
+                            &iNumCoeffs, &iLastCoeff,curr_slice,&cbSt,core_enc->m_SeqParamSet.seq_scaling_inv_matrix_8x8[1][QP_MOD_6[uMBQP]]);
+                    }else{
+                    ownQuantLuma8x8_H264(
+                        pTransformResult,
+                        pTransformResult,
+                        QP_DIV_6[uMBQP],
+                        0,
+                        enc_single_scan_8x8[is_cur_mb_field],
+                        core_enc->m_SeqParamSet.seq_scaling_matrix_8x8[1][QP_MOD_6[uMBQP]], // INTER scaling matrix
+                        &iNumCoeffs,
+                        &iLastCoeff,
+                        NULL,
+                        NULL,
+                        NULL);
+                    }
+                    coeffCost = CalculateCoeffsCost(pTransformResult, 64, dec_single_scan_8x8[is_cur_mb_field]);
+                    mbCost += coeffCost;
+                } else {
+                    for(Ipp32s i = 0; i < 64; i++) {
+                        pTransformResult[i] = pDiffBuf[i];
+                    }
+                    ownCountCoeffs(pTransformResult, &iNumCoeffs, enc_single_scan_8x8[is_cur_mb_field], &iLastCoeff, 64);
+                }
+
+                // if everything quantized to zero, skip RLE
+            if (!iNumCoeffs || (!transform_bypass && coeffCost < LUMA_COEFF_8X8_MAX_COST && core_enc->m_params.quant_opt_level < OPT_QUANT_INTER+1 ) ){
+                    uCBPLuma &= ~CBP8x8Mask[uBlock];
+                } else {
+                    // record RLE info
+                    if (core_enc->m_PicParamSet.entropy_coding_mode){
+                        T_Block_CABAC_Data<COEFFSTYPE>* c_data = &cur_mb.cabac_data[uBlock];
+                        c_data->uLastSignificant = iLastCoeff;
+                        c_data->CtxBlockCat = BLOCK_LUMA_64_LEVELS;
+                        c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)ABS(iNumCoeffs);
+//                        c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)((iNumCoeffs < 0) ? -(iNumCoeffs+1) : iNumCoeffs);
+                        c_data->uFirstCoeff = 0;
+                        c_data->uLastCoeff = 63;
+                        H264CoreEncoder_MakeSignificantLists_CABAC(pTransformResult,dec_single_scan_8x8[is_cur_mb_field], c_data);
+                    }else{
+                        COEFFSTYPE buf4x4[4][16];
+                        Ipp8u iLastCoeff;
+                        Ipp32s i4x4;
+
+                        //Reorder 8x8 block for coding with CAVLC
+                        for(i4x4=0; i4x4<4; i4x4++ ) {
+                            Ipp32s i;
+                            for(i = 0; i<16; i++ )
+                                buf4x4[i4x4][dec_single_scan[is_cur_mb_field][i]] =
+                                    pTransformResult[dec_single_scan_8x8[is_cur_mb_field][4*i+i4x4]];
+                        }
+
+                        Ipp32s idx = uBlock*4;
+                        //Encode each block with CAVLC 4x4
+                        for(i4x4 = 0; i4x4<4; i4x4++, idx++ ) {
+                            Ipp32s i;
+                            iLastCoeff = 0;
+
+                            //Check for last coeff
+                            for(i = 0; i<16; i++ ) if( buf4x4[i4x4][dec_single_scan[is_cur_mb_field][i]] != 0 ) iLastCoeff=i;
+
+                            ownEncodeCoeffsCAVLC_H264(
+                                buf4x4[i4x4],
+                                0, //Luma
+                                dec_single_scan[is_cur_mb_field],
+                                iLastCoeff,
+                                &curr_slice->Block_RLE[idx].uTrailing_Ones,
+                                &curr_slice->Block_RLE[idx].uTrailing_One_Signs,
+                                &curr_slice->Block_RLE[idx].uNumCoeffs,
+                                &curr_slice->Block_RLE[idx].uTotalZeros,
+                                curr_slice->Block_RLE[idx].iLevels,
+                                curr_slice->Block_RLE[idx].uRuns);
+
+                            cur_mb.MacroblockCoeffsInfo->numCoeff[idx] = curr_slice->Block_RLE[idx].uNumCoeffs;
+                         }
+                    }
+                }
+            }
+                uOffset += core_enc->m_EncBlockOffsetInc[is_cur_mb_field][uBlock] * 2;
+        }
+
+        if( !transform_bypass && mbCost < LUMA_COEFF_MB_8X8_MAX_COST ){
+                uCBPLuma = 0;
+        }
+
+       uOffset = core_enc->m_pMBOffsets[uMB].uLumaOffset[core_enc->m_is_cur_pic_afrm][is_cur_mb_field];
+       for (uBlock = 0; uBlock < 4; uBlock++){
+            pPredBuf = cur_mb.mbInter.prediction + xoff[uBlock*4] + yoff[uBlock*4]*16;
+            pReconBuf = core_enc->m_pReconstructFrame->m_pYPlane + uOffset;
+            bCoded = ((uCBPLuma & CBP8x8Mask[uBlock])?(1):(0));
+            if (!bCoded){
+                Copy8x8(pPredBuf, 16, pReconBuf, pitchPix);
+                if (core_enc->m_PicParamSet.entropy_coding_mode)
+                    cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = 0;
+                else
+                    cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock*4+0] =
+                    cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock*4+1] =
+                    cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock*4+2] =
+                    cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock*4+3] = 0;
+            } else if(!transform_bypass){
+                    ownQuantLuma8x8Inv_H264(pTransform + uBlock*64, QP_DIV_6[uMBQP], core_enc->m_SeqParamSet.seq_scaling_inv_matrix_8x8[1][QP_MOD_6[uMBQP]]); //scaling matrix for INTER slice
+                    ownTransformLuma8x8InvAddPred_H264(pPredBuf, 16, pTransform + uBlock*64, pReconBuf, pitchPix, core_enc->m_PicParamSet.bit_depth_luma);
+            }
+            uOffset += core_enc->m_EncBlockOffsetInc[is_cur_mb_field][uBlock] * 2;
+        }
+    } else {
+        //loop over all 4x4 blocks in Y plane for the MB
+        //first make transform for all blocks
+      if( core_enc->m_params.quant_opt_level > OPT_QUANT_INTER ){
+        memcpy( cbSt.absLevelM1, &curr_slice->m_pbitstream->context_array[227+20], 10*sizeof(CABAC_CONTEXT));
+        if( !is_cur_mb_field ){
+            //memcpy( cbSt.sig, &curr_slice->m_pbitstream->context_array[105+29], 15*sizeof(CABAC_CONTEXT));
+            //memcpy( cbSt.last, &curr_slice->m_pbitstream->context_array[166+29], 15*sizeof(CABAC_CONTEXT));
+            cbSt.sig = &curr_slice->m_pbitstream->context_array[105+29];
+            cbSt.last = &curr_slice->m_pbitstream->context_array[166+29];
+        }else{
+            //memcpy( cbSt.sig, &curr_slice->m_pbitstream->context_array[105+172+29], 15*sizeof(CABAC_CONTEXT));
+            //memcpy( cbSt.last, &curr_slice->m_pbitstream->context_array[166+172+29], 15*sizeof(CABAC_CONTEXT));
+            cbSt.sig = &curr_slice->m_pbitstream->context_array[105+172+29];
+            cbSt.last = &curr_slice->m_pbitstream->context_array[166+172+29];
+        }
+      }
+
+        Ipp32s iNumCoeffs[16], CoeffsCost[16] = {9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9};
+        for (uBlock = 0; uBlock < 16; uBlock++ ){
+            pPredBuf = cur_mb.mbInter.prediction + xoff[uBlock] + yoff[uBlock]*16;
+
+            // check if block is coded
+            bCoded = ((uCBPLuma & CBP4x4Mask[uBlock])?(1):(0));
+
+            if( bCoded ){   // block not declared empty, encode
+                Diff4x4(pPredBuf, pSrcPlane + uOffset, pitchPixels, pDiffBuf);
+                pTransformResult = pTransform + uBlock*16;
+                if(!transform_bypass) {
+                    // forward transform and quantization, in place in pDiffBuf
+                    if( core_enc->m_params.quant_opt_level > OPT_QUANT_INTER ){
+                        ownTransformQuantResidual_H264(
+                            pDiffBuf,
+                            pTransformResult,
+                            uMBQP,
+                            &iNumCoeffs[uBlock],
+                            0,
+                            enc_single_scan[is_cur_mb_field],
+                            &iLastCoeff,
+                            NULL,
+                            curr_slice,
+                            0,
+                            &cbSt);
+                    }else{
+                        ownTransformQuantResidual_H264(
+                            pDiffBuf,
+                            pTransformResult,
+                            uMBQP,
+                            &iNumCoeffs[uBlock],
+                            0,
+                            enc_single_scan[is_cur_mb_field],
+                            &iLastCoeff,
+                            NULL,
+                            NULL,
+                            0,
+                            NULL);
+                    }
+                    CoeffsCost[uBlock] = CalculateCoeffsCost(pTransformResult, 16, dec_single_scan[is_cur_mb_field]);
+                } else {
+                    for(Ipp32s i = 0; i < 16; i++) {
+                        pTransformResult[i] = pDiffBuf[i];
+                    }
+                    ownCountCoeffs(pTransformResult, &iNumCoeffs[uBlock], enc_single_scan[is_cur_mb_field], &iLastCoeff, 16);
+                }
+
+                if (!iNumCoeffs[uBlock]) { // if everything quantized to zero, skip RLE
+                    uCBPLuma &= ~CBP4x4Mask[uBlock];
+                }else{
+                    // Preserve the absolute number of coeffs.
+                    if (core_enc->m_PicParamSet.entropy_coding_mode) {
+                        T_Block_CABAC_Data<COEFFSTYPE>* c_data = &cur_mb.cabac_data[uBlock];
+//                        c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)((iNumCoeffs[uBlock] < 0) ? -(iNumCoeffs[uBlock]+1) : iNumCoeffs[uBlock]);
+                        c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)ABS(iNumCoeffs[uBlock]);
+                        c_data->uLastSignificant = iLastCoeff;
+                        c_data->CtxBlockCat = BLOCK_LUMA_LEVELS;
+                        c_data->uFirstCoeff = 0;
+                        c_data->uLastCoeff = 15;
+                        H264CoreEncoder_MakeSignificantLists_CABAC(pTransformResult,dec_single_scan[is_cur_mb_field], c_data);
+                    } else {
+                        cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)ABS(iNumCoeffs[uBlock]);
+                        ownEncodeCoeffsCAVLC_H264(
+                            pTransformResult,
+                            0,
+                            dec_single_scan[is_cur_mb_field],
+                            iLastCoeff,
+                            &curr_slice->Block_RLE[uBlock].uTrailing_Ones,
+                            &curr_slice->Block_RLE[uBlock].uTrailing_One_Signs,
+                            &curr_slice->Block_RLE[uBlock].uNumCoeffs,
+                            &curr_slice->Block_RLE[uBlock].uTotalZeros,
+                            curr_slice->Block_RLE[uBlock].iLevels,
+                            curr_slice->Block_RLE[uBlock].uRuns);
+                    }
+                }
+            }
+
+            // proceed to the next block
+            uOffset += core_enc->m_EncBlockOffsetInc[is_cur_mb_field][uBlock];
+        }  // for 4x4 uBlock in luma plane
+
+        //Skip subblock 8x8 if it cost is < 4 or skip MB if it's cost is < 5
+        if( !transform_bypass ){
+            Ipp32s mbCost=0;
+            for( uBlock = 0; uBlock < 4; uBlock++ ){
+                Ipp32s sb = uBlock*4;
+                Ipp32s block8x8cost = CoeffsCost[sb] + CoeffsCost[sb+1] + CoeffsCost[sb+2] + CoeffsCost[sb+3];
+
+                mbCost += block8x8cost;
+                if( block8x8cost <= LUMA_8X8_MAX_COST && core_enc->m_params.quant_opt_level < OPT_QUANT_INTER+1 )
+                    uCBPLuma &= ~CBP8x8Mask[uBlock];
+            }
+                if( mbCost <= LUMA_MB_MAX_COST )
+                    uCBPLuma = 0;
+        }
+
+        //Make inverse quantization and transform for non zero blocks
+        uOffset = core_enc->m_pMBOffsets[uMB].uLumaOffset[core_enc->m_is_cur_pic_afrm][is_cur_mb_field];
+        for( uBlock=0; uBlock < 16; uBlock++ ){
+            pPredBuf = cur_mb.mbInter.prediction + xoff[uBlock] + yoff[uBlock]*16;
+            pReconBuf = core_enc->m_pReconstructFrame->m_pYPlane + uOffset;
+
+            bCoded = ((uCBPLuma & CBP4x4Mask[uBlock])?(1):(0));
+            if (!bCoded) {
+                // update reconstruct frame for the empty block
+                Copy4x4(pPredBuf, 16, pReconBuf, pitchPix);
+                cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = 0;
+            } else if(!transform_bypass) {
+                 ownDequantTransformResidualAndAdd_H264(
+                     pPredBuf,
+                     pTransform + uBlock*16,
+                     NULL,
+                     pReconBuf,
+                     16,
+                     pitchPix,
+                     uMBQP,
+                     ((iNumCoeffs[uBlock] < -1) || (iNumCoeffs[uBlock] > 0)),
+                     core_enc->m_PicParamSet.bit_depth_luma,
+                     NULL);
+              }
+            uOffset += core_enc->m_EncBlockOffsetInc[is_cur_mb_field][uBlock];
+           }
+   }
+
+    //--------------------------------------------------------------------------
+    // encode U plane blocks then V plane blocks
+    //--------------------------------------------------------------------------
+
+    // update coded block flags
+    cur_mb.LocalMacroblockInfo->cbp_luma = uCBPLuma;
+
+    return 1;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// CEncAndRecMB
+//
+// Main function to drive encode and reconstruct for all blocks
+// of one macroblock.
+////////////////////////////////////////////////////////////////////////////////
+template<typename COEFFSTYPE, typename PIXTYPE>
+void H264CoreEncoder_CEncAndRecMB(void* state, H264Slice<COEFFSTYPE, PIXTYPE> *curr_slice)
+{
+    H264CoreEncoder<COEFFSTYPE, PIXTYPE>* core_enc = (H264CoreEncoder<COEFFSTYPE, PIXTYPE>*)state;
+    curr_slice->m_cur_mb.MacroblockCoeffsInfo->chromaNC = 0;
+    H264CurrentMacroblockDescriptor<COEFFSTYPE, PIXTYPE> &cur_mb = curr_slice->m_cur_mb;
+    Ipp32s is_cur_mb_field = curr_slice->m_is_cur_mb_field;
+    Ipp32s pitchPix;
+    PIXTYPE *pDst, *pSrc;
+
+    if(curr_slice->m_cur_mb.GlobalMacroblockInfo->mbtype != MBTYPE_SKIPPED && core_enc->m_PicParamSet.chroma_format_idc != 0)
+    {
+        PIXTYPE*  pPredBuf;     // prediction block pointer
+        Ipp32s    pitchPixels = cur_mb.mbPitchPixels;  // buffer pitch
+        Ipp32u    uMB     = cur_mb.uMB;
+        Ipp32u    uOffset = core_enc->m_pMBOffsets[uMB].uChromaOffset[core_enc->m_is_cur_pic_afrm][is_cur_mb_field];
+        bool      intra   = (cur_mb.GlobalMacroblockInfo->mbtype == MBTYPE_INTRA) || (cur_mb.GlobalMacroblockInfo->mbtype == MBTYPE_INTRA_16x16);
+        if(intra)
+        {
+            pPredBuf = cur_mb.mbChromaIntra.prediction;
+            if(!((core_enc->m_Analyse & ANALYSE_RD_OPT) || (core_enc->m_Analyse & ANALYSE_RD_MODE)))
+            {
+                cur_mb.MacroblockCoeffsInfo->chromaNC = 0;
+                H264CoreEncoder_AIModeSelectChromaMBs_8x8(state, curr_slice,
+                    core_enc->m_pCurrentFrame->m_pUPlane + uOffset,
+                    core_enc->m_pReconstructFrame->m_pUPlane + uOffset,
+                    core_enc->m_pCurrentFrame->m_pVPlane + uOffset,
+                    core_enc->m_pReconstructFrame->m_pVPlane + uOffset,
+                    pitchPixels, &cur_mb.LocalMacroblockInfo->intra_chroma_mode, pPredBuf, pPredBuf+8);  //up to 422 only
+            }
+        }
+        else
+        {
+            cur_mb.MacroblockCoeffsInfo->chromaNC = 0;
+            pPredBuf = cur_mb.mbChromaInter.prediction;
+            H264CoreEncoder_MCOneMBChroma(state, curr_slice, pPredBuf);
+        }
+    }
+
+    switch (curr_slice->m_cur_mb.GlobalMacroblockInfo->mbtype)
+    {
+        case MBTYPE_INTRA:
+            H264CoreEncoder_CEncAndRec4x4IntraMB(state, curr_slice);
+            if( core_enc->m_PicParamSet.chroma_format_idc != 0 )
+                H264CoreEncoder_EncodeChroma(state, curr_slice);
+            break;
+
+        case MBTYPE_INTRA_16x16:
+            H264CoreEncoder_CEncAndRec16x16IntraMB(state, curr_slice);
+            if( core_enc->m_PicParamSet.chroma_format_idc != 0 )
+                H264CoreEncoder_EncodeChroma(state, curr_slice);
+            break;
+
+        case MBTYPE_INTER:
+        case MBTYPE_INTER_8x8:
+        case MBTYPE_INTER_8x8_REF0:
+        case MBTYPE_INTER_8x16:
+        case MBTYPE_INTER_16x8:
+        case MBTYPE_FORWARD:
+        case MBTYPE_BACKWARD:
+        case MBTYPE_FWD_FWD_16x8:
+        case MBTYPE_FWD_BWD_16x8:
+        case MBTYPE_BWD_FWD_16x8:
+        case MBTYPE_BWD_BWD_16x8:
+        case MBTYPE_FWD_FWD_8x16:
+        case MBTYPE_FWD_BWD_8x16:
+        case MBTYPE_BWD_FWD_8x16:
+        case MBTYPE_BWD_BWD_8x16:
+        case MBTYPE_BIDIR_FWD_16x8:
+        case MBTYPE_FWD_BIDIR_16x8:
+        case MBTYPE_BIDIR_BWD_16x8:
+        case MBTYPE_BWD_BIDIR_16x8:
+        case MBTYPE_BIDIR_BIDIR_16x8:
+        case MBTYPE_BIDIR_FWD_8x16:
+        case MBTYPE_FWD_BIDIR_8x16:
+        case MBTYPE_BIDIR_BWD_8x16:
+        case MBTYPE_BWD_BIDIR_8x16:
+        case MBTYPE_BIDIR_BIDIR_8x16:
+        case MBTYPE_B_8x8:
+        case MBTYPE_DIRECT:
+        case MBTYPE_BIDIR:
+            H264CoreEncoder_CEncAndRecInterMB(state, curr_slice);
+            if( core_enc->m_PicParamSet.chroma_format_idc != 0 )
+                H264CoreEncoder_EncodeChroma(state, curr_slice);
+            //Check for possible skips after cbp reset for MBTYPE_DIRECT & MBTYPE_INTER
+            {
+                if( cur_mb.LocalMacroblockInfo->cbp_luma != 0 || cur_mb.LocalMacroblockInfo->cbp_chroma != 0 ) break;
+                if( cur_mb.GlobalMacroblockInfo->mbtype == MBTYPE_INTER && cur_mb.RefIdxs[LIST_0]->RefIdxs[0] == 0 ){
+                    H264MotionVector skip_vec;
+                    H264CoreEncoder_Skip_MV_Predicted(state, curr_slice, NULL, &skip_vec);
+                    if( cur_mb.MVs[LIST_0]->MotionVectors[0] != skip_vec ) break;
+                }else if( cur_mb.GlobalMacroblockInfo->mbtype != MBTYPE_DIRECT ) break;
+            }
+
+        case MBTYPE_SKIPPED: //copy prediction to recostruct
+            {
+                Ipp32s i;
+//                for( i = 0; i<4; i++ )  cur_mb.GlobalMacroblockInfo->sbtype[i] = (MBTypeValue)NUMBER_OF_MBTYPES;
+                pitchPix = cur_mb.mbPitchPixels;
+                pDst = core_enc->m_pReconstructFrame->m_pYPlane + core_enc->m_pMBOffsets[cur_mb.uMB].uLumaOffset[core_enc->m_is_cur_pic_afrm][is_cur_mb_field];
+                pSrc = cur_mb.mbInter.prediction;
+                if( curr_slice->m_slice_type == BPREDSLICE ){
+                    curr_slice->m_cur_mb.GlobalMacroblockInfo->mbtype = MBTYPE_DIRECT; //for correct MC
+                }
+                H264CoreEncoder_MCOneMBLuma(state, curr_slice, cur_mb.MVs[LIST_0]->MotionVectors, cur_mb.MVs[LIST_1]->MotionVectors, pSrc);
+                curr_slice->m_cur_mb.GlobalMacroblockInfo->mbtype = MBTYPE_SKIPPED;
+                for( i = 0; i<16; i++ ){
+                    memcpy( pDst, pSrc, 16*sizeof(PIXTYPE));
+                    pDst += pitchPix;
+                    pSrc += 16;
+                }
+                memset( cur_mb.MacroblockCoeffsInfo->numCoeff, 0, 16 );  //Reset this number for skips
+                for (i=0; i<16; i++) cur_mb.intra_types[i] = 2;
+
+                if( core_enc->m_PicParamSet.chroma_format_idc != 0 ){
+                    pDst = core_enc->m_pReconstructFrame->m_pUPlane + core_enc->m_pMBOffsets[cur_mb.uMB].uChromaOffset[core_enc->m_is_cur_pic_afrm][is_cur_mb_field];
+                    pSrc = cur_mb.mbChromaInter.prediction;
+                    if( curr_slice->m_slice_type == BPREDSLICE )
+                         curr_slice->m_cur_mb.GlobalMacroblockInfo->mbtype = MBTYPE_DIRECT; //for correct MC
+                    H264CoreEncoder_MCOneMBChroma(state, curr_slice, pSrc);
+                    curr_slice->m_cur_mb.GlobalMacroblockInfo->mbtype = MBTYPE_SKIPPED;
+                    Ipp32s vsize = 8;
+                    if( core_enc->m_params.chroma_format_idc == 2 ) vsize = 16;
+                    for( i = 0; i < vsize; i++ ){
+                        memcpy( pDst, pSrc, 8*sizeof(PIXTYPE));
+                        pDst += pitchPix;
+                        pSrc += 16;
+                    }
+                    pDst = core_enc->m_pReconstructFrame->m_pVPlane + core_enc->m_pMBOffsets[cur_mb.uMB].uChromaOffset[core_enc->m_is_cur_pic_afrm][is_cur_mb_field];
+                    pSrc = cur_mb.mbChromaInter.prediction+8;
+                    for( i = 0; i < vsize; i++ ){
+                         memcpy( pDst, pSrc, 8*sizeof(PIXTYPE));
+                         pDst += pitchPix;
+                         pSrc += 16;
+                    }
+                    memset( &cur_mb.MacroblockCoeffsInfo->numCoeff[16], 0, 32 );  //Reset this number for skips
+                    cur_mb.LocalMacroblockInfo->cbp_chroma = 0;
+                }
+            }
+            break;
+        default:
+            break;
+    }
+
+   if( IS_INTRA_MBTYPE( curr_slice->m_cur_mb.GlobalMacroblockInfo->mbtype ) ){
+        Ipp32s k;
+        for (k = 0; k < 16; k ++){
+            curr_slice->m_cur_mb.MVs[LIST_0]->MotionVectors[k] = null_mv;
+            curr_slice->m_cur_mb.MVs[LIST_1]->MotionVectors[k] = null_mv;
+            curr_slice->m_cur_mb.MVs[LIST_0 + 2]->MotionVectors[k] = null_mv;
+            curr_slice->m_cur_mb.MVs[LIST_1 + 2]->MotionVectors[k] = null_mv;
+            curr_slice->m_cur_mb.RefIdxs[LIST_0]->RefIdxs[k] = -1;
+            curr_slice->m_cur_mb.RefIdxs[LIST_1]->RefIdxs[k] = -1;
+         }
+   }else{
+      Ipp32s k;
+      for (k = 0; k < 16; k++)
+           curr_slice->m_cur_mb.intra_types[k] = (T_AIMode) 2;
+   }
+
+    if (curr_slice->m_cur_mb.LocalMacroblockInfo->cbp_chroma == 0)
+        curr_slice->m_cur_mb.MacroblockCoeffsInfo->chromaNC = 0;
+}
+
+template<typename COEFFSTYPE, typename PIXTYPE>
+Ipp32u H264CoreEncoder_TransQuantIntra_RD(void* state, H264Slice<COEFFSTYPE, PIXTYPE> *curr_slice)
+{
+    H264CoreEncoder<COEFFSTYPE, PIXTYPE>* core_enc = (H264CoreEncoder<COEFFSTYPE, PIXTYPE>*)state;
+    Ipp32u  uBlock;     // block number, 0 to 23
+    Ipp32u  uOffset;        // to upper left corner of block from start of plane
+    Ipp32u  uMBQP;          // QP of current MB
+    Ipp32u  uMBType;        // current MB type
+    Ipp32u  uMB;
+    Ipp32u  uCBPLuma;        // coded flags for all 4x4 blocks
+    Ipp32u  uIntraSAD;      // intra MB SAD
+    Ipp16s* pMassDiffBuf;   // difference block pointer
+
+    COEFFSTYPE* pDCBuf;     // chroma & luma dc coeffs pointer
+    PIXTYPE*  pPredBuf;       // prediction block pointer
+    PIXTYPE*  pReconBuf;       // prediction block pointer
+    Ipp16s*   pDiffBuf;       // difference block pointer
+    COEFFSTYPE* pTransformResult; // Result of the transformation.
+    COEFFSTYPE* pQBuf;          // quantized block pointer
+    PIXTYPE*  pSrcPlane;      // start of plane to encode
+    Ipp32s    pitchPixels;     // buffer pitch
+    Ipp32s    iMBCost;        // recode MB cost counter
+    Ipp32s    iBlkCost[2];    // coef removal counter for left/right 8x8 luma blocks
+    Ipp8u     bCoded; // coded block flag
+    Ipp32s    iNumCoeffs;    // Number of nonzero coeffs after quant (negative if DC is nonzero)
+    Ipp32s    iLastCoeff;    // Number of nonzero coeffs after quant (negative if DC is nonzero)
+    Ipp32u    uTotalCoeffs = 0;    // Used to detect single expensive coeffs.
+
+    H264CurrentMacroblockDescriptor<COEFFSTYPE, PIXTYPE> &cur_mb = curr_slice->m_cur_mb;
+    Ipp32s is_cur_mb_field = curr_slice->m_is_cur_mb_field;
+    uMB = cur_mb.uMB;
+
+    pitchPixels = cur_mb.mbPitchPixels;
+    uCBPLuma     = cur_mb.LocalMacroblockInfo->cbp_luma;
+    uMBQP       = cur_mb.lumaQP;
+    uMBType     = cur_mb.GlobalMacroblockInfo->mbtype;
+    pDiffBuf    = (Ipp16s*) (curr_slice->m_pMBEncodeBuffer + 512);
+    pTransformResult = (COEFFSTYPE*)(pDiffBuf + 64);
+    pQBuf       = (COEFFSTYPE*) (pTransformResult + 64);
+    pDCBuf      = (COEFFSTYPE*) (pQBuf + 16);   // Used for both luma and chroma DC blocks
+    pMassDiffBuf= (Ipp16s*) (pDCBuf+ 16);
+    uIntraSAD   = 0;
+    iMBCost     = 0;
+    iBlkCost[0] = 0;
+    iBlkCost[1] = 0;
+
+    //--------------------------------------------------------------------------
+    // encode Y plane blocks (0-15)
+    //--------------------------------------------------------------------------
+
+    // initialize pointers and offset
+    pSrcPlane = core_enc->m_pCurrentFrame->m_pYPlane;
+    uOffset = core_enc->m_pMBOffsets[uMB].uLumaOffset[core_enc->m_is_cur_pic_afrm][is_cur_mb_field];
+    CabacStates cbSt;
+
+    Ipp32s pitchPix = 16;
+//    pitchPix = pitchPixels;
+
+    if(pGetMB8x8TSPackFlag(cur_mb.GlobalMacroblockInfo)) {
+
+      if( core_enc->m_params.quant_opt_level > 1){
+        memcpy( cbSt.absLevelM1, &curr_slice->m_pbitstream->context_array[426], 10*sizeof(CABAC_CONTEXT));
+        if( !is_cur_mb_field ){
+            //memcpy( cbSt.sig, &curr_slice->m_pbitstream->context_array[402], 15*sizeof(CABAC_CONTEXT));
+            //memcpy( cbSt.last, &curr_slice->m_pbitstream->context_array[417], 9*sizeof(CABAC_CONTEXT));
+            cbSt.sig = &curr_slice->m_pbitstream->context_array[402];
+            cbSt.last = &curr_slice->m_pbitstream->context_array[417];
+        }else{
+            //memcpy( cbSt.sig, &curr_slice->m_pbitstream->context_array[436], 15*sizeof(CABAC_CONTEXT));
+            //memcpy( cbSt.last, &curr_slice->m_pbitstream->context_array[451], 9*sizeof(CABAC_CONTEXT));
+            cbSt.sig = &curr_slice->m_pbitstream->context_array[436];
+            cbSt.last = &curr_slice->m_pbitstream->context_array[451];
+        }
+     }
+        pSetMB8x8TSFlag(cur_mb.GlobalMacroblockInfo, 1);
+
+        for (uBlock = 0; uBlock < 4; uBlock ++){
+            Ipp32s idxb, idx, idxe;
+
+            idxb = uBlock<<2;
+            idxe = idxb+4;
+            pPredBuf = cur_mb.mb8x8.prediction + xoff[4*uBlock] + yoff[4*uBlock]*16;
+            pReconBuf = cur_mb.mb8x8.reconstruct + xoff[4*uBlock] + yoff[4*uBlock]*16;
+            //pReconBuf = core_enc->m_pReconstructFrame->m_pYPlane + uOffset;
+
+            if (core_enc->m_PicParamSet.entropy_coding_mode)
+            {
+                cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = 0;        // These will be updated if the block is coded
+                cur_mb.cabac_data[uBlock].uNumSigCoeffs = 0;
+            } else {
+                for( idx = idxb; idx<idxe; idx++ ){
+                    curr_slice->Block_RLE[idx].uNumCoeffs = 0;
+                    curr_slice->Block_RLE[idx].uTrailing_Ones = 0;
+                    curr_slice->Block_RLE[idx].uTrailing_One_Signs = 0;
+                    curr_slice->Block_RLE[idx].uTotalZeros = 16;
+                    cur_mb.MacroblockCoeffsInfo->numCoeff[idx] = 0;
+               }
+            }
+
+            if (!curr_slice->m_use_transform_for_intra_decision){
+                uIntraSAD += H264CoreEncoder_AIModeSelectOneMB_8x8(
+                    state,
+                    curr_slice,
+                    pSrcPlane + uOffset,
+                    pReconBuf,
+                    uBlock,
+                    cur_mb.intra_types,
+                    pPredBuf);
+            }
+
+            // check if block is coded
+            bCoded = ((uCBPLuma & CBP8x8Mask[uBlock])?(1):(0));
+
+            if (!bCoded){  // update reconstruct frame for the empty block
+                Copy8x8(pPredBuf, 16, pReconBuf, pitchPix);
+            } else {   // block not declared empty, encode
+                // compute difference of predictor and source pels
+                // note: asm version does not use pDiffBuf
+                //       output is being passed in the mmx registers
+            if (!curr_slice->m_use_transform_for_intra_decision /*|| core_enc->m_params.quant_opt_level > 1*/){
+                Diff8x8(pPredBuf, pSrcPlane + uOffset, pitchPixels, pDiffBuf);
+                    // forward transform and quantization, in place in pDiffBuf
+                    ownTransformLuma8x8Fwd_H264(pDiffBuf, pTransformResult);
+                    if( core_enc->m_params.quant_opt_level > 1 ){
+                        ownQuantLuma8x8_H264(pTransformResult,pTransformResult,uMBQP, 1,
+                            enc_single_scan_8x8[is_cur_mb_field], core_enc->m_SeqParamSet.seq_scaling_matrix_8x8[0][QP_MOD_6[uMBQP]], //Use scaling matrix for INTRA
+                            &iNumCoeffs, &iLastCoeff,curr_slice,&cbSt,core_enc->m_SeqParamSet.seq_scaling_inv_matrix_8x8[0][QP_MOD_6[uMBQP]]);
+                    }else{
+                        ownQuantLuma8x8_H264(
+                            pTransformResult,
+                            pTransformResult,
+                            QP_DIV_6[uMBQP],
+                            1,
+                            enc_single_scan_8x8[is_cur_mb_field],
+                            core_enc->m_SeqParamSet.seq_scaling_matrix_8x8[0][QP_MOD_6[uMBQP]], //Use scaling matrix for INTRA
+                            &iNumCoeffs,
+                            &iLastCoeff,
+                            NULL,
+                            NULL,
+                            NULL);
+                    }
+            }else{
+                    iNumCoeffs = cur_mb.m_iNumCoeffs8x8[ uBlock ];
+                    iLastCoeff = cur_mb.m_iLastCoeff8x8[ uBlock ];
+                    pTransformResult = &cur_mb.mb8x8.transform[ uBlock*64 ];
+            }
+
+                // if everything quantized to zero, skip RLE
+                if (!iNumCoeffs ){ // the block is empty so it is not coded
+                    bCoded = 0;
+                } else {
+                    uTotalCoeffs += ((iNumCoeffs < 0) ? -(iNumCoeffs*2) : iNumCoeffs);
+
+                    // record RLE info
+                    if (core_enc->m_PicParamSet.entropy_coding_mode){
+                        T_Block_CABAC_Data<COEFFSTYPE>* c_data = &cur_mb.cabac_data[uBlock];
+                        c_data->uLastSignificant = iLastCoeff;
+                        c_data->CtxBlockCat = BLOCK_LUMA_64_LEVELS;
+//                        c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)((iNumCoeffs < 0) ? -(iNumCoeffs+1) : iNumCoeffs);
+                        c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)ABS(iNumCoeffs);
+                        c_data->uFirstCoeff = 0;
+                        c_data->uLastCoeff = 63;
+                        H264CoreEncoder_MakeSignificantLists_CABAC(pTransformResult,dec_single_scan_8x8[is_cur_mb_field], c_data);
+                        bCoded = c_data->uNumSigCoeffs;
+                    }else{
+                        COEFFSTYPE buf4x4[4][16];
+                        Ipp32s i4x4;
+
+                        //Reorder 8x8 block for coding with CAVLC
+                        for(i4x4=0; i4x4<4; i4x4++ ) {
+                            Ipp32s i;
+                            for(i = 0; i<16; i++ )
+                                buf4x4[i4x4][dec_single_scan[is_cur_mb_field][i]] =
+                                    pTransformResult[dec_single_scan_8x8[is_cur_mb_field][4*i+i4x4]];
+                        }
+
+                        bCoded = 0;
+                        //Encode each block with CAVLC 4x4
+                        for(i4x4 = 0; i4x4<4; i4x4++ ) {
+                            Ipp32s i;
+                            iLastCoeff = 0;
+                            idx = idxb + i4x4;
+
+                            //Check for last coeff
+                            for(i = 0; i<16; i++ ) if( buf4x4[i4x4][dec_single_scan[is_cur_mb_field][i]] != 0 ) iLastCoeff=i;
+
+                            ownEncodeCoeffsCAVLC_H264(
+                                buf4x4[i4x4],
+                                0, //Luma
+                                dec_single_scan[is_cur_mb_field],
+                                iLastCoeff,
+                                &curr_slice->Block_RLE[idx].uTrailing_Ones,
+                                &curr_slice->Block_RLE[idx].uTrailing_One_Signs,
+                                &curr_slice->Block_RLE[idx].uNumCoeffs,
+                                &curr_slice->Block_RLE[idx].uTotalZeros,
+                                curr_slice->Block_RLE[idx].iLevels,
+                                curr_slice->Block_RLE[idx].uRuns);
+
+                            bCoded += curr_slice->Block_RLE[idx].uNumCoeffs;
+                            cur_mb.MacroblockCoeffsInfo->numCoeff[idx] = curr_slice->Block_RLE[idx].uNumCoeffs;
+                         }
+                    }
+                }
+
+            // update flags if block quantized to empty
+            if (curr_slice->m_use_transform_for_intra_decision){
+                if (!bCoded){
+                    uCBPLuma &= ~CBP8x8Mask[uBlock];
+                    //Copy  prediction
+                    Copy8x8(pPredBuf, 16, pReconBuf, pitchPix);
+                }else //Copy reconstruct
+                    Copy8x8(pPredBuf + 256, 16, pReconBuf, pitchPix);
+            }else{
+                // update flags if block quantized to empty
+                if (!bCoded){
+                    uCBPLuma &= ~CBP8x8Mask[uBlock];
+                    // update reconstruct frame with prediction
+                    Copy8x8(pPredBuf, 16, pReconBuf, pitchPix);
+                }else {
+                    // inverse transform for reconstruct AND...
+                    // add inverse transformed coefficients to original predictor
+                    // to obtain reconstructed block, store in reconstruct frame
+                    // buffer
+                    if(iNumCoeffs != 0) {
+                        ownQuantLuma8x8Inv_H264(pTransformResult, QP_DIV_6[uMBQP], core_enc->m_SeqParamSet.seq_scaling_inv_matrix_8x8[0][QP_MOD_6[uMBQP]]);
+                        ownTransformLuma8x8InvAddPred_H264(pPredBuf, 16, pTransformResult, pReconBuf, pitchPix, core_enc->m_PicParamSet.bit_depth_luma);
+                    }
+                }
+            }   // block not declared empty
+            } //curr_slice->m_use_transform_for_intra_decision
+            uOffset += core_enc->m_EncBlockOffsetInc[is_cur_mb_field][uBlock] * 2;
+        }  // for uBlock in luma plane
+    }else{
+      if( core_enc->m_params.quant_opt_level > 1 ){
+        memcpy( cbSt.absLevelM1, &curr_slice->m_pbitstream->context_array[227+20], 10*sizeof(CABAC_CONTEXT));
+        if( !is_cur_mb_field ){
+            //memcpy( cbSt.sig, &curr_slice->m_pbitstream->context_array[105+29], 15*sizeof(CABAC_CONTEXT));
+            //memcpy( cbSt.last, &curr_slice->m_pbitstream->context_array[166+29], 15*sizeof(CABAC_CONTEXT));
+            cbSt.sig = &curr_slice->m_pbitstream->context_array[105+29];
+            cbSt.last = &curr_slice->m_pbitstream->context_array[166+29];
+        }else{
+            //memcpy( cbSt.sig, &curr_slice->m_pbitstream->context_array[105+172+29], 15*sizeof(CABAC_CONTEXT));
+            //memcpy( cbSt.last, &curr_slice->m_pbitstream->context_array[166+172+29], 15*sizeof(CABAC_CONTEXT));
+            cbSt.sig = &curr_slice->m_pbitstream->context_array[105+172+29];
+            cbSt.last = &curr_slice->m_pbitstream->context_array[166+172+29];
+        }
+      }
+
+    for (uBlock = 0; uBlock < 16; uBlock++ ){
+        pPredBuf = cur_mb.mb4x4.prediction + xoff[uBlock] + yoff[uBlock]*16;
+        pReconBuf = cur_mb.mb4x4.reconstruct + xoff[uBlock] + yoff[uBlock]*16;
+        //pReconBuf = core_enc->m_pReconstructFrame->m_pYPlane + uOffset;
+
+        cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = 0; // These will be updated if the block is coded
+        if (core_enc->m_PicParamSet.entropy_coding_mode){
+            cur_mb.cabac_data[uBlock].uNumSigCoeffs = 0;
+        }else{
+            curr_slice->Block_RLE[uBlock].uNumCoeffs = 0;
+            curr_slice->Block_RLE[uBlock].uTrailing_Ones = 0;
+            curr_slice->Block_RLE[uBlock].uTrailing_One_Signs = 0;
+            curr_slice->Block_RLE[uBlock].uTotalZeros = 16;
+        }
+
+        // find advanced intra prediction block, store in PredBuf
+        // Select best AI mode for the block, using reconstructed
+        // predictor pels. This function also stores the block
+        // predictor pels at pPredBuf.
+        if (!curr_slice->m_use_transform_for_intra_decision){
+            uIntraSAD += H264CoreEncoder_AIModeSelectOneBlock(
+                state,
+                curr_slice,
+                pSrcPlane + uOffset,
+                pReconBuf,
+                uBlock,
+                cur_mb.intra_types,
+                pPredBuf);
+        }
+
+        // check if block is coded
+        bCoded = ((uCBPLuma & CBP4x4Mask[uBlock])?(1):(0));
+
+        if (!bCoded){
+            // update reconstruct frame for the empty block
+            Copy4x4(pPredBuf, 16, pReconBuf, pitchPix);
+        } else {   // block not declared empty, encode
+            // compute difference of predictor and source pels
+            // note: asm version does not use pDiffBuf
+            //       output is being passed in the mmx registers
+          if (!curr_slice->m_use_transform_for_intra_decision /*|| core_enc->m_params.quant_opt_level > 1*/){
+            Diff4x4(pPredBuf, pSrcPlane + uOffset, pitchPixels, pDiffBuf);
+                if( core_enc->m_params.quant_opt_level > 1 ){
+                    ownTransformQuantResidual_H264(
+                        pDiffBuf,
+                        pTransformResult,
+                        uMBQP,
+                        &iNumCoeffs,
+                        1, //Always use f for INTRA
+                        enc_single_scan[is_cur_mb_field],
+                        &iLastCoeff,
+                        NULL,
+                        curr_slice,
+                        0,
+                        &cbSt);
+                }else{
+                    ownTransformQuantResidual_H264(
+                        pDiffBuf,
+                        pTransformResult,
+                        uMBQP,
+                        &iNumCoeffs,
+                        1, //Always use f for INTRA
+                        enc_single_scan[is_cur_mb_field],
+                        &iLastCoeff,
+                        NULL,
+                        NULL,
+                        0,
+                        NULL);
+                 }
+          }else{
+              iNumCoeffs = cur_mb.m_iNumCoeffs4x4[ uBlock ];
+              iLastCoeff = cur_mb.m_iLastCoeff4x4[ uBlock ];
+              pTransformResult = &cur_mb.mb4x4.transform[ uBlock*16 ];
+          }
+            // if everything quantized to zero, skip RLE
+            if (!iNumCoeffs){
+                // the block is empty so it is not coded
+                bCoded = 0;
+            } else {
+                // Preserve the absolute number of coeffs.
+                if (core_enc->m_PicParamSet.entropy_coding_mode){
+                    T_Block_CABAC_Data<COEFFSTYPE>* c_data = &cur_mb.cabac_data[uBlock];
+//                    c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)((iNumCoeffs < 0) ? -(iNumCoeffs+1) : iNumCoeffs);
+                    c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)ABS(iNumCoeffs);
+                    c_data->uLastSignificant = iLastCoeff;
+                    c_data->CtxBlockCat = BLOCK_LUMA_LEVELS;
+                    c_data->uFirstCoeff = 0;
+                    c_data->uLastCoeff = 15;
+                    H264CoreEncoder_MakeSignificantLists_CABAC(pTransformResult,dec_single_scan[is_cur_mb_field], c_data);
+                    bCoded = c_data->uNumSigCoeffs;
+                } else {
+                // record RLE info
+                    cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)ABS(iNumCoeffs);
+                    ownEncodeCoeffsCAVLC_H264(
+                        pTransformResult,
+                        0,
+                        dec_single_scan[is_cur_mb_field],
+                        iLastCoeff,
+                        &curr_slice->Block_RLE[uBlock].uTrailing_Ones,
+                        &curr_slice->Block_RLE[uBlock].uTrailing_One_Signs,
+                        &curr_slice->Block_RLE[uBlock].uNumCoeffs,
+                        &curr_slice->Block_RLE[uBlock].uTotalZeros,
+                        curr_slice->Block_RLE[uBlock].iLevels,
+                        curr_slice->Block_RLE[uBlock].uRuns);
+                    cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = bCoded = curr_slice->Block_RLE[uBlock].uNumCoeffs;
+                }
+            }
+
+            // update flags if block quantized to empty
+            if (curr_slice->m_use_transform_for_intra_decision) {
+                if (!bCoded) {
+                    uCBPLuma &= ~CBP4x4Mask[uBlock]; //Copy predition
+                    Copy4x4(pPredBuf, 16, pReconBuf, pitchPix);
+                }else //Copy reconstruct
+                    Copy4x4(pPredBuf + 256, 16, pReconBuf, pitchPix);
+            } else {
+                if (!bCoded){
+                    uCBPLuma &= ~CBP4x4Mask[uBlock];
+                    Copy4x4(pPredBuf, 16, pReconBuf, pitchPix);
+                } else {
+                    ownDequantTransformResidualAndAdd_H264(
+                        pPredBuf,
+                        pTransformResult,
+                        NULL,
+                        pReconBuf,
+                        16,
+                        pitchPix,
+                        uMBQP,
+                        ((iNumCoeffs < -1) || (iNumCoeffs > 0)),
+                        core_enc->m_PicParamSet.bit_depth_luma,
+                        NULL);
+                }
+            }
+        }   // block not declared empty
+
+        // proceed to the next block
+        uOffset += core_enc->m_EncBlockOffsetInc[is_cur_mb_field][uBlock];
+    }  // for uBlock in luma plane
+    }
+
+    cur_mb.LocalMacroblockInfo->cbp_luma = uCBPLuma;
+
+    return 1;
+}
+
+template<typename COEFFSTYPE, typename PIXTYPE>
+Ipp32u H264CoreEncoder_TransQuantInter_RD(void* state, H264Slice<COEFFSTYPE, PIXTYPE> *curr_slice)
+{
+    H264CoreEncoder<COEFFSTYPE, PIXTYPE>* core_enc = (H264CoreEncoder<COEFFSTYPE, PIXTYPE>*)state;
+    Ipp32u  uBlock;     // block number, 0 to 23
+    Ipp32u  uOffset;        // to upper left corner of block from start of plane
+    Ipp32u  uMBQP;          // QP of current MB
+    Ipp32u  uMBType;        // current MB type
+    Ipp32u  uMB;
+    Ipp32u  uCBPLuma;        // coded flags for all 4x4 blocks
+
+    COEFFSTYPE* pDCBuf;     // chroma & luma dc coeffs pointer
+    PIXTYPE*  pPredBuf;       // prediction block pointer
+    PIXTYPE*  pReconBuf;       // prediction block pointer
+    Ipp16s* pDiffBuf;       // difference block pointer
+    COEFFSTYPE *pTransform; // result of the transform.
+    COEFFSTYPE *pTransformResult; // result of the transform.
+    COEFFSTYPE* pQBuf;          // quantized block pointer
+    Ipp16s* pMassDiffBuf;   // difference block pointer
+    PIXTYPE*  pSrcPlane;      // start of plane to encode
+    Ipp32s    pitchPixels;     // buffer pitch in pixels
+    Ipp8u     bCoded;        // coded block flag
+    Ipp32s    iNumCoeffs;    // Number of nonzero coeffs after quant (negative if DC is nonzero)
+    Ipp32s    iLastCoeff;  // Number of nonzero coeffs after quant (negative if DC is nonzero)
+    H264CurrentMacroblockDescriptor<COEFFSTYPE, PIXTYPE> &cur_mb = curr_slice->m_cur_mb;
+    Ipp32s is_cur_mb_field = curr_slice->m_is_cur_mb_field;
+
+    uMBQP       = cur_mb.lumaQP;
+    CabacStates cbSt;
+
+    uCBPLuma    = cur_mb.LocalMacroblockInfo->cbp_luma;
+    pitchPixels = core_enc->m_pCurrentFrame->m_pitchPixels << is_cur_mb_field;
+    uMBType     = cur_mb.GlobalMacroblockInfo->mbtype;
+    pTransform  = (COEFFSTYPE*)curr_slice->m_pMBEncodeBuffer;
+    pDiffBuf    = (Ipp16s*) (curr_slice->m_pMBEncodeBuffer + 512);
+    pQBuf       = (COEFFSTYPE*) (pDiffBuf+64);
+    pDCBuf      = (COEFFSTYPE*) (pQBuf + 16);   // Used for both luma and chroma DC blocks
+    pMassDiffBuf= (Ipp16s*) (pDCBuf+ 16);
+    uMB=cur_mb.uMB;
+
+    //--------------------------------------------------------------------------
+    // encode Y plane blocks (0-15)
+    //--------------------------------------------------------------------------
+
+    Ipp32s pitchPix = 16;
+//    pitchPix = pitchPixels;
+
+    // initialize pointers and offset
+    pSrcPlane = core_enc->m_pCurrentFrame->m_pYPlane;
+    uOffset = core_enc->m_pMBOffsets[uMB].uLumaOffset[core_enc->m_is_cur_pic_afrm][is_cur_mb_field];
+    pPredBuf = cur_mb.mbInter.prediction;
+
+    // Motion Compensate this MB
+    H264CoreEncoder_MCOneMBLuma(state, curr_slice, cur_mb.MVs[LIST_0]->MotionVectors, cur_mb.MVs[LIST_1]->MotionVectors, pPredBuf);
+
+    if (core_enc->m_PicParamSet.entropy_coding_mode){
+        for( uBlock = 0; uBlock<16; uBlock++ ){
+              cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = 0;        // These will be updated if the block is coded
+              cur_mb.cabac_data[uBlock].uNumSigCoeffs = 0;
+        }
+    } else {
+        for( uBlock = 0; uBlock<16; uBlock++ ){
+            cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = 0;        // These will be updated if the block is coded
+            curr_slice->Block_RLE[uBlock].uNumCoeffs = 0;
+            curr_slice->Block_RLE[uBlock].uTrailing_Ones = 0;
+            curr_slice->Block_RLE[uBlock].uTrailing_One_Signs = 0;
+            curr_slice->Block_RLE[uBlock].uTotalZeros = 16;
+        }
+    }
+
+    if(pGetMB8x8TSPackFlag(cur_mb.GlobalMacroblockInfo)) {
+        Ipp32s mbCost=0;
+
+    if( core_enc->m_params.quant_opt_level > OPT_QUANT_INTER_RD ){
+//Save current cabac state
+        memcpy( cbSt.absLevelM1, &curr_slice->m_pbitstream->context_array[426], 10*sizeof(CABAC_CONTEXT));
+        if( !is_cur_mb_field ){
+            //memcpy( cbSt.sig, &curr_slice->m_pbitstream->context_array[402], 15*sizeof(CABAC_CONTEXT));
+            //memcpy( cbSt.last, &curr_slice->m_pbitstream->context_array[417], 9*sizeof(CABAC_CONTEXT));
+            cbSt.sig = &curr_slice->m_pbitstream->context_array[402];
+            cbSt.last = &curr_slice->m_pbitstream->context_array[417];
+        }else{
+            //memcpy( cbSt.sig, &curr_slice->m_pbitstream->context_array[436], 15*sizeof(CABAC_CONTEXT));
+            //memcpy( cbSt.last, &curr_slice->m_pbitstream->context_array[451], 9*sizeof(CABAC_CONTEXT));
+            cbSt.sig = &curr_slice->m_pbitstream->context_array[436];
+            cbSt.last = &curr_slice->m_pbitstream->context_array[451];
+        }
+     }
+        pSetMB8x8TSFlag(cur_mb.GlobalMacroblockInfo, 1);
+        //loop over all 8x8 blocks in Y plane for the MB
+        Ipp32s coeffCost;
+        for (uBlock = 0; uBlock < 4; uBlock++){
+            pPredBuf = cur_mb.mbInter.prediction + xoff[uBlock*4] + yoff[uBlock*4]*16;
+            // check if block is coded
+            bCoded = ((uCBPLuma & CBP8x8Mask[uBlock])?(1):(0));
+
+            if (bCoded){
+                Diff8x8(pPredBuf, pSrcPlane + uOffset, pitchPixels, pDiffBuf);
+                pTransformResult = pTransform + uBlock*64;
+                    // forward transform and quantization, in place in pDiffBuf
+                    ownTransformLuma8x8Fwd_H264(pDiffBuf, pTransformResult);
+                    if( core_enc->m_params.quant_opt_level > OPT_QUANT_INTER_RD ){
+                        ownQuantLuma8x8_H264(
+                            pTransformResult,
+                            pTransformResult,
+                            uMBQP,
+                            0,
+                            enc_single_scan_8x8[is_cur_mb_field],
+                            core_enc->m_SeqParamSet.seq_scaling_matrix_8x8[1][QP_MOD_6[uMBQP]], // INTER scaling matrix
+                            &iNumCoeffs,
+                            &iLastCoeff,
+                            curr_slice,
+                            &cbSt,
+                            core_enc->m_SeqParamSet.seq_scaling_inv_matrix_8x8[1][QP_MOD_6[uMBQP]]);
+                    }else{
+                        ownQuantLuma8x8_H264(
+                            pTransformResult,
+                            pTransformResult,
+                            QP_DIV_6[uMBQP],
+                            0,
+                            enc_single_scan_8x8[is_cur_mb_field],
+                            core_enc->m_SeqParamSet.seq_scaling_matrix_8x8[1][QP_MOD_6[uMBQP]], // INTER scaling matrix
+                            &iNumCoeffs,
+                            &iLastCoeff,
+                            NULL,
+                            NULL,
+                            NULL);
+                    }
+                    coeffCost = CalculateCoeffsCost(pTransformResult, 64, dec_single_scan_8x8[is_cur_mb_field]);
+                    mbCost += coeffCost;
+
+                // if everything quantized to zero, skip RLE
+                if (!iNumCoeffs || (coeffCost < LUMA_COEFF_8X8_MAX_COST && core_enc->m_params.quant_opt_level < OPT_QUANT_INTER_RD+1)){
+                    uCBPLuma &= ~CBP8x8Mask[uBlock];
+                } else {
+                    // record RLE info
+                    if (core_enc->m_PicParamSet.entropy_coding_mode){
+                        T_Block_CABAC_Data<COEFFSTYPE>* c_data = &cur_mb.cabac_data[uBlock];
+                        c_data->uLastSignificant = iLastCoeff;
+                        c_data->CtxBlockCat = BLOCK_LUMA_64_LEVELS;
+                        c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)ABS(iNumCoeffs);
+//                        c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)((iNumCoeffs < 0) ? -(iNumCoeffs+1) : iNumCoeffs);
+                        c_data->uFirstCoeff = 0;
+                        c_data->uLastCoeff = 63;
+                        H264CoreEncoder_MakeSignificantLists_CABAC(pTransformResult,dec_single_scan_8x8[is_cur_mb_field], c_data);
+                    }else{
+                        COEFFSTYPE buf4x4[4][16];
+                        Ipp8u iLastCoeff;
+                        Ipp32s i4x4;
+
+                        //Reorder 8x8 block for coding with CAVLC
+                        for(i4x4=0; i4x4<4; i4x4++ ) {
+                            Ipp32s i;
+                            for(i = 0; i<16; i++ )
+                                buf4x4[i4x4][dec_single_scan[is_cur_mb_field][i]] =
+                                    pTransformResult[dec_single_scan_8x8[is_cur_mb_field][4*i+i4x4]];
+                        }
+
+                        Ipp32s idx = uBlock*4;
+                        //Encode each block with CAVLC 4x4
+                        for(i4x4 = 0; i4x4<4; i4x4++, idx++ ) {
+                            Ipp32s i;
+                            iLastCoeff = 0;
+
+                            //Check for last coeff
+                            for(i = 0; i<16; i++ ) if( buf4x4[i4x4][dec_single_scan[is_cur_mb_field][i]] != 0 ) iLastCoeff=i;
+
+                            ownEncodeCoeffsCAVLC_H264(
+                                buf4x4[i4x4],
+                                0, //Luma
+                                dec_single_scan[is_cur_mb_field],
+                                iLastCoeff,
+                                &curr_slice->Block_RLE[idx].uTrailing_Ones,
+                                &curr_slice->Block_RLE[idx].uTrailing_One_Signs,
+                                &curr_slice->Block_RLE[idx].uNumCoeffs,
+                                &curr_slice->Block_RLE[idx].uTotalZeros,
+                                curr_slice->Block_RLE[idx].iLevels,
+                                curr_slice->Block_RLE[idx].uRuns);
+
+                            cur_mb.MacroblockCoeffsInfo->numCoeff[idx] = curr_slice->Block_RLE[idx].uNumCoeffs;
+                         }
+                    }
+                }
+            }
+                uOffset += core_enc->m_EncBlockOffsetInc[is_cur_mb_field][uBlock] * 2;
+        }
+
+        if( mbCost < LUMA_COEFF_MB_8X8_MAX_COST ){
+                uCBPLuma = 0;
+        }
+
+       uOffset = core_enc->m_pMBOffsets[uMB].uLumaOffset[core_enc->m_is_cur_pic_afrm][is_cur_mb_field];
+       for (uBlock = 0; uBlock < 4; uBlock++){
+            pPredBuf = cur_mb.mbInter.prediction + xoff[uBlock*4] + yoff[uBlock*4]*16;
+            pReconBuf = cur_mb.mbInter.reconstruct + xoff[uBlock*4] + yoff[uBlock*4]*16;
+            //pReconBuf = core_enc->m_pReconstructFrame->m_pYPlane + uOffset;
+
+            bCoded = ((uCBPLuma & CBP8x8Mask[uBlock])?(1):(0));
+            if (!bCoded){
+                Copy8x8(pPredBuf, 16, pReconBuf, pitchPix);
+                if (core_enc->m_PicParamSet.entropy_coding_mode)
+                    cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = 0;
+                else
+                    cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock*4+0] =
+                    cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock*4+1] =
+                    cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock*4+2] =
+                    cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock*4+3] = 0;
+            } else {
+                    ownQuantLuma8x8Inv_H264(pTransform + uBlock*64, QP_DIV_6[uMBQP], core_enc->m_SeqParamSet.seq_scaling_inv_matrix_8x8[1][QP_MOD_6[uMBQP]]); //scaling matrix for INTER slice
+                    ownTransformLuma8x8InvAddPred_H264(pPredBuf, 16, pTransform + uBlock*64, pReconBuf, pitchPix, core_enc->m_PicParamSet.bit_depth_luma);
+            }
+            uOffset += core_enc->m_EncBlockOffsetInc[is_cur_mb_field][uBlock] * 2;
+        }
+    } else {
+      if( core_enc->m_params.quant_opt_level > OPT_QUANT_INTER_RD ){
+//Save current cabac state
+        memcpy( cbSt.absLevelM1, &curr_slice->m_pbitstream->context_array[227+20], 10*sizeof(CABAC_CONTEXT));
+        if( !is_cur_mb_field ){
+            //memcpy( cbSt.sig, &curr_slice->m_pbitstream->context_array[105+29], 15*sizeof(CABAC_CONTEXT));
+            //memcpy( cbSt.last, &curr_slice->m_pbitstream->context_array[166+29], 15*sizeof(CABAC_CONTEXT));
+            cbSt.sig = &curr_slice->m_pbitstream->context_array[105+29];
+            cbSt.last = &curr_slice->m_pbitstream->context_array[166+29];
+        }else{
+            //memcpy( cbSt.sig, &curr_slice->m_pbitstream->context_array[105+172+29], 15*sizeof(CABAC_CONTEXT));
+            //memcpy( cbSt.last, &curr_slice->m_pbitstream->context_array[166+172+29], 15*sizeof(CABAC_CONTEXT));
+            cbSt.sig = &curr_slice->m_pbitstream->context_array[105+172+29];
+            cbSt.last = &curr_slice->m_pbitstream->context_array[166+172+29];
+        }
+     }
+
+        Ipp32s iNumCoeffs[16], CoeffsCost[16] = {9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9};
+        for (uBlock = 0; uBlock < 16; uBlock++ ){
+            pPredBuf = cur_mb.mbInter.prediction + xoff[uBlock] + yoff[uBlock]*16;
+
+            // check if block is coded
+            bCoded = ((uCBPLuma & CBP4x4Mask[uBlock])?(1):(0));
+
+            if( bCoded ){   // block not declared empty, encode
+                Diff4x4(pPredBuf, pSrcPlane + uOffset, pitchPixels, pDiffBuf);
+                pTransformResult = pTransform + uBlock*16;
+                if( core_enc->m_params.quant_opt_level > OPT_QUANT_INTER_RD ){
+                    ownTransformQuantResidual_H264(
+                        pDiffBuf,
+                        pTransformResult,
+                        uMBQP,
+                        &iNumCoeffs[uBlock],
+                        0,
+                        enc_single_scan[is_cur_mb_field],
+                        &iLastCoeff,
+                        NULL,
+                        curr_slice,
+                        0,
+                        &cbSt);
+                }else{
+                    ownTransformQuantResidual_H264(
+                        pDiffBuf,
+                        pTransformResult,
+                        uMBQP,
+                        &iNumCoeffs[uBlock],
+                        0,
+                        enc_single_scan[is_cur_mb_field],
+                        &iLastCoeff,
+                        NULL,
+                        NULL,
+                        0,
+                        NULL);
+                }
+                CoeffsCost[uBlock] = CalculateCoeffsCost(pTransformResult, 16, dec_single_scan[is_cur_mb_field]);
+
+                if (!iNumCoeffs[uBlock]) { // if everything quantized to zero, skip RLE
+                    uCBPLuma &= ~CBP4x4Mask[uBlock];
+                }else{
+                    // Preserve the absolute number of coeffs.
+                    if (core_enc->m_PicParamSet.entropy_coding_mode) {
+                        T_Block_CABAC_Data<COEFFSTYPE>* c_data = &cur_mb.cabac_data[uBlock];
+//                        c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)((iNumCoeffs[uBlock] < 0) ? -(iNumCoeffs[uBlock]+1) : iNumCoeffs[uBlock]);
+                        c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)ABS(iNumCoeffs[uBlock]);
+                        c_data->uLastSignificant = iLastCoeff;
+                        c_data->CtxBlockCat = BLOCK_LUMA_LEVELS;
+                        c_data->uFirstCoeff = 0;
+                        c_data->uLastCoeff = 15;
+                        H264CoreEncoder_MakeSignificantLists_CABAC(pTransformResult,dec_single_scan[is_cur_mb_field], c_data);
+                    } else {
+                        cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)ABS(iNumCoeffs[uBlock]);
+                        ownEncodeCoeffsCAVLC_H264(
+                            pTransformResult,
+                            0,
+                            dec_single_scan[is_cur_mb_field],
+                            iLastCoeff,
+                            &curr_slice->Block_RLE[uBlock].uTrailing_Ones,
+                            &curr_slice->Block_RLE[uBlock].uTrailing_One_Signs,
+                            &curr_slice->Block_RLE[uBlock].uNumCoeffs,
+                            &curr_slice->Block_RLE[uBlock].uTotalZeros,
+                            curr_slice->Block_RLE[uBlock].iLevels,
+                            curr_slice->Block_RLE[uBlock].uRuns);
+                    }
+                }
+            }
+
+            // proceed to the next block
+            uOffset += core_enc->m_EncBlockOffsetInc[is_cur_mb_field][uBlock];
+        }  // for 4x4 uBlock in luma plane
+
+        //Skip subblock 8x8 if it cost is < 4 or skip MB if it's cost is < 5
+            Ipp32s mbCost=0;
+            for( uBlock = 0; uBlock < 4; uBlock++ ){
+                Ipp32s sb = uBlock*4;
+                Ipp32s block8x8cost = CoeffsCost[sb] + CoeffsCost[sb+1] + CoeffsCost[sb+2] + CoeffsCost[sb+3];
+
+                mbCost += block8x8cost;
+                if( block8x8cost <= LUMA_8X8_MAX_COST && core_enc->m_params.quant_opt_level < OPT_QUANT_INTER_RD+1)
+                    uCBPLuma &= ~CBP8x8Mask[uBlock];
+            }
+                if( mbCost <= LUMA_MB_MAX_COST )
+                    uCBPLuma = 0;
+
+        //Make inverse quantization and transform for non zero blocks
+        uOffset = core_enc->m_pMBOffsets[uMB].uLumaOffset[core_enc->m_is_cur_pic_afrm][is_cur_mb_field];
+        for( uBlock=0; uBlock < 16; uBlock++ ){
+            pPredBuf = cur_mb.mbInter.prediction + xoff[uBlock] + yoff[uBlock]*16;
+            pReconBuf = cur_mb.mbInter.reconstruct + xoff[uBlock] + yoff[uBlock]*16;
+            //pReconBuf = core_enc->m_pReconstructFrame->m_pYPlane + uOffset;
+
+            bCoded = ((uCBPLuma & CBP4x4Mask[uBlock])?(1):(0));
+            if (!bCoded) {
+                // update reconstruct frame for the empty block
+                Copy4x4(pPredBuf, 16, pReconBuf, pitchPix);
+                cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = 0;
+            } else {
+                 ownDequantTransformResidualAndAdd_H264(
+                     pPredBuf,
+                     pTransform + uBlock*16,
+                     NULL,
+                     pReconBuf,
+                     16,
+                     pitchPix,
+                     uMBQP,
+                     ((iNumCoeffs[uBlock] < -1) || (iNumCoeffs[uBlock] > 0)),
+                     core_enc->m_PicParamSet.bit_depth_luma,
+                     NULL);
+              }
+            uOffset += core_enc->m_EncBlockOffsetInc[is_cur_mb_field][uBlock];
+           }
+   }
+    cur_mb.LocalMacroblockInfo->cbp_luma = uCBPLuma;
+    return 1;
+}
+
+template<typename COEFFSTYPE, typename PIXTYPE>
+void H264CoreEncoder_TransQuantChromaIntra_RD(void* state, H264Slice<COEFFSTYPE, PIXTYPE> *curr_slice)
+{
+    H264CoreEncoder<COEFFSTYPE, PIXTYPE>* core_enc = (H264CoreEncoder<COEFFSTYPE, PIXTYPE>*)state;
+    Ipp32u  uBlock;         // block number, 0 to 23
+    Ipp32u  uOffset;        // to upper left corner of block from start of plane
+    Ipp32u  uMBQP;          // QP of current MB
+    Ipp32u  uMB;
+    PIXTYPE*  pSrcPlane;    // start of plane to encode
+    Ipp32s    pitchPixels;  // buffer pitch
+    COEFFSTYPE *pDCBuf;     // chroma & luma dc coeffs pointer
+    PIXTYPE*  pPredBuf;     // prediction block pointer
+    PIXTYPE*  pReconBuf;     // prediction block pointer
+    PIXTYPE*  pPredBuf_copy;     // prediction block pointer
+    COEFFSTYPE* pQBuf;      // quantized block pointer
+    Ipp16s* pMassDiffBuf;   // difference block pointer
+
+    Ipp32u   uCBPChroma;    // coded flags for all chroma blocks
+    Ipp32s   iNumCoeffs;    // Number of nonzero coeffs after quant (negative if DC is nonzero)
+    Ipp32s   iLastCoeff;    // Number of nonzero coeffs after quant (negative if DC is nonzero)
+    Ipp32s   RLE_Offset;    // Index into BlockRLE array
+
+    H264CurrentMacroblockDescriptor<COEFFSTYPE, PIXTYPE> &cur_mb = curr_slice->m_cur_mb;
+    Ipp32s is_cur_mb_field = curr_slice->m_is_cur_mb_field;
+    EnumSliceType slice_type = curr_slice->m_slice_type;
+    COEFFSTYPE *pTransformResult;
+    COEFFSTYPE *pTransform;
+
+    pitchPixels = cur_mb.mbPitchPixels;
+    uMBQP       = cur_mb.chromaQP;
+    pTransform = (COEFFSTYPE*)curr_slice->m_pMBEncodeBuffer;
+    pQBuf       = (COEFFSTYPE*) (pTransform + 64*2);
+    pDCBuf      = (COEFFSTYPE*) (pQBuf + 16);   // Used for both luma and chroma DC blocks
+    pMassDiffBuf= (Ipp16s*) (pDCBuf+ 16);
+    Ipp16s*  pTempDiffBuf;
+    uMB = cur_mb.uMB;
+
+    // initialize pointers and offset
+    uOffset = core_enc->m_pMBOffsets[uMB].uChromaOffset[core_enc->m_is_cur_pic_afrm][is_cur_mb_field];
+//    uCBPChroma  = cur_mb.LocalMacroblockInfo->cbp_chroma;
+    uCBPChroma  = cur_mb.LocalMacroblockInfo->cbp_chroma = 0xffffffff;
+    cur_mb.MacroblockCoeffsInfo->chromaNC = 0;
+
+    pPredBuf = cur_mb.mbChromaIntra.prediction;
+        // initialize pointers for the U plane blocks
+        Ipp32s num_blocks = 2<<core_enc->m_PicParamSet.chroma_format_idc;
+        Ipp32s startBlock;
+        startBlock = uBlock = 16;
+        Ipp32u uLastBlock = uBlock+num_blocks;
+        Ipp32u uFinalBlock = uBlock+2*num_blocks;
+
+        // encode first chroma U plane then V plane
+        do{
+            // Adjust the pPredBuf to point at the V plane predictor when appropriate:
+            // (blocks and an INTRA Y plane mode...)
+            if (uBlock == uLastBlock) {
+                startBlock = uBlock;
+                uOffset = core_enc->m_pMBOffsets[uMB].uChromaOffset[core_enc->m_is_cur_pic_afrm][is_cur_mb_field];
+                pSrcPlane = core_enc->m_pCurrentFrame->m_pVPlane;
+                pPredBuf = cur_mb.mbChromaIntra.prediction+8;
+                pReconBuf = cur_mb.mbChromaIntra.reconstruct+8;
+                RLE_Offset = V_DC_RLE;
+                uLastBlock += num_blocks;
+            } else {
+                RLE_Offset = U_DC_RLE;
+                pSrcPlane = core_enc->m_pCurrentFrame->m_pUPlane;
+                pPredBuf = cur_mb.mbChromaIntra.prediction;
+                pReconBuf = cur_mb.mbChromaIntra.reconstruct;
+            }
+
+            if( core_enc->m_PicParamSet.chroma_format_idc == 2 ){
+                ownSumsDiff8x8Blocks4x4(
+                    pSrcPlane + uOffset,    // source pels
+                    pitchPixels,                 // source pitch
+                    pPredBuf,               // predictor pels
+                    16,
+                    pDCBuf,                 // result buffer
+                    pMassDiffBuf);
+                // Process second part of 2x4 block for DC coeffs
+                ownSumsDiff8x8Blocks4x4(
+                    pSrcPlane + uOffset+8*pitchPixels,    // source pels
+                    pitchPixels,                 // source pitch
+                    pPredBuf+8*16,               // predictor pels
+                    16,
+                    pDCBuf+4,                 // result buffer
+                    pMassDiffBuf+64);   //+Offset for second path
+                ownTransformQuantChroma422DC_H264(
+                    pDCBuf,
+                    pQBuf,
+                    uMBQP,
+                    &iNumCoeffs,
+                    (slice_type == INTRASLICE),
+                    1,
+                    NULL);
+                 // DC values in this block if iNonEmpty is 1.
+                cur_mb.MacroblockCoeffsInfo->chromaNC |= (iNumCoeffs != 0);
+                if (core_enc->m_PicParamSet.entropy_coding_mode){
+                    Ipp32s ctxIdxBlockCat = BLOCK_CHROMA_DC_LEVELS;
+                    H264CoreEncoder_ScanSignificant_CABAC(pDCBuf,ctxIdxBlockCat,8,dec_single_scan_p422, &cur_mb.cabac_data[RLE_Offset]);
+                }else{
+                        ownEncodeChroma422DC_CoeffsCAVLC_H264(
+                            pDCBuf,
+                            &curr_slice->Block_RLE[RLE_Offset].uTrailing_Ones,
+                            &curr_slice->Block_RLE[RLE_Offset].uTrailing_One_Signs,
+                            &curr_slice->Block_RLE[RLE_Offset].uNumCoeffs,
+                            &curr_slice->Block_RLE[RLE_Offset].uTotalZeros,
+                            curr_slice->Block_RLE[RLE_Offset].iLevels,
+                            curr_slice->Block_RLE[RLE_Offset].uRuns);
+                }
+                ownTransformDequantChromaDC422_H264(pDCBuf, uMBQP, NULL);
+           }else{
+                ownSumsDiff8x8Blocks4x4(
+                    pSrcPlane + uOffset,    // source pels
+                    pitchPixels,                 // source pitch
+                    pPredBuf,               // predictor pels
+                    16,
+                    pDCBuf,                 // result buffer
+                    pMassDiffBuf);
+                ownTransformQuantChromaDC_H264(
+                    pDCBuf,
+                    pQBuf,
+                    uMBQP,
+                    &iNumCoeffs,
+                    (slice_type == INTRASLICE),
+                    1,
+                    NULL);
+                // DC values in this block if iNonEmpty is 1.
+                cur_mb.MacroblockCoeffsInfo->chromaNC |= (iNumCoeffs != 0);
+                if (core_enc->m_PicParamSet.entropy_coding_mode){
+                    Ipp32s ctxIdxBlockCat = BLOCK_CHROMA_DC_LEVELS;
+                        H264CoreEncoder_ScanSignificant_CABAC(pDCBuf,ctxIdxBlockCat,4,dec_single_scan_p, &cur_mb.cabac_data[RLE_Offset]);
+                }else{
+                       ownEncodeChromaDcCoeffsCAVLC_H264(
+                           pDCBuf,
+                           &curr_slice->Block_RLE[RLE_Offset].uTrailing_Ones,
+                           &curr_slice->Block_RLE[RLE_Offset].uTrailing_One_Signs,
+                           &curr_slice->Block_RLE[RLE_Offset].uNumCoeffs,
+                           &curr_slice->Block_RLE[RLE_Offset].uTotalZeros,
+                           curr_slice->Block_RLE[RLE_Offset].iLevels,
+                           curr_slice->Block_RLE[RLE_Offset].uRuns);
+                }
+                ownTransformDequantChromaDC_H264(pDCBuf, uMBQP, NULL);
+           }
+
+//Encode croma AC
+       Ipp32s coeffsCost = 0;
+       pPredBuf_copy = pPredBuf;
+       for (uBlock = startBlock; uBlock < uLastBlock; uBlock ++) {
+            cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = 0;     // This will be updated if the block is coded
+            if (core_enc->m_PicParamSet.entropy_coding_mode){
+                cur_mb.cabac_data[uBlock].uNumSigCoeffs = 0;
+            } else {
+                curr_slice->Block_RLE[uBlock].uNumCoeffs = 0;
+                curr_slice->Block_RLE[uBlock].uTrailing_Ones = 0;
+                curr_slice->Block_RLE[uBlock].uTrailing_One_Signs = 0;
+                curr_slice->Block_RLE[uBlock].uTotalZeros = 15;
+            }
+                 pTempDiffBuf = pMassDiffBuf + (uBlock-startBlock)*16;
+                 pTransformResult = pTransform + (uBlock-startBlock)*16;
+                 ownTransformQuantResidual_H264(
+                     pTempDiffBuf,
+                     pTransformResult,
+                     uMBQP,
+                     &iNumCoeffs,
+                     0,
+                     enc_single_scan[is_cur_mb_field],
+                     &iLastCoeff,
+                     NULL,
+                     NULL,
+                     0,
+                     NULL);
+                 coeffsCost += CalculateCoeffsCost(pTransformResult, 15, &dec_single_scan[is_cur_mb_field][1]);
+
+                    // if everything quantized to zero, skip RLE
+                    cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)((iNumCoeffs < 0) ? -(iNumCoeffs+1) : iNumCoeffs);
+                    if (cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock]){  // the block is empty so it is not coded
+                       if (core_enc->m_PicParamSet.entropy_coding_mode)
+                       {
+                            T_Block_CABAC_Data<COEFFSTYPE>* c_data = &cur_mb.cabac_data[uBlock];
+                            c_data->uLastSignificant = iLastCoeff;
+                            c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock];
+                            c_data->CtxBlockCat = BLOCK_CHROMA_AC_LEVELS;
+                            c_data->uFirstCoeff = 1;
+                            c_data->uLastCoeff = 15;
+                            H264CoreEncoder_MakeSignificantLists_CABAC(pTransformResult,dec_single_scan[is_cur_mb_field], c_data);
+                            cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = c_data->uNumSigCoeffs;
+                       }
+                       else
+                       {
+                            ownEncodeCoeffsCAVLC_H264(pTransformResult,// pDiffBuf,
+                                                        1,
+                                                        dec_single_scan[is_cur_mb_field],
+                                                        iLastCoeff,
+                                                        &curr_slice->Block_RLE[uBlock].uTrailing_Ones,
+                                                        &curr_slice->Block_RLE[uBlock].uTrailing_One_Signs,
+                                                        &curr_slice->Block_RLE[uBlock].uNumCoeffs,
+                                                        &curr_slice->Block_RLE[uBlock].uTotalZeros,
+                                                        curr_slice->Block_RLE[uBlock].iLevels,
+                                                        curr_slice->Block_RLE[uBlock].uRuns);
+
+                            cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = curr_slice->Block_RLE[uBlock].uNumCoeffs;
+                        }
+                    }
+                pPredBuf += chromaPredInc[core_enc->m_PicParamSet.chroma_format_idc-1][uBlock-startBlock]; //!!!
+       }
+
+       if(coeffsCost <= (CHROMA_COEFF_MAX_COST<<(core_enc->m_PicParamSet.chroma_format_idc-1)) ){ //Reset all ac coeffs
+//           memset( pTransform, 0, (64*sizeof(COEFFSTYPE))<<(core_enc->m_PicParamSet.chroma_format_idc-1));
+           for(uBlock = startBlock; uBlock < uLastBlock; uBlock++){
+                cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = 0;
+                if (core_enc->m_PicParamSet.entropy_coding_mode){
+                   cur_mb.cabac_data[uBlock].uNumSigCoeffs = 0;
+                } else {
+                    curr_slice->Block_RLE[uBlock].uNumCoeffs = 0;
+                    curr_slice->Block_RLE[uBlock].uTrailing_Ones = 0;
+                    curr_slice->Block_RLE[uBlock].uTrailing_One_Signs = 0;
+                    curr_slice->Block_RLE[uBlock].uTotalZeros = 15;
+                }
+           }
+       }
+
+
+       pPredBuf = pPredBuf_copy;
+       for (uBlock = startBlock; uBlock < uLastBlock; uBlock ++) {
+                   cur_mb.MacroblockCoeffsInfo->chromaNC |= 2*(cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock]!=0);
+                    if (!cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] && !pDCBuf[ chromaDCOffset[core_enc->m_PicParamSet.chroma_format_idc-1][uBlock-startBlock] ]){
+                        uCBPChroma &= ~CBP4x4Mask[uBlock-16];
+                        Copy4x4(pPredBuf, 16, pReconBuf, 16);
+                    }else {
+                            ownDequantTransformResidualAndAdd_H264(
+                                pPredBuf,
+                                pTransform + (uBlock-startBlock)*16,
+                                &pDCBuf[ chromaDCOffset[core_enc->m_PicParamSet.chroma_format_idc-1][uBlock-startBlock] ],
+                                pReconBuf,
+                                16,
+                                16,
+                                uMBQP,
+                                (cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock]!=0),
+                                core_enc->m_SeqParamSet.bit_depth_chroma,
+                                NULL);
+                    }
+                Ipp32s inc = chromaPredInc[core_enc->m_PicParamSet.chroma_format_idc-1][uBlock-startBlock];
+                pPredBuf += inc; //!!!
+                pReconBuf += inc;
+            }   // for uBlock in chroma plane
+    } while (uBlock < uFinalBlock);
+    uCBPChroma &= ~(0xffffffff<<(uBlock-16));
+
+    cur_mb.LocalMacroblockInfo->cbp_chroma = uCBPChroma;
+
+    if (cur_mb.MacroblockCoeffsInfo->chromaNC == 3)
+        cur_mb.MacroblockCoeffsInfo->chromaNC = 2;
+
+    if ((cur_mb.GlobalMacroblockInfo->mbtype != MBTYPE_INTRA_16x16) && (cur_mb.GlobalMacroblockInfo->mbtype!= MBTYPE_PCM)){
+        cur_mb.LocalMacroblockInfo->cbp = (cur_mb.MacroblockCoeffsInfo->chromaNC << 4);
+    } else  {
+        cur_mb.LocalMacroblockInfo->cbp = 0;
+    }
+}
+
+template<typename COEFFSTYPE, typename PIXTYPE>
+void H264CoreEncoder_TransQuantChromaInter_RD(void* state, H264Slice<COEFFSTYPE, PIXTYPE> *curr_slice)
+{
+    H264CoreEncoder<COEFFSTYPE, PIXTYPE>* core_enc = (H264CoreEncoder<COEFFSTYPE, PIXTYPE>*)state;
+    Ipp32u  uBlock;         // block number, 0 to 23
+    Ipp32u  uOffset;        // to upper left corner of block from start of plane
+    Ipp32u  uMBQP;          // QP of current MB
+    Ipp32u  uMB;
+    PIXTYPE*  pSrcPlane;    // start of plane to encode
+    Ipp32s    pitchPixels;  // buffer pitch
+    COEFFSTYPE *pDCBuf;     // chroma & luma dc coeffs pointer
+    PIXTYPE*  pPredBuf;     // prediction block pointer
+    PIXTYPE*  pReconBuf;     // prediction block pointer
+    PIXTYPE*  pPredBuf_copy;     // prediction block pointer
+    COEFFSTYPE* pQBuf;      // quantized block pointer
+    Ipp16s* pMassDiffBuf;   // difference block pointer
+
+    Ipp32u   uCBPChroma;    // coded flags for all chroma blocks
+    Ipp32s   iNumCoeffs;    // Number of nonzero coeffs after quant (negative if DC is nonzero)
+    Ipp32s   iLastCoeff;    // Number of nonzero coeffs after quant (negative if DC is nonzero)
+    Ipp32s   RLE_Offset;    // Index into BlockRLE array
+
+    H264CurrentMacroblockDescriptor<COEFFSTYPE, PIXTYPE> &cur_mb = curr_slice->m_cur_mb;
+    Ipp32s is_cur_mb_field = curr_slice->m_is_cur_mb_field;
+    EnumSliceType slice_type = curr_slice->m_slice_type;
+    COEFFSTYPE *pTransformResult;
+    COEFFSTYPE *pTransform;
+    bool  VPlane;
+
+    pitchPixels = cur_mb.mbPitchPixels;
+    uMBQP       = cur_mb.chromaQP;
+    pTransform = (COEFFSTYPE*)curr_slice->m_pMBEncodeBuffer;
+    pQBuf       = (COEFFSTYPE*) (pTransform + 64*2);
+    pDCBuf      = (COEFFSTYPE*) (pQBuf + 16);   // Used for both luma and chroma DC blocks
+    pMassDiffBuf= (Ipp16s*) (pDCBuf+ 16);
+    Ipp16s*  pTempDiffBuf;
+    uMB = cur_mb.uMB;
+
+    // initialize pointers and offset
+    uOffset = core_enc->m_pMBOffsets[uMB].uChromaOffset[core_enc->m_is_cur_pic_afrm][is_cur_mb_field];
+    uCBPChroma  = cur_mb.LocalMacroblockInfo->cbp_chroma;
+
+    cur_mb.MacroblockCoeffsInfo->chromaNC = 0;
+
+    // initialize pointers for the U plane blocks
+    Ipp32s num_blocks = 2<<core_enc->m_PicParamSet.chroma_format_idc;
+    Ipp32s startBlock;
+    startBlock = uBlock = 16;
+    Ipp32u uLastBlock = uBlock+num_blocks;
+    Ipp32u uFinalBlock = uBlock+2*num_blocks;
+
+    pPredBuf = cur_mb.mbChromaInter.prediction;
+    H264CoreEncoder_MCOneMBChroma(state, curr_slice, pPredBuf);
+    // encode first chroma U plane then V plane
+    do
+    {
+        // Adjust the pPredBuf to point at the V plane predictor when appropriate:
+        // (blocks and an INTRA Y plane mode...)
+        if (uBlock == uLastBlock) {
+            startBlock = uBlock;
+            uOffset = core_enc->m_pMBOffsets[uMB].uChromaOffset[core_enc->m_is_cur_pic_afrm][is_cur_mb_field];
+            pSrcPlane = core_enc->m_pCurrentFrame->m_pVPlane;
+            pPredBuf = cur_mb.mbChromaInter.prediction+8;
+            pReconBuf = cur_mb.mbChromaInter.reconstruct+8;
+            RLE_Offset = V_DC_RLE;
+            // initialize pointers for the V plane blocks
+            uLastBlock += num_blocks;
+            VPlane = true;
+        } else {
+            RLE_Offset = U_DC_RLE;
+            pSrcPlane = core_enc->m_pCurrentFrame->m_pUPlane;
+            pPredBuf = cur_mb.mbChromaInter.prediction;
+            pReconBuf = cur_mb.mbChromaInter.reconstruct;
+            VPlane = false;
+        }
+        if( core_enc->m_PicParamSet.chroma_format_idc == 2 ){
+            ownSumsDiff8x8Blocks4x4(
+                pSrcPlane + uOffset,    // source pels
+                pitchPixels,                 // source pitch
+                pPredBuf,               // predictor pels
+                16,
+                pDCBuf,                 // result buffer
+                pMassDiffBuf);
+            // Process second part of 2x4 block for DC coeffs
+            ownSumsDiff8x8Blocks4x4(
+                pSrcPlane + uOffset+8*pitchPixels,    // source pels
+                pitchPixels,                 // source pitch
+                pPredBuf+8*16,               // predictor pels
+                16,
+                pDCBuf+4,                 // result buffer
+                pMassDiffBuf+64);   //+Offset for second path
+            ownTransformQuantChroma422DC_H264(
+                pDCBuf,
+                pQBuf,
+                uMBQP,
+                &iNumCoeffs,
+                (slice_type == INTRASLICE),
+                1,
+                NULL);
+             // DC values in this block if iNonEmpty is 1.
+             cur_mb.MacroblockCoeffsInfo->chromaNC |= (iNumCoeffs != 0);
+            if (core_enc->m_PicParamSet.entropy_coding_mode){
+                Ipp32s ctxIdxBlockCat = BLOCK_CHROMA_DC_LEVELS;
+                H264CoreEncoder_ScanSignificant_CABAC(pDCBuf,ctxIdxBlockCat,8,dec_single_scan_p422, &cur_mb.cabac_data[RLE_Offset]);
+            }else{
+                    ownEncodeChroma422DC_CoeffsCAVLC_H264(
+                        pDCBuf,
+                        &curr_slice->Block_RLE[RLE_Offset].uTrailing_Ones,
+                        &curr_slice->Block_RLE[RLE_Offset].uTrailing_One_Signs,
+                        &curr_slice->Block_RLE[RLE_Offset].uNumCoeffs,
+                        &curr_slice->Block_RLE[RLE_Offset].uTotalZeros,
+                        curr_slice->Block_RLE[RLE_Offset].iLevels,
+                        curr_slice->Block_RLE[RLE_Offset].uRuns);
+            }
+            ownTransformDequantChromaDC422_H264(pDCBuf, uMBQP, NULL);
+       }else{
+            ownSumsDiff8x8Blocks4x4(
+                pSrcPlane + uOffset,    // source pels
+                pitchPixels,                 // source pitch
+                pPredBuf,               // predictor pels
+                16,
+                pDCBuf,                 // result buffer
+                pMassDiffBuf);
+            ownTransformQuantChromaDC_H264(
+                pDCBuf,
+                pQBuf,
+                uMBQP,
+                &iNumCoeffs,
+                (slice_type == INTRASLICE),
+                1,
+                NULL);
+            // DC values in this block if iNonEmpty is 1.
+            cur_mb.MacroblockCoeffsInfo->chromaNC |= (iNumCoeffs != 0);
+            if (core_enc->m_PicParamSet.entropy_coding_mode){
+                Ipp32s ctxIdxBlockCat = BLOCK_CHROMA_DC_LEVELS;
+                    H264CoreEncoder_ScanSignificant_CABAC(pDCBuf,ctxIdxBlockCat,4,dec_single_scan_p, &cur_mb.cabac_data[RLE_Offset]);
+            }else{
+                   ownEncodeChromaDcCoeffsCAVLC_H264(
+                       pDCBuf,
+                       &curr_slice->Block_RLE[RLE_Offset].uTrailing_Ones,
+                       &curr_slice->Block_RLE[RLE_Offset].uTrailing_One_Signs,
+                       &curr_slice->Block_RLE[RLE_Offset].uNumCoeffs,
+                       &curr_slice->Block_RLE[RLE_Offset].uTotalZeros,
+                       curr_slice->Block_RLE[RLE_Offset].iLevels,
+                       curr_slice->Block_RLE[RLE_Offset].uRuns);
+            }
+            ownTransformDequantChromaDC_H264(pDCBuf, uMBQP, NULL);
+       }
+
+//Encode croma AC
+#ifdef H264_RD_TRELLIS
+//Save current cabac state
+/*      CabacStates cbSt;
+        memcpy( cbSt.absLevelM1, &curr_slice->m_pbitstream->context_array[227+39], 10*sizeof(CABAC_CONTEXT));
+        if( !is_cur_mb_field ){
+            memcpy( cbSt.sig+1, &curr_slice->m_pbitstream->context_array[105+47], 14*sizeof(CABAC_CONTEXT));
+            memcpy( cbSt.last+1, &curr_slice->m_pbitstream->context_array[166+47], 14*sizeof(CABAC_CONTEXT));
+        }else{
+            memcpy( cbSt.sig+1, &curr_slice->m_pbitstream->context_array[105+172+47], 14*sizeof(CABAC_CONTEXT));
+            memcpy( cbSt.last+1, &curr_slice->m_pbitstream->context_array[166+172+47], 14*sizeof(CABAC_CONTEXT));
+        }
+*/
+#endif
+       Ipp32s coeffsCost = 0;
+       pPredBuf_copy = pPredBuf;
+       for (uBlock = startBlock; uBlock < uLastBlock; uBlock ++) {
+            cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = 0;     // This will be updated if the block is coded
+            if (core_enc->m_PicParamSet.entropy_coding_mode){
+                cur_mb.cabac_data[uBlock].uNumSigCoeffs = 0;
+            } else {
+                curr_slice->Block_RLE[uBlock].uNumCoeffs = 0;
+                curr_slice->Block_RLE[uBlock].uTrailing_Ones = 0;
+                curr_slice->Block_RLE[uBlock].uTrailing_One_Signs = 0;
+                curr_slice->Block_RLE[uBlock].uTotalZeros = 15;
+            }
+
+            // check if block is coded
+                 pTempDiffBuf = pMassDiffBuf + (uBlock-startBlock)*16;
+                 pTransformResult = pTransform + (uBlock-startBlock)*16;
+                 ownTransformQuantResidual_H264(
+                     pTempDiffBuf,
+                     pTransformResult,
+                     uMBQP,
+                     &iNumCoeffs,
+                     0,
+                     enc_single_scan[is_cur_mb_field],
+                     &iLastCoeff,
+                     NULL,
+                     NULL,
+                     0,
+                     NULL);
+                 coeffsCost += CalculateCoeffsCost(pTransformResult, 15, &dec_single_scan[is_cur_mb_field][1]);
+
+                    // if everything quantized to zero, skip RLE
+                    cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = (T_NumCoeffs)((iNumCoeffs < 0) ? -(iNumCoeffs+1) : iNumCoeffs);
+                    if (cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock]){  // the block is empty so it is not coded
+                       if (core_enc->m_PicParamSet.entropy_coding_mode){
+                            T_Block_CABAC_Data<COEFFSTYPE>* c_data = &cur_mb.cabac_data[uBlock];
+                            c_data->uLastSignificant = iLastCoeff;
+                            c_data->uNumSigCoeffs = cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock];
+                            c_data->CtxBlockCat = BLOCK_CHROMA_AC_LEVELS;
+                            c_data->uFirstCoeff = 1;
+                            c_data->uLastCoeff = 15;
+                            H264CoreEncoder_MakeSignificantLists_CABAC(pTransformResult,dec_single_scan[is_cur_mb_field], c_data);
+                            cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = c_data->uNumSigCoeffs;
+                        } else {
+                            ownEncodeCoeffsCAVLC_H264(pTransformResult,// pDiffBuf,
+                                                        1,
+                                                        dec_single_scan[is_cur_mb_field],
+                                                        iLastCoeff,
+                                                        &curr_slice->Block_RLE[uBlock].uTrailing_Ones,
+                                                        &curr_slice->Block_RLE[uBlock].uTrailing_One_Signs,
+                                                        &curr_slice->Block_RLE[uBlock].uNumCoeffs,
+                                                        &curr_slice->Block_RLE[uBlock].uTotalZeros,
+                                                        curr_slice->Block_RLE[uBlock].iLevels,
+                                                        curr_slice->Block_RLE[uBlock].uRuns);
+
+                            cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = curr_slice->Block_RLE[uBlock].uNumCoeffs;
+                        }
+                    }
+                pPredBuf += chromaPredInc[core_enc->m_PicParamSet.chroma_format_idc-1][uBlock-startBlock]; //!!!
+       }
+
+       if(coeffsCost <= (CHROMA_COEFF_MAX_COST<<(core_enc->m_PicParamSet.chroma_format_idc-1)) ){ //Reset all ac coeffs
+//           if(cur_mb.MacroblockCoeffsInfo->chromaNC&1) //if we have DC coeffs
+//           memset( pTransform, 0, (64*sizeof(COEFFSTYPE))<<(core_enc->m_PicParamSet.chroma_format_idc-1));
+           for(uBlock = startBlock; uBlock < uLastBlock; uBlock++){
+                cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] = 0;
+                if (core_enc->m_PicParamSet.entropy_coding_mode){
+                   cur_mb.cabac_data[uBlock].uNumSigCoeffs = 0;
+                } else {
+                    curr_slice->Block_RLE[uBlock].uNumCoeffs = 0;
+                    curr_slice->Block_RLE[uBlock].uTrailing_Ones = 0;
+                    curr_slice->Block_RLE[uBlock].uTrailing_One_Signs = 0;
+                    curr_slice->Block_RLE[uBlock].uTotalZeros = 15;
+                }
+           }
+       }
+//#endif
+
+       pPredBuf = pPredBuf_copy;
+       for (uBlock = startBlock; uBlock < uLastBlock; uBlock ++) {
+                    cur_mb.MacroblockCoeffsInfo->chromaNC |= 2*(cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock]!=0);
+
+                    if (!cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock] && !pDCBuf[ chromaDCOffset[core_enc->m_PicParamSet.chroma_format_idc-1][uBlock-startBlock] ]){
+                        uCBPChroma &= ~CBP4x4Mask[uBlock-16];
+                        Copy4x4(pPredBuf, 16, pReconBuf, 16);
+                    }else{
+                            ownDequantTransformResidualAndAdd_H264(
+                                pPredBuf,
+                                pTransform + (uBlock-startBlock)*16,
+                                &pDCBuf[ chromaDCOffset[core_enc->m_PicParamSet.chroma_format_idc-1][uBlock-startBlock] ],
+                                pReconBuf,
+                                16,
+                                16,
+                                uMBQP,
+                                (cur_mb.MacroblockCoeffsInfo->numCoeff[uBlock]!=0),
+                                core_enc->m_SeqParamSet.bit_depth_chroma,
+                                NULL);
+                    }
+                Ipp32s inc = chromaPredInc[core_enc->m_PicParamSet.chroma_format_idc-1][uBlock-startBlock];
+                pPredBuf += inc; //!!!
+                pReconBuf += inc; //!!!
+            }   // for uBlock in chroma plane
+    } while (uBlock < uFinalBlock);
+
+    //Reset other chroma
+    uCBPChroma &= ~(0xffffffff<<(uBlock-16));
+
+    cur_mb.LocalMacroblockInfo->cbp_chroma = uCBPChroma;
+
+    if (cur_mb.MacroblockCoeffsInfo->chromaNC == 3)
+        cur_mb.MacroblockCoeffsInfo->chromaNC = 2;
+}
+
+
+// forced instantiation
+#ifdef BITDEPTH_9_12
+#define COEFFSTYPE Ipp32s
+#define PIXTYPE Ipp16u
+template void   H264CoreEncoder_CEncAndRecMB<COEFFSTYPE, PIXTYPE>(void*, H264Slice<COEFFSTYPE, PIXTYPE>*);
+template void   H264CoreEncoder_TransQuantIntra16x16_RD<COEFFSTYPE, PIXTYPE>(void*, H264Slice<COEFFSTYPE, PIXTYPE>*);
+template void   H264CoreEncoder_TransQuantChromaInter_RD<COEFFSTYPE, PIXTYPE>(void*, H264Slice<COEFFSTYPE, PIXTYPE>*);
+template Ipp32u H264CoreEncoder_TransQuantInter_RD<COEFFSTYPE, PIXTYPE>(void*, H264Slice<COEFFSTYPE, PIXTYPE>*);
+template Ipp32u H264CoreEncoder_TransQuantIntra_RD<COEFFSTYPE, PIXTYPE>(void*, H264Slice<COEFFSTYPE, PIXTYPE>*);
+template void   H264CoreEncoder_TransQuantChromaIntra_RD(void*, H264Slice<COEFFSTYPE, PIXTYPE>*);
+template void   H264CoreEncoder_Encode4x4IntraBlock<COEFFSTYPE, PIXTYPE>(void*, H264Slice<COEFFSTYPE, PIXTYPE>*, Ipp32s);
+template void   H264CoreEncoder_Encode8x8IntraBlock<COEFFSTYPE, PIXTYPE>(void*, H264Slice<COEFFSTYPE, PIXTYPE>*, Ipp32s);
+
+#undef COEFFSTYPE
+#undef PIXTYPE
+#endif
+
+#define COEFFSTYPE Ipp16s
+#define PIXTYPE Ipp8u
+template void   H264CoreEncoder_CEncAndRecMB<COEFFSTYPE, PIXTYPE>(void*, H264Slice<COEFFSTYPE, PIXTYPE>*);
+template void   H264CoreEncoder_TransQuantIntra16x16_RD<COEFFSTYPE, PIXTYPE>(void*, H264Slice<COEFFSTYPE, PIXTYPE>*);
+template void   H264CoreEncoder_TransQuantChromaInter_RD<COEFFSTYPE, PIXTYPE>(void*, H264Slice<COEFFSTYPE, PIXTYPE>*);
+template Ipp32u H264CoreEncoder_TransQuantInter_RD<COEFFSTYPE, PIXTYPE>(void*, H264Slice<COEFFSTYPE, PIXTYPE>*);
+template Ipp32u H264CoreEncoder_TransQuantIntra_RD<COEFFSTYPE, PIXTYPE>(void*, H264Slice<COEFFSTYPE, PIXTYPE>*);
+template void   H264CoreEncoder_TransQuantChromaIntra_RD(void*, H264Slice<COEFFSTYPE, PIXTYPE>*);
+template void   H264CoreEncoder_Encode4x4IntraBlock<COEFFSTYPE, PIXTYPE>(void*, H264Slice<COEFFSTYPE, PIXTYPE>*, Ipp32s);
+template void   H264CoreEncoder_Encode8x8IntraBlock<COEFFSTYPE, PIXTYPE>(void*, H264Slice<COEFFSTYPE, PIXTYPE>*, Ipp32s);
 
 #endif //UMC_ENABLE_H264_VIDEO_ENCODER
 

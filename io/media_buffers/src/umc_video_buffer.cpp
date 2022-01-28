@@ -4,7 +4,7 @@
 //  This software is supplied under the terms of a license  agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in  accordance  with the terms of that agreement.
-//    Copyright (c) 2003-2007 Intel Corporation. All Rights Reserved.
+//    Copyright (c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 //
 */
@@ -14,25 +14,8 @@
 #include "umc_video_data.h"
 #include "umc_automatic_mutex.h"
 
-namespace UMC
-{
+using namespace UMC;
 
-MediaBuffer *CreateVideoBuffer(void)
-{
-    return new VideoBuffer();
-
-} // MediaBuffer *CreateVideoBuffer(void)
-
-VideoBufferParams::VideoBufferParams(void)
-{
-    m_lIPDistance = 0;
-    m_lGOPSize = 0;
-} // VideoBufferParams::VideoBufferParams(void)
-
-VideoBufferParams::~VideoBufferParams(void)
-{
-
-} // VideoBufferParams::~VideoBufferParams(void)
 
 VideoBuffer::VideoBuffer(void)
 {
@@ -86,7 +69,7 @@ bool VideoBuffer::BuildPattern(void)
 
 Status VideoBuffer::Init(MediaReceiverParams* init)
 {
-    VideoBufferParams* pParams = DynamicCast<VideoBufferParams> (init);
+    VideoBufferParams* pParams = DynamicCast<VideoBufferParams, MediaReceiverParams> (init);
     Status umcRes;
 
     if (NULL == pParams)
@@ -138,7 +121,7 @@ Status VideoBuffer::Close(void)
 
 Status VideoBuffer::LockInputBuffer(MediaData *in)
 {
-    VideoData *pData = DynamicCast<VideoData> (in);
+    VideoData *pData = DynamicCast<VideoData, MediaData> (in);
     Status umcRes;
 
     // check error(s)
@@ -150,14 +133,14 @@ Status VideoBuffer::LockInputBuffer(MediaData *in)
     if (UMC_OK != umcRes)
         return umcRes;
 
-    pData->SetFrameType(I_PICTURE);
+    pData->m_frameType = I_PICTURE;
     return UMC_OK;
 
 } // Status VideoBuffer::LockInputBuffer(MediaData *in)
 
 Status VideoBuffer::UnLockInputBuffer(MediaData *in, Status StreamStatus)
 {
-    VideoData *pData = DynamicCast<VideoData> (in);
+    VideoData *pData = DynamicCast<VideoData, MediaData> (in);
     Status umcRes;
 
     // check error(s)
@@ -180,7 +163,7 @@ Status VideoBuffer::UnLockInputBuffer(MediaData *in, Status StreamStatus)
 
 Status VideoBuffer::LockOutputBuffer(MediaData *out)
 {
-    VideoData *pData = DynamicCast<VideoData> (out);
+    VideoData *pData = DynamicCast<VideoData, MediaData> (out);
     AutomaticMutex guard(m_synchro);
     SampleInfo *pTemp = NULL;
     Ipp32u lOffset;
@@ -242,9 +225,9 @@ Status VideoBuffer::LockOutputBuffer(MediaData *out)
     // set used pointer
     out->SetBufferPointer(pTemp->m_pbData, pTemp->m_lDataSize);
     out->SetDataSize(pTemp->m_lDataSize);
-    out->SetTime(pTemp->m_dTime);
+    out->m_fPTSStart = pTemp->m_dTime;
 
-    pData->SetFrameType(m_pEncPattern[m_lFrameNumber]);
+    pData->m_frameType = m_pEncPattern[m_lFrameNumber];
     return UMC_OK;
 
 } // Status VideoBuffer::LockOutputBuffer(MediaData *out)
@@ -315,5 +298,3 @@ Status VideoBuffer::UnLockOutputBuffer(MediaData* out)
     return UMC_OK;
 
 } // Status VideoBuffer::UnLockOutputBuffer(MediaData* out)
-
-} // namespace UMC

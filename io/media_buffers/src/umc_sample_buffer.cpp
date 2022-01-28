@@ -4,7 +4,7 @@
 //  This software is supplied under the terms of a license  agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in  accordance  with the terms of that agreement.
-//    Copyright (c) 2003-2008 Intel Corporation. All Rights Reserved.
+//    Copyright (c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 //
 */
@@ -13,19 +13,13 @@
 #include "umc_sample_buffer.h"
 #include "umc_automatic_mutex.h"
 
-namespace UMC
-{
+using namespace UMC;
+
 
 enum
 {
     ALIGN_VALUE                 = 128
 };
-
-MediaBuffer *CreateSampleBuffer(void)
-{
-    return new SampleBuffer();
-
-} // MediaBuffer *CreateSampleBuffer(void)
 
 SampleBuffer::SampleBuffer(void)
 {
@@ -43,20 +37,11 @@ SampleBuffer::SampleBuffer(void)
 
     m_bEndOfStream = false;
     m_bQuit = false;
-
-    // reset the mutex
-    vm_mutex_set_invalid(&m_synchro);
-
 } // SampleBuffer::SampleBuffer(void)
 
 SampleBuffer::~SampleBuffer(void)
 {
     Close();
-
-    // destroy mutex
-    if (1 == vm_mutex_is_valid(&m_synchro))
-        vm_mutex_destroy(&m_synchro);
-
 } // SampleBuffer::~SampleBuffer(void)
 
 Status SampleBuffer::Close(void)
@@ -96,7 +81,7 @@ Status SampleBuffer::Close(void)
 Status SampleBuffer::Init(MediaReceiverParams *init)
 {
     size_t lAllocate, lMaxSampleSize;
-    MediaBufferParams *pParams = DynamicCast<MediaBufferParams> (init);
+    MediaBufferParams *pParams = DynamicCast<MediaBufferParams, MediaReceiverParams> (init);
     Status umcRes;
 
     // check error(s)
@@ -117,11 +102,7 @@ Status SampleBuffer::Init(MediaReceiverParams *init)
 
     m_Params = *pParams;
     // init the mutex
-    if (0 == vm_mutex_is_valid(&m_synchro))
-    {
-        if (VM_OK != vm_mutex_init(&m_synchro))
-            return UMC_ERR_INIT;
-    }
+    m_synchro.Reset();
 
     // allocate buffer
     lMaxSampleSize = IPP_MAX(pParams->m_prefInputBufferSize, pParams->m_prefOutputBufferSize) +
@@ -257,8 +238,9 @@ Status SampleBuffer::UnLockInputBuffer(MediaData* in, Status StreamStatus)
     pTemp = reinterpret_cast<SampleInfo *> (pb);
 
     // fill sample info
-    in->GetTime(pTemp->m_dTime, pTemp->m_dTimeAux);
-    pTemp->m_FrameType = in->GetFrameType();
+    pTemp->m_dTime     = in->m_fPTSStart;
+    pTemp->m_dTimeAux  = in->m_fPTSEnd;
+    pTemp->m_FrameType = in->m_frameType;
     pTemp->m_lBufferSize = align_value<size_t> (pb + sizeof(SampleInfo) - m_pbFree, ALIGN_VALUE);
     pTemp->m_lDataSize = in->GetDataSize();
     pTemp->m_pbData = m_pbFree;
@@ -324,8 +306,9 @@ Status SampleBuffer::LockOutputBuffer(MediaData* out)
     // set used pointer
     out->SetBufferPointer(m_pbUsed, m_pSamples->m_lDataSize);
     out->SetDataSize(m_pSamples->m_lDataSize);
-    out->SetTime(m_pSamples->m_dTime, m_pSamples->m_dTimeAux);
-    out->SetFrameType(m_pSamples->m_FrameType);
+    out->m_fPTSStart = m_pSamples->m_dTime;
+    out->m_fPTSEnd   = m_pSamples->m_dTimeAux;
+    out->m_frameType = m_pSamples->m_FrameType;
     return UMC_OK;
 
 } // Status SampleBuffer::LockOutputBuffer(MediaData* out)
@@ -369,7 +352,7 @@ Status SampleBuffer::UnLockOutputBuffer(MediaData* out)
 
         m_pSamples->m_lBufferSize -= lToSkip;
         m_pSamples->m_lDataSize -= lToSkip;
-        m_pSamples->m_dTime = out->GetTime();
+        m_pSamples->m_dTime = out->m_fPTSStart;
     }
     // skip whole sample
     else
@@ -411,30 +394,3 @@ Status SampleBuffer::Reset(void)
     return UMC_OK;
 
 } //Status SampleBuffer::Reset(void)
-
-Status SampleBuffer::DumpState()
-{
-  AutomaticMutex guard(m_synchro);
-  SampleInfo *pTemp;
-  double timeFirst = -1, timeLast = -1;
-  int numSamples = 0;
-
-  if (m_pSamples) timeFirst = m_pSamples->m_dTime;
-
-  // find last sample info
-  for (pTemp = m_pSamples; pTemp != NULL; pTemp = pTemp->m_pNext) {
-    timeLast = pTemp->m_dTime;
-    numSamples++;
-  }
-
-  vm_debug_trace_i(VM_DEBUG_PROGRESS, m_lBufferSize);
-  vm_debug_trace_f(VM_DEBUG_PROGRESS, 100.0*m_lFreeSize/m_lBufferSize);
-  vm_debug_trace_f(VM_DEBUG_PROGRESS, 100.0*(m_lInputSize + sizeof(SampleInfo))/m_lBufferSize);
-  vm_debug_trace_i(VM_DEBUG_PROGRESS, numSamples);
-  vm_debug_trace_f(VM_DEBUG_PROGRESS, timeFirst);
-  vm_debug_trace_f(VM_DEBUG_PROGRESS, timeLast);
-
-  return UMC_OK;
-}
-
-} // namespace UMC

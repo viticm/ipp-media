@@ -4,28 +4,26 @@
 //  This software is supplied under the terms of a license  agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in  accordance  with the terms of that agreement.
-//    Copyright (c) 2003-2006 Intel Corporation. All Rights Reserved.
+//    Copyright (c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 //
 */
 
 #include "umc_pendulum.h"
 
-namespace UMC
-{
+using namespace UMC;
+
 
 Pendulum::Pendulum(void)
 {
     vm_event_set_invalid(&m_hHigh);
     vm_event_set_invalid(&m_hLow);
-
-} // Pendulum::Pendulum(void)
+}
 
 Pendulum::~Pendulum(void)
 {
     Release();
-
-} // Pendulum::~Pendulum(void)
+}
 
 void Pendulum::Release(void)
 {
@@ -36,8 +34,7 @@ void Pendulum::Release(void)
 
     vm_event_set_invalid(&m_hHigh);
     vm_event_set_invalid(&m_hLow);
-
-} // void Pendulum::Release(void)
+}
 
 Status Pendulum::Init(bool bSignaled)
 {
@@ -55,8 +52,7 @@ Status Pendulum::Init(bool bSignaled)
         return UMC_ERR_INIT;
 
     return UMC_OK;
-
-} // Status Pendulum::Init(bool bSignaled)
+}
 
 Status Pendulum::Reset(bool bSignaled)
 {
@@ -77,8 +73,7 @@ Status Pendulum::Reset(bool bSignaled)
     }
 
     return UMC_OK;
-
-} // Status Pendulum::Reset(bool bSignaled)
+}
 
 Status Pendulum::Set(void)
 {
@@ -89,8 +84,7 @@ Status Pendulum::Set(void)
     vm_event_signal(&m_hHigh);
 
     return UMC_OK;
-
-} // Status Pendulum::Set(void)
+}
 
 Status Pendulum::Wait(void)
 {
@@ -101,7 +95,4 @@ Status Pendulum::Wait(void)
     vm_event_signal(&m_hLow);
 
     return UMC_OK;
-
-} // Status Pendulum::Wait(void)
-
-} // namespace UMC
+}

@@ -14,7 +14,7 @@
 #include "ippdefs.h"
 #include "ipps.h"
 #include "ippi.h"
-#include "ippvc.h"
+#include "ippvc90legacy.h" //#include "ippvc.h"
 #include "vm_debug.h"
 
 #pragma warning(disable : 4514)     // unreferenced inline function has been removed

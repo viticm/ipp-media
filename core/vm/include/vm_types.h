@@ -4,33 +4,29 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//       Copyright(c) 2003-2008 Intel Corporation. All Rights Reserved.
+//       Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
 #ifndef __VM_TYPES_H__
 #define __VM_TYPES_H__
 
-#ifdef LINUX32
-# include "sys/vm_types_linux32.h"
-#else /* LINUX32 */
-# include <io.h>
-# include "sys/vm_types_win32.h"
-#endif /* LINUX32 */
+#if defined WINDOWS || defined _WIN32 || defined _WIN64
+#include <io.h>
+#include "vm_types_win.h"
+#else
+#include "vm_types_unix.h"
+#endif
 
 #include "vm_strings.h"
-/*
- * The following macros are about to remove
- */
-
 
 #ifdef __cplusplus
-extern "C"
-{
-#endif /* __cplusplus */
+extern "C" {
+#endif
 
 #define VM_ALIGN16_DECL(X) VM_ALIGN_DECL(16,X)
 #define VM_ALIGN32_DECL(X) VM_ALIGN_DECL(32,X)
+#define VM_ALIGN64_DECL(X) VM_ALIGN_DECL(64,X)
 
 #define _MAX_LEN 256
 
@@ -48,11 +44,18 @@ typedef enum e_vm_Status
     VM_SO_CANT_GET_ADDR             =-992
 } vm_status;
 
+/* Resource examination definitions */
+
+#if defined WINDOWS || defined _WIN32 || defined _WIN64
+typedef HANDLE VM_PID;
+#else
+typedef pid_t VM_PID;
+#endif
 
 #include "vm_file.h"
 
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
+#endif
 
-#endif /* __VM_TYPES_H__ */
+#endif

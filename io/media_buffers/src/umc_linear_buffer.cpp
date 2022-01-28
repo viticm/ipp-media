@@ -4,7 +4,7 @@
 //  This software is supplied under the terms of a license  agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in  accordance  with the terms of that agreement.
-//    Copyright (c) 2003-2008 Intel Corporation. All Rights Reserved.
+//    Copyright (c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 //
 */
@@ -12,19 +12,13 @@
 #include "umc_linear_buffer.h"
 #include "umc_automatic_mutex.h"
 
-namespace UMC
-{
+using namespace UMC;
+
 
 enum
 {
     ALIGN_VALUE                 = 128
 };
-
-MediaBuffer *CreateLinearBuffer(void)
-{
-    return new LinearBuffer();
-
-} // MediaBuffer *CreateLinearBuffer(void)
 
 LinearBuffer::LinearBuffer(void)
 {
@@ -45,9 +39,6 @@ LinearBuffer::LinearBuffer(void)
     m_bEndOfStream = false;
     m_bQuit = false;
 
-    // reset mutex
-    vm_mutex_set_invalid(&m_synchro);
-
     // reset time of dummy sample
     memset(&m_Dummy, 0, sizeof(m_Dummy));
     m_Dummy.m_dTime = -1.0;
@@ -57,11 +48,6 @@ LinearBuffer::LinearBuffer(void)
 LinearBuffer::~LinearBuffer(void)
 {
     Close();
-
-    // destroy mutex
-    if (1 == vm_mutex_is_valid(&m_synchro))
-        vm_mutex_destroy(&m_synchro);
-
 } // LinearBuffer::~LinearBuffer(void)
 
 Status LinearBuffer::Close(void)
@@ -123,7 +109,7 @@ Status LinearBuffer::Init(MediaReceiverParams *init)
 {
     size_t lAllocate, lMaxSampleSize;
     Ipp32u l, lFramesNumber;
-    MediaBufferParams *pParams = DynamicCast<MediaBufferParams> (init);
+    MediaBufferParams *pParams = DynamicCast<MediaBufferParams, MediaReceiverParams> (init);
     Status umcRes;
 
     // check error(s)
@@ -146,11 +132,7 @@ Status LinearBuffer::Init(MediaReceiverParams *init)
     m_Params = *pParams;
 
     // init mutex
-    if (0 == vm_mutex_is_valid(&m_synchro))
-    {
-        if (VM_OK != vm_mutex_init(&m_synchro))
-            return UMC_ERR_INIT;
-    }
+    m_synchro.Reset();
 
     // allocate buffer (one more)
     lMaxSampleSize = IPP_MAX(pParams->m_prefInputBufferSize, pParams->m_prefOutputBufferSize);
@@ -327,8 +309,8 @@ Status LinearBuffer::UnLockInputBuffer(MediaData* in, Status StreamStatus)
     //
 
     // handle data gaps
-    if ((m_pSamples) || (in->GetTime() > m_Dummy.m_dTime))
-        pTemp->m_dTime = in->GetTime();
+    if ((m_pSamples) || (in->m_fPTSStart > m_Dummy.m_dTime))
+        pTemp->m_dTime = in->m_fPTSStart;
     else
         pTemp->m_dTime = m_Dummy.m_dTime;
     pTemp->m_lBufferSize =
@@ -453,7 +435,7 @@ Status LinearBuffer::LockOutputBuffer(MediaData* out)
     // set used pointer
     out->SetBufferPointer(m_pbUsed, lUsedSize);
     out->SetDataSize(lUsedSize);
-    out->SetTime(m_pSamples->m_dTime);
+    out->m_fPTSStart = m_pSamples->m_dTime;
     return UMC_OK;
 
 } // Status LinearBuffer::LockOutputBuffer(MediaData* out)
@@ -591,5 +573,3 @@ Status LinearBuffer::Reset(void)
     return UMC_OK;
 
 } // Status LinearBuffer::Reset(void)
-
-} // namespace UMC

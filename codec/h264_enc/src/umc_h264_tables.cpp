@@ -3,16 +3,13 @@
 //  This software is supplied under the terms of a license agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in accordance with the terms of that agreement.
-//        Copyright (c) 2004 - 2008 Intel Corporation. All Rights Reserved.
+//        Copyright (c) 2004 - 2012 Intel Corporation. All Rights Reserved.
 //
 
-#include "umc_defs.h"
-#if defined(UMC_ENABLE_H264_VIDEO_ENCODER)
+#include "umc_config.h"
+#ifdef UMC_ENABLE_H264_VIDEO_ENCODER
 
 #include "umc_h264_tables.h"
-
-namespace UMC_H264_ENCODER
-{
 
 const Ipp8u EdgePelCountTable [52] =
 {
@@ -44,7 +41,7 @@ const Ipp32s QP_MOD_6[88] = {
 };
 
 const Ipp16s MAX_PIX_VALUE[5] = { 255, 511, 1023, 2047, 4095};
-const Ipp8u block_subblock_mapping[16] =
+const Ipp8u block_subblock_mapping_[16] =
     {0,1,4,5,2,3,6,7,8,9,12,13,10,11,14,15};
 
 const Ipp8u xoff[16] = {0,4,0,4,8,12,8,12,0,4,0, 4, 8,12, 8,12};
@@ -62,7 +59,7 @@ const Ipp8u yoff16[1] = {0};
 // in 8x8 block 0. Table is indexed by current subblock, containing a
 // pair of values for each. The first value is the x offset to be added,
 // the second value is the pitch multiplier to use to add the y offset.
-const Ipp8s xyoff[16][2] = {
+const Ipp8s xyoff_[16][2] = {
     {4,0},{-4,4},{4,0},{4,-4},
     {4,0},{-4,4},{4,0},{-12,4},
     {4,0},{-4,4},{4,0},{4,-4},
@@ -345,12 +342,12 @@ const Ipp32s BestOf5EarlyExitThres[52] =
 // Tables used for finding if a luma block is on the edge
 // of a macroblock. JVT CD block order
 // tab4, indexed by 8x8 block
-const Ipp8u left_edge_tab4[4]       = {1,0,1,0};
-const Ipp8u top_edge_tab4[4]        = {1,1,0,0};
+const Ipp8u left_edge_tab4_[4]       = {1,0,1,0};
+const Ipp8u top_edge_tab4_[4]        = {1,1,0,0};
 const Ipp8u right_edge_tab4[4]      = {0,1,0,1};
 // tab16, indexed by 4x4 subblock
-const Ipp8u left_edge_tab16[16]     = {1,0,1,0,0,0,0,0,1,0,1,0,0,0,0,0};
-const Ipp8u top_edge_tab16[16]      = {1,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0};
+const Ipp8u left_edge_tab16_[16]     = {1,0,1,0,0,0,0,0,1,0,1,0,0,0,0,0};
+const Ipp8u top_edge_tab16_[16]      = {1,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0};
 const Ipp8u right_edge_tab16[16]    = {0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,1};
 // 8x4 and 4x8 tables, indexed by [8x8block*4 + subblock]
 const Ipp8u left_edge_tab16_8x4[16]     = {1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0};
@@ -368,7 +365,7 @@ const Ipp8u above_right_avail_4x8[16] = {0,0,0,0,0,0,0,0,1,1,0,0,1,0,0,0};
 // Table for 4x4 intra prediction to find if a subblock can use predictors
 // from above right. Also used for motion vector prediction availability.
 // JVT CD block order.
-const Ipp8u above_right_avail_4x4[16] = {1,1,1,0,1,1,1,0,1,1,1,0,1,0,1,0};
+const Ipp8u above_right_avail_4x4_[16] = {1,1,1,0,1,1,1,0,1,1,1,0,1,0,1,0};
 const Ipp8u above_right_avail_4x4_lin[16] = {
     1,1,1,1,
     1,0,1,0,
@@ -410,7 +407,7 @@ Ipp16s enc_single_scan_8x8[2][64] = {
 
 const Ipp32s gc_Zeroes[8*8] = { 0 };
 
-const Ipp8u MbPartWidth[UMC_H264_ENCODER::NUMBER_OF_MBTYPES] = {
+const Ipp8u MbPartWidth[NUMBER_OF_MBTYPES] = {
     16, // MBTYPE_INTRA
     16, // MBTYPE_INTRA_16x16 = 1,
     16, // MBTYPE_PCM = 2,             // Raw Pixel Coding, qualifies as a INTRA type...
@@ -445,7 +442,7 @@ const Ipp8u MbPartWidth[UMC_H264_ENCODER::NUMBER_OF_MBTYPES] = {
      8  // MBTYPE_B_8x8 = 31,
 };
 
-const Ipp8u MbPartHeight[UMC_H264_ENCODER::NUMBER_OF_MBTYPES] = {
+const Ipp8u MbPartHeight[NUMBER_OF_MBTYPES] = {
     16, // MBTYPE_INTRA
     16, // MBTYPE_INTRA_16x16 = 1,
     16, // MBTYPE_PCM = 2,             // Raw Pixel Coding, qualifies as a INTRA type...
@@ -643,8 +640,5 @@ const Ipp8u IntraMBTypeOffset[5] = {
     5,  // S_PREDSLICE
     1   // S_INTRASLICE
 };
-
-
-} //namespace UMC_H264_ENCODER
 
 #endif //UMC_ENABLE_H264_VIDEO_ENCODER

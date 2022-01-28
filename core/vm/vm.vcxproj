@@ -264,20 +264,6 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\vm_debug_win32.c" />
-    <ClCompile Include="src\vm_event_win32.c" />
-    <ClCompile Include="src\vm_file.c" />
-    <ClCompile Include="src\vm_file_win.c" />
-    <ClCompile Include="src\vm_mmap_win32.c" />
-    <ClCompile Include="src\vm_mutex_win32.c" />
-    <ClCompile Include="src\vm_semaphore_win32.c" />
-    <ClCompile Include="src\vm_shared_object_win32.c" />
-    <ClCompile Include="src\vm_socket_win32.c" />
-    <ClCompile Include="src\vm_sys_info_win32.c" />
-    <ClCompile Include="src\vm_thread_win32.c" />
-    <ClCompile Include="src\vm_time_win32.c" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="include\vm_debug.h" />
     <ClInclude Include="include\vm_event.h" />
     <ClInclude Include="include\vm_file.h" />
@@ -291,6 +277,22 @@
     <ClInclude Include="include\vm_thread.h" />
     <ClInclude Include="include\vm_time.h" />
     <ClInclude Include="include\vm_types.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\vm_affinity_common.c" />
+    <ClCompile Include="src\vm_affinity_win.c" />
+    <ClCompile Include="src\vm_event_win.c" />
+    <ClCompile Include="src\vm_file.c" />
+    <ClCompile Include="src\vm_file_win.c" />
+    <ClCompile Include="src\vm_mmap_win.c" />
+    <ClCompile Include="src\vm_mutex_win.c" />
+    <ClCompile Include="src\vm_semaphore_win.c" />
+    <ClCompile Include="src\vm_shared_object_win.c" />
+    <ClCompile Include="src\vm_socket_win.c" />
+    <ClCompile Include="src\vm_sys_info_win.c" />
+    <ClCompile Include="src\vm_thread_win.c" />
+    <ClCompile Include="src\vm_time_common.c" />
+    <ClCompile Include="src\vm_time_win.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

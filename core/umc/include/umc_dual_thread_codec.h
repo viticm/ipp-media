@@ -4,7 +4,7 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//          Copyright(c) 2003-2007 Intel Corporation. All Rights Reserved.
+//          Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
@@ -18,71 +18,73 @@
 namespace UMC
 {
 
-// Create codec with input or/and output buffering.
-// Returned pointer should be deleted via delete operator.
-// Pointers pCodec, pInputBuffer, pOutputBuffer will be deleted automatically
-BaseCodec *CreateBufferingCodec(BaseCodec   *pCodec,
-                                MediaBuffer *pInputBuffer,
-                                MediaBuffer *pOutputBuffer = NULL);
-
 class DualThreadCodecParams
 {
 public:
+    DYNAMIC_CAST_DECL_BASE(DualThreadCodecParams)
+
     // Default constructor
-    DualThreadCodecParams(void);
+    DualThreadCodecParams(void)
+    {
+        m_pMediaBufferParams = NULL;
+        m_pMediaBuffer       = NULL;
+        m_pCodecInitParams   = NULL;
+        m_pCodec             = NULL;
+    }
 
-    MediaBufferParams *m_pMediaBufferParams;                    // (MediaBufferParams *) pointer to media buffer parameter(s)
-    MediaBuffer *m_pMediaBuffer;                                // (MediaBuffer *) pointer to media buffer
+    virtual ~DualThreadCodecParams(void) {}
 
-    BaseCodecParams *m_pCodecInitParams;                        // (BaseCodecParams *) pointer to audio codec parameter(s)
-    BaseCodec *m_pCodec;                                        // (BaseCodec *) pointer to audio codec
+    MediaBufferParams* m_pMediaBufferParams;  // pointer to media buffer parameter(s)
+    MediaBuffer*       m_pMediaBuffer;        // pointer to media buffer
+
+    BaseCodecParams*   m_pCodecInitParams;    // pointer to audio codec parameter(s)
+    BaseCodec*         m_pCodec;              // pointer to audio codec
 };
+
 
 class DualThreadedCodec : public BaseCodec
 {
+public:
     DYNAMIC_CAST_DECL(DualThreadedCodec, BaseCodec)
 
-public:
-    // Constructor
     DualThreadedCodec(void);
-    // Destructor
     virtual ~DualThreadedCodec(void);
 
-    virtual Status Init(BaseCodec *pCodec,
-                        MediaBuffer *pInputBuffer,
-                        MediaBuffer *pOutputBuffer = NULL);
+    virtual Status Init(BaseCodec*   pCodec,
+                        MediaBuffer* pInputBuffer,
+                        MediaBuffer* pOutputBuffer = NULL);
 
     // BaseCodec methods
-    virtual Status Init(BaseCodecParams *init);
-    virtual Status GetFrame(MediaData *in, MediaData *out);
-    virtual Status GetInfo(BaseCodecParams *info);
+    virtual Status Init(BaseCodecParams* init);
+    virtual Status GetFrame(MediaData* in, MediaData* out);
+    virtual Status GetInfo(BaseCodecParams* info);
     virtual Status Close(void);
     virtual Status Reset(void);
-    virtual Status SetParams(BaseCodecParams *params);
+    virtual Status SetParams(BaseCodecParams* params);
 
     // old API of DualThreadedCodec
-    Status InitCodec(DualThreadCodecParams *init);
-    Status LockInputBuffer(MediaData *in);
-    Status UnLockInputBuffer(MediaData *in, Status StreamsStatus = UMC_OK);
-    Status GetFrame(MediaData *out);
+    Status InitCodec(DualThreadCodecParams* init);
+    Status LockInputBuffer(MediaData* in);
+    Status UnLockInputBuffer(MediaData* in, Status StreamsStatus = UMC_OK);
+    Status GetFrame(MediaData* out);
 
 protected:
-    Status PostponedInit();
+    Status PostponedInit(void);
 
-    BaseCodec       *m_pCodec;          // Pointer to codec
-    MediaBuffer     *m_pInputBuffer;    // Pointer to input buffer
-    MediaBuffer     *m_pOutputBuffer;   // Pointer to output buffer
-    bool            m_bDeleteResourcesOnClose;
-    bool            m_bGetFrameLoop;
+    BaseCodec*       m_pCodec;          // Pointer to codec
+    MediaBuffer*     m_pInputBuffer;    // Pointer to input buffer
+    MediaBuffer*     m_pOutputBuffer;   // Pointer to output buffer
+    bool             m_bDeleteResourcesOnClose;
+    bool             m_bGetFrameLoop;
 
-    BaseCodecParams *m_pPostponedParams;    // Keeps pointer to CodecParams for postponed initialization
-    MediaData       m_pTmpInput[1];
-    MediaData       m_pTmpOutput[1];
+    BaseCodecParams* m_pPostponedParams;  // Keeps pointer to CodecParams for postponed initialization
+    MediaData        m_pTmpInput[1];
+    MediaData        m_pTmpOutput[1];
 };
 
 // Utility functions
-Status PutDataToBuffer(MediaBuffer *pBuffer, MediaData* in, Status StreamStatus = UMC_OK);
-Status GetDataFromBuffer(MediaBuffer *pBuffer, MediaData* out);
+Status PutDataToBuffer(MediaBuffer* pBuffer, MediaData* in, Status StreamStatus = UMC_OK);
+Status GetDataFromBuffer(MediaBuffer* pBuffer, MediaData* out);
 
 } // end namespace UMC
 

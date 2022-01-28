@@ -4,11 +4,11 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//          Copyright(c) 2003-2008 Intel Corporation. All Rights Reserved.
+//          Copyright(c) 2003-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
-#include "umc_defs.h"
+#include "umc_config.h"
 
 #ifdef UMC_BSTREAM
 #undef UMC_BSTREAM
@@ -18,17 +18,9 @@
   #define UMC_BSTREAM
 #elif defined UMC_ENABLE_MP3_AUDIO_DECODER
   #define UMC_BSTREAM
-#elif defined UMC_ENABLE_AAC_INT_AUDIO_DECODER
-  #define UMC_BSTREAM
-#elif defined UMC_ENABLE_MP3_INT_AUDIO_DECODER
-  #define UMC_BSTREAM
 #elif defined UMC_ENABLE_AAC_AUDIO_ENCODER
   #define UMC_BSTREAM
 #elif defined UMC_ENABLE_MP3_AUDIO_ENCODER
-  #define UMC_BSTREAM
-#elif defined UMC_ENABLE_AAC_INT_AUDIO_ENCODER
-  #define UMC_BSTREAM
-#elif defined UMC_ENABLE_MP3_INT_AUDIO_ENCODER
   #define UMC_BSTREAM
 #elif defined UMC_ENABLE_MP4_SPLITTER
   #define UMC_BSTREAM
@@ -56,7 +48,7 @@ Ipp32u GetNumProcessedByte(sBitsreamBuffer* pBS)
 {
   Ipp32u ret;
 
-  ret = (pBS->pCurrent_dword - pBS->pBuffer) * sizeof(*pBS->pBuffer);
+  ret = (Ipp32u)((pBS->pCurrent_dword - pBS->pBuffer) * sizeof(*pBS->pBuffer));
 
   ret += (32 - pBS->nBit_offset) / 8;
   return ret;
@@ -394,7 +386,7 @@ void bs_CRC_update_bs(sBitsreamBuffer *bs, Ipp32s len, Ipp32u *crc) {
 
 void bs_CRC_update_ptr(Ipp8u *ptr, Ipp32s len, Ipp32u *crc) {
   Ipp32u *pCurrent_dword = (Ipp32u *)_ALIGN_PTR(ptr, 4);
-  Ipp32s nBit_offset = 32 - (_OFFSET_PTR(ptr, 4) << 3);
+  Ipp32s nBit_offset = 32 - ((Ipp32s)_OFFSET_PTR(ptr, 4) << 3);
 
   bs_CRC_update(pCurrent_dword, nBit_offset, len, crc);
 }
