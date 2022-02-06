@@ -141,7 +141,7 @@ private:
   const MPEG2VideoEncoder& operator=(const MPEG2VideoEncoder&) { return *this; }
 };
 
-VideoEncoder* createMPEG2VideoEncoder() {
+inline VideoEncoder* createMPEG2VideoEncoder() {
   MPEG2VideoEncoder* ptr = new MPEG2VideoEncoder;
   return ptr;
 }

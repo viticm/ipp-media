@@ -74,7 +74,7 @@ protected:
     Status UnlockBuffers();
 };
 
-VideoEncoder* createMPEG4VideoEncoder() {
+inline VideoEncoder* createMPEG4VideoEncoder() {
   MPEG4VideoEncoder* ptr = new MPEG4VideoEncoder;
   return ptr;
 }
