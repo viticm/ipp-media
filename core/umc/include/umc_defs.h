@@ -11,6 +11,7 @@
 #ifndef __UMC_DEFS_H__
 #define __UMC_DEFS_H__
 
+#include "umc_config.h"
 #include "vm_types.h"
 #include "umc_dynamic_cast.h"
 

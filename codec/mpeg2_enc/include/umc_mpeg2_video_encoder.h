@@ -4,22 +4,23 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//          Copyright(c) 2005-2008 Intel Corporation. All Rights Reserved.
+//          Copyright(c) 2005-2012 Intel Corporation. All Rights Reserved.
 //
 //  Purpose
 //    Interface class for UMC mpeg2 video encoder.
 //
 */
 
-#include "umc_defs.h"
-#if defined (UMC_ENABLE_MPEG2_VIDEO_ENCODER)
-
 #ifndef __UMC_MPEG2_VIDEO_ENCODER_H
 #define __UMC_MPEG2_VIDEO_ENCODER_H
 
-#include "ippdefs.h"
+#include "umc_defs.h"
+//#pragma message (UMC_DEPRECATED_MESSAGE("MPEG-2 encoder"))
+
 #include "umc_video_data.h"
 #include "umc_video_encoder.h"
+
+#include "ippdefs.h"
 
 namespace UMC
 {
@@ -31,29 +32,26 @@ namespace UMC
 #define RC_UVBR RC_VBR
 #define RC_RVBR (RC_CBR | RC_VBR)
 
-// maximum string length in parameter file
-#define PAR_STRLEN 256
-
 // used to specify motion estimation ranges for different types of pictures
-typedef struct _MotionData  // motion data
+struct MotionData  // motion data
 {
   Ipp32s f_code[2][2];      // [forward=0/backward=1][x=0/y=1]
   Ipp32s searchRange[2][2]; // search range, in pixels, -sr <= x < sr
-} MotionData;
+};
 
 
 class MPEG2EncoderParams : public VideoEncoderParams
 {
-  DYNAMIC_CAST_DECL(MPEG2EncoderParams, VideoEncoderParams)
 public:
+  DYNAMIC_CAST_DECL(MPEG2EncoderParams, VideoEncoderParams)
+
   //constructors
   MPEG2EncoderParams();
   MPEG2EncoderParams(MPEG2EncoderParams *par);
   virtual ~MPEG2EncoderParams();
 
-  //void      operator=(MPEG2EncoderParams &p);
-  Status ReadParamFile(const vm_char *ParFileName); // opens and reads MSSG standard par-file
-  Status ReadQMatrices(vm_char* IntraQMatrixFName, vm_char* NonIntraQMatrixFName);
+  Status ReadParams(ParserCfg *par); // opens and reads MSSG standard par-file
+  Status ReadQMatrices(DString sIntraQMatrixFName, DString sNonIntraQMatrixFName);
   Status Profile_and_Level_Checks();
   Status RelationChecks();
 
@@ -105,21 +103,16 @@ public:
 
   vm_char*                 UserData;                // current user data
   Ipp32s                   UserDataLen;             // current user data length, set to 0 after is used
-  vm_char                  idStr[PAR_STRLEN];       // default user data to put to each sequence
-
-private:
-  Status ReadOldParamFile(const vm_char *ParFileName);  // opens and reads cut par-file (obsolete)
+  vm_char                  idStr[256];       // default user data to put to each sequence
 
 };
 
 class MPEG2VideoEncoder : public VideoEncoder
 {
-  DYNAMIC_CAST_DECL(MPEG2VideoEncoder, VideoEncoder)
 public:
-  //constructor
-  MPEG2VideoEncoder();
+  DYNAMIC_CAST_DECL(MPEG2VideoEncoder, VideoEncoder)
 
-  //destructor
+  MPEG2VideoEncoder();
   ~MPEG2VideoEncoder();
 
   // Initialize codec with specified parameter(s)
@@ -144,16 +137,15 @@ public:
 
 private:
   void * encoder;
+  MPEG2VideoEncoder(const MPEG2VideoEncoder&) {}
+  const MPEG2VideoEncoder& operator=(const MPEG2VideoEncoder&) { return *this; }
 };
 
-// reads parameters from ParamList to VideoEncoderParams
-Status ReadParamList(MPEG2EncoderParams* par, ParamList* lst);
-
-// information about parameters for VideoEncoderParams
-extern const ParamList::OptionInfo MPEG2EncoderOptions[];
+VideoEncoder* createMPEG2VideoEncoder() {
+  MPEG2VideoEncoder* ptr = new MPEG2VideoEncoder;
+  return ptr;
+}
 
 } // end namespace UMC
 
 #endif // __UMC_MPEG2_VIDEO_ENCODER_H
-
-#endif // UMC_ENABLE_MPEG2_VIDEO_ENCODER

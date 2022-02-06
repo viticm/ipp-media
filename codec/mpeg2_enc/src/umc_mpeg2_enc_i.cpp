@@ -4,14 +4,13 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//          Copyright(c) 2002-2008 Intel Corporation. All Rights Reserved.
+//          Copyright(c) 2002-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
-#include "umc_defs.h"
-#if defined (UMC_ENABLE_MPEG2_VIDEO_ENCODER)
+#include "umc_config.h"
+#ifdef UMC_ENABLE_MPEG2_VIDEO_ENCODER
 
-#include "ippi.h"
 #include "umc_mpeg2_enc_defs.h"
 
 using namespace UMC;
@@ -91,7 +90,7 @@ void MPEG2VideoEncoderBase::encodeI(Ipp32s numTh)
 
     PutSliceHeader(j >> 4, numTh);
 
-    for(i=ic=0; i < encodeInfo.info.clip_info.width; i += 16, ic += BlkWidth_c)
+    for(i=ic=0; i < (Ipp32s)encodeInfo.m_info.videoInfo.m_iWidth; i += 16, ic += BlkWidth_c)
     {
       const Ipp8u *BlockSrc[3];
       Ipp8u       *BlockRec[3];

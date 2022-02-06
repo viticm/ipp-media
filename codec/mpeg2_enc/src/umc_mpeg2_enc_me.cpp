@@ -4,12 +4,12 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//          Copyright(c) 2002-2008 Intel Corporation. All Rights Reserved.
+//          Copyright(c) 2002-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
-#include "umc_defs.h"
-#if defined (UMC_ENABLE_MPEG2_VIDEO_ENCODER)
+#include "umc_config.h"
+#ifdef UMC_ENABLE_MPEG2_VIDEO_ENCODER
 
 #include "vm_time.h"
 #include "umc_mpeg2_enc_defs.h"
@@ -33,13 +33,6 @@ using namespace UMC;
                         &MAD,        \
                         flag)
 
-/*#define SAD_FUNC_16x16_fullpix      \
-  ippiSAD16x8_8u32s_C1R(pBlock,     \
-                    2*BlockStep,    \
-                    ref_data,       \
-                    2*RefStep,      \
-                    &MAD,           \
-                    0)*/
 #define SAD_FUNC_16x16_fullpix \
   SAD_FUNC_16x16
 
@@ -211,7 +204,7 @@ void MPEG2VideoEncoderBase::AdjustSearchRange(Ipp32s B_count, Ipp32s direction)
   r = 4;
   //r = flRangeMax / 2;
   if (r < 2) r = 2;
-  for (i = 0; i < (encodeInfo.info.clip_info.height*encodeInfo.info.clip_info.width)/256; i ++) {
+  for (i = 0; i < (Ipp32s)(encodeInfo.m_info.videoInfo.m_iHeight*encodeInfo.m_info.videoInfo.m_iWidth/256); i ++) {
     if (!(pMBInfo[i].mb_type & MB_INTRA)) {
       Ipp32s dx = pMBInfo[i].MV[0][0].x;
       Ipp32s dy = pMBInfo[i].MV[0][0].y;

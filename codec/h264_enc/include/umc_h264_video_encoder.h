@@ -364,6 +364,11 @@ protected:
     void        *m_pEncoder;
 };
 
+VideoEncoder* createH264VideoEncoder() {
+  H264VideoEncoder* ptr = new H264VideoEncoder;
+  return ptr;
+}
+
 }
 
 #endif

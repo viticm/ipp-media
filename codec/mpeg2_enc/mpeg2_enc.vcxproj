@@ -34,6 +34,24 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\umc_mpeg2_enc.h" />
+    <ClInclude Include="include\umc_mpeg2_enc_defs.h" />
+    <ClInclude Include="include\umc_mpeg2_enc_me.h" />
+    <ClInclude Include="include\umc_mpeg2_video_encoder.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\umc_mpeg2_enc.cpp" />
+    <ClCompile Include="src\umc_mpeg2_enc_b.cpp" />
+    <ClCompile Include="src\umc_mpeg2_enc_cme.cpp" />
+    <ClCompile Include="src\umc_mpeg2_enc_i.cpp" />
+    <ClCompile Include="src\umc_mpeg2_enc_me.cpp" />
+    <ClCompile Include="src\umc_mpeg2_enc_p.cpp" />
+    <ClCompile Include="src\umc_mpeg2_enc_params.cpp" />
+    <ClCompile Include="src\umc_mpeg2_enc_put.cpp" />
+    <ClCompile Include="src\umc_mpeg2_enc_rc.cpp" />
+    <ClCompile Include="src\umc_mpeg2_video_encoder.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <ProjectGuid>{3C2E1E62-5CDE-4D3C-9705-900B5A187198}</ProjectGuid>
@@ -169,7 +187,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>include;$(IPPROOT)\..\em64t\include;..\..\core\umc\include;..\..\core\vm\include;..\..\core\vm_plus\include;..\..\codec\common\include;..\..\dependencies\IPP;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;$(IPPROOT)\..\em64t\include;..\..\core\umc\include;..\..\core\vm\include;..\..\core\vm_plus\include;..\..\codec\common\include;..\..\dependencies\IPP;..\..\io\umc_io\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN64;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -263,26 +281,6 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="src\umc_mpeg2_enc.cpp" />
-    <ClCompile Include="src\umc_mpeg2_enc_b.cpp" />
-    <ClCompile Include="src\umc_mpeg2_enc_b_me.cpp" />
-    <ClCompile Include="src\umc_mpeg2_enc_cme.cpp" />
-    <ClCompile Include="src\umc_mpeg2_enc_i.cpp" />
-    <ClCompile Include="src\umc_mpeg2_enc_me.cpp" />
-    <ClCompile Include="src\umc_mpeg2_enc_p.cpp" />
-    <ClCompile Include="src\umc_mpeg2_enc_params.cpp" />
-    <ClCompile Include="src\umc_mpeg2_enc_put.cpp" />
-    <ClCompile Include="src\umc_mpeg2_enc_p_me.cpp" />
-    <ClCompile Include="src\umc_mpeg2_enc_rc.cpp" />
-    <ClCompile Include="src\umc_mpeg2_video_encoder.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="include\umc_mpeg2_enc.h" />
-    <ClInclude Include="include\umc_mpeg2_enc_defs.h" />
-    <ClInclude Include="include\umc_mpeg2_enc_me.h" />
-    <ClInclude Include="include\umc_mpeg2_video_encoder.h" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

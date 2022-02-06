@@ -4,15 +4,13 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//          Copyright(c) 2002-2008 Intel Corporation. All Rights Reserved.
+//          Copyright(c) 2002-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
-#include "umc_defs.h"
-#if defined (UMC_ENABLE_MPEG2_VIDEO_ENCODER)
+#include "umc_config.h"
+#ifdef UMC_ENABLE_MPEG2_VIDEO_ENCODER
 
-#include "ippi.h"
-#include "ipps.h"
 #include "umc_mpeg2_enc_defs.h"
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -30,7 +28,7 @@ void MPEG2VideoEncoderBase::encodeB(Ipp32s numTh)
   Ipp32s      dc_dct_pred[3];
   Ipp16s      *pMBlock, *pDiff;
   Ipp32s      Count[12], CodedBlockPattern;
-  IppMotionVector2   vector[3][2] = {0,}; // top/bottom/frame F/B
+  MpegMotionVector2   vector[3][2] = {0}; // top/bottom/frame F/B
   MB_prediction_info pred_info[2];
   MB_prediction_info *best = pred_info;
   MB_prediction_info *curr = pred_info + 1;
@@ -66,7 +64,7 @@ void MPEG2VideoEncoderBase::encodeB(Ipp32s numTh)
     mf = B_count;
     for(j=start_y; j < stop_y; j += 16)
     {
-      for(i=0; i < encodeInfo.info.clip_info.width; i += 16, k++)
+        for(i=0; i < (Ipp32s)encodeInfo.m_info.videoInfo.m_iWidth; i += 16, k++)
       {
         pMBInfo[k].MV[0][0].x = pMBInfo[k].MV_P[0].x*mf/256;
         pMBInfo[k].MV[0][0].y = pMBInfo[k].MV_P[0].y*mf/256;
@@ -91,18 +89,18 @@ void MPEG2VideoEncoderBase::encodeB(Ipp32s numTh)
     // reset predictors at the start of slice
     dc_dct_pred[0] = dc_dct_pred[1] = dc_dct_pred[2] = ResetTbl[intra_dc_precision];
 
-    ippsZero_8u((Ipp8u*)threadSpec[numTh].PMV, sizeof(threadSpec[0].PMV));
+    ippsSet_8u(0, (Ipp8u*)threadSpec[numTh].PMV, sizeof(threadSpec[0].PMV));
     BOUNDS_V(0,j)
     BOUNDS_V(1,j)
-    if(picture_structure != FRAME_PICTURE) {
+    if(picture_structure != MPS_PROGRESSIVE) {
       BOUNDS_V_FIELD(0,j)
       BOUNDS_V_FIELD(1,j)
-      // to avoid reference below bottom in 16x8 mode when trying to skip MB
-      me_bound_1_bottom[0] = me_bound_bottom[0];
-      me_bound_1_bottom[1] = me_bound_bottom[1];
+      //// to avoid reference below bottom in 16x8 mode when trying to skip MB
+      //me_bound_1_bottom[0] = me_bound_bottom[0];
+      //me_bound_1_bottom[1] = me_bound_bottom[1];
     }
 
-    for(i=ic=0; i < encodeInfo.info.clip_info.width; i += 16, ic += BlkWidth_c)
+    for(i=ic=0; i < (Ipp32s)encodeInfo.m_info.videoInfo.m_iWidth; i += 16, ic += BlkWidth_c)
     {
       Ipp32s goodpred = 0;
       cur_offset = i + j * YFrameHSize;
@@ -145,11 +143,17 @@ void MPEG2VideoEncoderBase::encodeB(Ipp32s numTh)
             }
             VARMEAN_FRAME(pDiff, best->var, best->mean, best->var_sum);
           } else {
-            Ipp32s mv_shift = (picture_structure == FRAME_PICTURE) ? 1 : 0;
-            SET_FIELD_VECTOR((&vector[0][0]), pMBInfo[k].MV[0][0].x, pMBInfo[k].MV[0][0].y >> mv_shift);
-            SET_FIELD_VECTOR((&vector[1][0]), pMBInfo[k].MV[1][0].x, pMBInfo[k].MV[1][0].y >> mv_shift);
-            SET_FIELD_VECTOR((&vector[0][1]), pMBInfo[k].MV[0][1].x, pMBInfo[k].MV[0][1].y >> mv_shift);
-            SET_FIELD_VECTOR((&vector[1][1]), pMBInfo[k].MV[1][1].x, pMBInfo[k].MV[1][1].y >> mv_shift);
+            if (picture_structure == MPS_PROGRESSIVE) {
+              SET_FIELD_VECTOR((&vector[0][0]), pMBInfo[k].MV[0][0].x, pMBInfo[k].MV[0][0].y >> 1);
+              SET_FIELD_VECTOR((&vector[1][0]), pMBInfo[k].MV[1][0].x, pMBInfo[k].MV[1][0].y >> 1);
+              SET_FIELD_VECTOR((&vector[0][1]), pMBInfo[k].MV[0][1].x, pMBInfo[k].MV[0][1].y >> 1);
+              SET_FIELD_VECTOR((&vector[1][1]), pMBInfo[k].MV[1][1].x, pMBInfo[k].MV[1][1].y >> 1);
+            } else {
+              SET_MOTION_VECTOR((&vector[0][0]), pMBInfo[k].MV[0][0].x, pMBInfo[k].MV[0][0].y);
+              SET_MOTION_VECTOR((&vector[1][0]), pMBInfo[k].MV[1][0].x, pMBInfo[k].MV[1][0].y);
+              SET_MOTION_VECTOR((&vector[0][1]), pMBInfo[k].MV[0][1].x, pMBInfo[k].MV[0][1].y);
+              SET_MOTION_VECTOR((&vector[1][1]), pMBInfo[k].MV[1][1].x, pMBInfo[k].MV[1][1].y);
+            }
             if (pMBInfo[k].mb_type == (MB_FORWARD|MB_BACKWARD)) {
               GETDIFF_FIELD_FB(Y, Y, l, pDiff);
             }
@@ -177,9 +181,9 @@ void MPEG2VideoEncoderBase::encodeB(Ipp32s numTh)
       if (i != 0 && i != MBcountH*16-16 &&
         !(pMBInfo[k-1].mb_type & MB_INTRA)
         && (!(pMBInfo[k - 1].mb_type & MB_FORWARD)
-        || i+((threadSpec[numTh].PMV[0][0].x+1)>>1)+15 < MBcountH*16)
+        || i+((threadSpec[numTh].PMV[0][0].x+1)>>1)+15 < MBcountH*16 && j+((threadSpec[numTh].PMV[0][0].y+1)>>1)+15 < MBcountV*16)
         && (!(pMBInfo[k - 1].mb_type & MB_BACKWARD)
-        || i+((threadSpec[numTh].PMV[0][1].x+1)>>1)+15 < MBcountH*16) )
+        || i+((threadSpec[numTh].PMV[0][1].x+1)>>1)+15 < MBcountH*16 && j+((threadSpec[numTh].PMV[0][1].y+1)>>1)+15 < MBcountV*16) )
       {
         Ipp32s blk;
         Ipp32s var, mean;
@@ -391,8 +395,8 @@ encodeMB:
 
       if (pMBInfo[k].mb_type & MB_INTRA)
       {
-        ippsZero_8u((Ipp8u*)threadSpec[numTh].PMV, sizeof(threadSpec[0].PMV));
-        ippsZero_8u((Ipp8u*)pMBInfo[k].MV, sizeof(pMBInfo[k].MV));
+        ippsSet_8u(0, (Ipp8u*)threadSpec[numTh].PMV, sizeof(threadSpec[0].PMV));
+        ippsSet_8u(0, (Ipp8u*)pMBInfo[k].MV, sizeof(pMBInfo[k].MV));
 
         PutAddrIncrement(macroblock_address_increment, numTh);
         macroblock_address_increment = 1;
@@ -412,7 +416,7 @@ encodeMB:
       } //Intra macroblock
 
 
-      ippsZero_8u((Ipp8u*)Count, sizeof(Count));
+      ippsSet_8u(0, (Ipp8u*)Count, sizeof(Count));
       CodedBlockPattern  = 0;
       pDiff = best->pDiff;
 

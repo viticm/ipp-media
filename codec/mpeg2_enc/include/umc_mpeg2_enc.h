@@ -4,22 +4,22 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//          Copyright(c) 2002-2008 Intel Corporation. All Rights Reserved.
+//          Copyright(c) 2002-2012 Intel Corporation. All Rights Reserved.
 //
 */
-
-#include "umc_defs.h"
-#if defined (UMC_ENABLE_MPEG2_VIDEO_ENCODER)
 
 #ifndef __UMC_MPEG2_ENC_H
 #define __UMC_MPEG2_ENC_H
 
-#include <limits.h>
-#include "ippvc90legacy.h" //#include "ippvc90legacy.h" //#include "ippvc.h"
-#include "vm_debug.h"
 #include "umc_memory_allocator.h"
 #include "umc_video_processing.h"
 #include "umc_mpeg2_video_encoder.h"
+
+#include "ippcore.h"
+//#include "ippvc.h"
+#include "ippvc90legacy.h"
+#include "ipps.h"
+#include "ippi.h"
 
 
 namespace UMC
@@ -34,7 +34,7 @@ enum MPEG2FrameType
 };
 
 
-typedef struct _MBInfo  // macroblock information
+struct MBInfo  // macroblock information
 {
   Ipp32s mb_type;               // intra/forward/backward/interpolated
   Ipp32s dct_type;              // field/frame DCT
@@ -45,9 +45,10 @@ typedef struct _MBInfo  // macroblock information
                                 // the first index: 0-top field, 1-bottom field, 2-frame;
                                 // the second index:0-forward, 1-backward
   Ipp32s skipped;
-} MBInfo;
+};
 
-typedef struct {
+struct MB_prediction_info
+{
   Ipp32s mb_type;
   Ipp32s dct_type;
   Ipp32s pred_type;
@@ -55,9 +56,9 @@ typedef struct {
   Ipp32s var[4];
   Ipp32s mean[4];
   Ipp16s *pDiff;
-} MB_prediction_info;
+};
 
-typedef struct _IppMotionVector2
+struct MpegMotionVector2
 {
   Ipp32s x;
   Ipp32s y;
@@ -65,19 +66,19 @@ typedef struct _IppMotionVector2
   Ipp32s offset_l;
   Ipp32s mctype_c;
   Ipp32s offset_c;
-} IppMotionVector2;
+};
 
-typedef struct _VLCode_8u // variable length code
+struct VLCode_8u // variable length code
 {
     Ipp8u code; // right justified
     Ipp8u len;
-} VLCode_8u;
+};
 
-typedef struct _VLCode_16u // VL code longer than 8 bits
+struct VLCode_16u // VL code longer than 8 bits
 {
     Ipp16u code; // right justified
     Ipp8u  len;
-} VLCode_16u;
+};
 
 #if defined (_WIN32_WCE) && defined (_M_IX86) && defined (__stdcall)
   #define _IPP_STDCALL_CDECL
@@ -119,19 +120,6 @@ typedef IppStatus (__STDCALL *functype_mc)(
         Ipp32s       mcType,
         Ipp32s       roundControl);
 
-typedef IppStatus (__STDCALL *functype_mcB)(
-  const Ipp8u*       pSrcRefF,
-        Ipp32s       srcStepF,
-        Ipp32s       mcTypeF,
-  const Ipp8u*       pSrcRefB,
-        Ipp32s       srcStepB,
-        Ipp32s       mcTypeB,
-  const Ipp16s*      pSrcYData,
-        Ipp32s       srcYDataStep,
-        Ipp8u*       pDst,
-        Ipp32s       dstStep,
-        Ipp32s       roundControl);
-
 #if defined (_IPP_STDCALL_CDECL)
   #undef  _IPP_STDCALL_CDECL
   #define __stdcall __cdecl
@@ -153,7 +141,7 @@ typedef IppStatus (__STDCALL *functype_mcB)(
   IppiPoint InitialMV0,       \
   IppiPoint InitialMV1,       \
   IppiPoint InitialMV2,       \
-  IppMotionVector2 *vector,   \
+  MpegMotionVector2 *vector,   \
   threadSpecificData *th,     \
   Ipp32s   i,                 \
   Ipp32s   j,                 \
@@ -163,15 +151,15 @@ typedef IppStatus (__STDCALL *functype_mcB)(
 
 class MPEG2VideoEncoderBase;
 
-typedef struct
+struct bitBuffer
 {
   Ipp32s bit_offset;
   Ipp32s bytelen;
   Ipp8u  *start_pointer;
   Ipp32u *current_pointer;
-} bitBuffer;
+};
 
-typedef struct
+struct threadSpecificData
 {
   bitBuffer bBuf;
   Ipp16s *pMBlock;
@@ -186,9 +174,9 @@ typedef struct
   Ipp32s me_matrix_size;
   Ipp8u *me_matrix_buff;
   Ipp32s me_matrix_id;
-} threadSpecificData;
+};
 
-typedef struct
+struct threadInfo
 {
   Ipp32s    numTh;
   MPEG2VideoEncoderBase *m_lpOwner;
@@ -196,37 +184,34 @@ typedef struct
   vm_event  stop_event;
   vm_event  quit_event;
   vm_thread thread;
-} threadInfo;
+};
 
-class MPEG2VideoEncoderBase : public VideoEncoder
+class MPEG2VideoEncoderBase: public VideoEncoder
 {
-  DYNAMIC_CAST_DECL(MPEG2VideoEncoderBase, VideoEncoder)
 public:
-  //constructor
-  MPEG2VideoEncoderBase();
+    DYNAMIC_CAST_DECL(MPEG2VideoEncoderBase, VideoEncoder)
 
-  //destructor
-  ~MPEG2VideoEncoderBase();
+    MPEG2VideoEncoderBase();
+    ~MPEG2VideoEncoderBase();
 
-  // Initialize codec with specified parameter(s)
-  virtual Status Init(BaseCodecParams *init);
-  // Compress (decompress) next frame
-  virtual Status GetFrame(MediaData *in, MediaData *out);
-  // Get codec working (initialization) parameter(s)
-  virtual Status GetInfo(BaseCodecParams *info);
-  // Repeat last frame
-  Status RepeatLastFrame(Ipp64f PTS, MediaData *out);
-  // Close all codec resources
-  virtual Status Close();
+    // Initialize codec with specified parameter(s)
+    virtual Status Init(BaseCodecParams *init);
+    // Compress (decompress) next frame
+    virtual Status GetFrame(MediaData *in, MediaData *out);
+    // Get codec working (initialization) parameter(s)
+    virtual Status GetInfo(BaseCodecParams *info);
+    // Repeat last frame
+    Status RepeatLastFrame(Ipp64f PTS, MediaData *out);
+    // Close all codec resources
+    virtual Status Close();
 
-  virtual Status Reset();
+    virtual Status Reset();
 
-  virtual Status SetParams(BaseCodecParams* params);
+    virtual Status SetParams(BaseCodecParams* params);
 
-  virtual Status SetBitRate(Ipp32s BitRate);
+    virtual Status SetBitRate(Ipp32s BitRate);
 
 public:
-
   // Get source frame size (summary size of Y, U and V frames)
   Ipp32s GetYUVFrameSize();
 
@@ -277,8 +262,8 @@ protected:
                      const IppVCHuffmanSpec_32u* DC_Tbl,
                      Ipp32s count, Ipp32s numTh);
   void PutIntraMacroBlock(Ipp32s numTh, Ipp32s k, const Ipp8u *BlockSrc[3], Ipp8u *BlockRec[3], Ipp32s *dc_dct_pred);
-  void PutMV_FRAME(Ipp32s numTh, Ipp32s k, IppMotionVector2 *vector, Ipp32s motion_type);
-  void PutMV_FIELD(Ipp32s numTh, Ipp32s k, IppMotionVector2 *vector, IppMotionVector2 *vector2, Ipp32s motion_type);
+  void PutMV_FRAME(Ipp32s numTh, Ipp32s k, MpegMotionVector2 *vector, Ipp32s motion_type);
+  void PutMV_FIELD(Ipp32s numTh, Ipp32s k, MpegMotionVector2 *vector, MpegMotionVector2 *vector2, Ipp32s motion_type);
 
   Status PutPicture();
   void NonIntraMBCoeffs(Ipp32s numTh, MB_prediction_info *prediction_info, Ipp32s *Count, Ipp32s *pCodedBlockPattern);
@@ -300,9 +285,11 @@ protected:
   //ColorFormat        m_ColorFormat;
   VideoProcessing* frame_loader;
 
-  class VideoDataBuffer : public VideoData {
-    DYNAMIC_CAST_DECL(VideoDataBuffer, VideoData)
+  class VideoDataBuffer : public VideoData
+  {
     public:
+      DYNAMIC_CAST_DECL(VideoDataBuffer, VideoData)
+
       VideoDataBuffer();
       ~VideoDataBuffer();
       Status Alloc();
@@ -344,7 +331,6 @@ protected:
   Status SelectPictureType(VideoData *in);
   Ipp32s FormatMismatch(VideoData *in);
   Status LoadToBuffer(VideoDataBuffer* frame, VideoData *in);
-
 
   // for [topfield/bottomfield][forward/backward] ME; points to refs in frames_buff
   Ipp8u       *YRefFrame[2][2];   // [top/bottom][fwd/bwd]
@@ -476,8 +462,6 @@ protected:
     func_getdiffB_frame_c, func_getdiffB_field_c;
   functype_mc
     func_mc_frame_c, func_mc_field_c;
-  functype_mcB
-    func_mcB_frame_c, func_mcB_field_c;
 
   // Internal var's
   Ipp32s BlkWidth_c;
@@ -510,5 +494,3 @@ protected:
 } // namespace UMC
 
 #endif // __UMC_MPEG2_ENC_H
-
-#endif // UMC_ENABLE_MPEG2_VIDEO_ENCODER

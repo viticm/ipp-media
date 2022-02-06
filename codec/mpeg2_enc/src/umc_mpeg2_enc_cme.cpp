@@ -4,14 +4,17 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//          Copyright(c) 2007-2008 Intel Corporation. All Rights Reserved.
+//          Copyright(c) 2007-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
-#include "ipps.h"
-#include "umc_mpeg2_enc_defs.h"
+#include "umc_config.h"
+#ifdef UMC_ENABLE_MPEG2_VIDEO_ENCODER
 
 #ifdef M2_USE_CME
+
+//#include "ipps.h"
+#include "umc_mpeg2_enc_defs.h"
 
 #include "umc_me_m2.h"
 
@@ -33,8 +36,8 @@ Status MPEG2VideoEncoderBase::externME()
 
     MeInitParams MEInitParams;
     ippsSet_8u(0,(Ipp8u*)&MEInitParams,sizeof(MEInitParams));
-    MEInitParams.width = encodeInfo.info.clip_info.width;
-    MEInitParams.height = encodeInfo.info.clip_info.width;
+    MEInitParams.width = encodeInfo.info.videoInfo.m_iWidth;
+    MEInitParams.height = encodeInfo.info.videoInfo.m_iWidth;
     /// not clear
     MEInitParams.refPadding = 0; //at least 32 bits on each side
     /// nameless structure is used - warning
@@ -100,8 +103,8 @@ Status MPEG2VideoEncoderBase::externME()
   MEParams.SetSearchSpeed(64); //0-127, 0 - maximum quality, 127 - maximum speed, -1 use specified parameters
   MEParams.PicRange.top_left.x = 0;//-32;
   MEParams.PicRange.top_left.y = 0;//-32;
-  MEParams.PicRange.bottom_right.x = encodeInfo.info.clip_info.width + 0;//32;
-  MEParams.PicRange.bottom_right.y = encodeInfo.info.clip_info.height + 0;//32;
+  MEParams.PicRange.bottom_right.x = encodeInfo.info.videoInfo.m_iWidth + 0;//32;
+  MEParams.PicRange.bottom_right.y = encodeInfo.info.videoInfo.m_iHeight + 0;//32;
   /// can't specify different F/B ranges
   MEParams.SearchRange.x = pMotionData[B_count].searchRange[0][0]; //in integer pixel
   MEParams.SearchRange.y = pMotionData[B_count].searchRange[0][1];
@@ -245,3 +248,4 @@ Status MPEG2VideoEncoderBase::externME()
   return ret;
 }
 #endif // M2_USE_CME
+#endif

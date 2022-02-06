@@ -4,15 +4,12 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//          Copyright(c) 2002-2008 Intel Corporation. All Rights Reserved.
+//          Copyright(c) 2002-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
-#include "umc_defs.h"
-#if defined (UMC_ENABLE_MPEG2_VIDEO_ENCODER)
-
-//#include <vm_debug.h>
-//#include <crtdbg.h>
+#include "umc_config.h"
+#ifdef UMC_ENABLE_MPEG2_VIDEO_ENCODER
 
 #include "vm_strings.h"
 #include "umc_video_data.h"
@@ -20,7 +17,6 @@
 #include "umc_mpeg2_video_encoder.h"
 #include "umc_mpeg2_enc.h"
 
-//#include "umc_mpeg2_RTP.h"
 
 using namespace UMC;
 
@@ -31,14 +27,12 @@ using namespace UMC;
 //constructor
 MPEG2VideoEncoder::MPEG2VideoEncoder()
 {
-  vm_debug_trace(VM_DEBUG_INFO, VM_STRING("MPEG2VideoEncoder::MPEG2VideoEncoder"));
   encoder = new MPEG2VideoEncoderBase;
 }
 
 //destructor
 MPEG2VideoEncoder::~MPEG2VideoEncoder()
 {
-  vm_debug_trace(VM_DEBUG_INFO, VM_STRING("MPEG2VideoEncoder::~MPEG2VideoEncoder"));
   delete ((MPEG2VideoEncoderBase*)encoder);
 }
 
@@ -74,7 +68,7 @@ Status MPEG2VideoEncoderBase::GetFrame(MediaData *in, MediaData *out)
     return UMC_ERR_NULL_PTR;
   }
 
-  vin = DynamicCast<VideoData> (in);
+  vin = DynamicCast<VideoData, MediaData> (in);
   if (in != NULL) {
     if (vin == NULL) {
       m_UserData = *in;
@@ -88,7 +82,6 @@ Status MPEG2VideoEncoderBase::GetFrame(MediaData *in, MediaData *out)
   }
   data_size = out->GetDataSize();
 
-  //  VM_ASSERT(_CrtCheckMemory());
   ret = TakeNextFrame(vin);
   if(ret == UMC_OK) {
     LockBuffers();
@@ -101,7 +94,7 @@ Status MPEG2VideoEncoderBase::GetFrame(MediaData *in, MediaData *out)
     ret = EncodeFrameReordered();
 
     out->SetDataSize(out->GetDataSize() + mEncodedSize);
-    out->SetFrameType(picture_coding_type == MPEG2_B_PICTURE ? B_PICTURE
+    out->m_frameType = (picture_coding_type == MPEG2_B_PICTURE ? B_PICTURE
       : (picture_coding_type == MPEG2_P_PICTURE ? P_PICTURE : I_PICTURE));
 
     UnlockBuffers();
@@ -121,7 +114,6 @@ Status MPEG2VideoEncoderBase::GetFrame(MediaData *in, MediaData *out)
   if (vin != NULL) {
     vin->SetDataSize(0);
   }
-
 
   return ret;
 }
@@ -218,8 +210,6 @@ Status MPEG2VideoEncoder::SetBitRate(Ipp32s BitRate)
   if(encoder == 0)
     return UMC_ERR_NOT_INITIALIZED;
   ret = ((MPEG2VideoEncoderBase*)encoder)->SetBitRate(BitRate);
-  vm_debug_trace_s(VM_DEBUG_INFO, "SetBitRate()");
-  vm_debug_trace_i(VM_DEBUG_INFO, BitRate);
   return ret;
 }
 
@@ -227,15 +217,6 @@ Status MPEG2VideoEncoderBase::SetBitRate(Ipp32s BitRate)
 {
   InitRateControl(BitRate);
   return UMC_OK;
-}
-
-namespace UMC
-{
-VideoEncoder* CreateMPEG2Encoder()
-{
-  VideoEncoder* ptr = new MPEG2VideoEncoder;
-  return ptr;
-}
 }
 
 #endif // UMC_ENABLE_MPEG2_VIDEO_ENCODER

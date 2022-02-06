@@ -11,13 +11,24 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\umc_mpeg2_enc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\umc_mpeg2_enc_defs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\umc_mpeg2_enc_me.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\umc_mpeg2_video_encoder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
     <ClCompile Include="src\umc_mpeg2_enc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\umc_mpeg2_enc_b.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\umc_mpeg2_enc_b_me.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\umc_mpeg2_enc_cme.cpp">
@@ -32,9 +43,6 @@
     <ClCompile Include="src\umc_mpeg2_enc_p.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\umc_mpeg2_enc_p_me.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\umc_mpeg2_enc_params.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -47,19 +55,5 @@
     <ClCompile Include="src\umc_mpeg2_video_encoder.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="include\umc_mpeg2_enc.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\umc_mpeg2_enc_defs.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\umc_mpeg2_enc_me.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\umc_mpeg2_video_encoder.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

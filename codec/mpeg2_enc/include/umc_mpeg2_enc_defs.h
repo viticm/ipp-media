@@ -4,29 +4,26 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//          Copyright(c) 2002-2008 Intel Corporation. All Rights Reserved.
+//          Copyright(c) 2002-2012 Intel Corporation. All Rights Reserved.
 //
 */
-
-#include "umc_defs.h"
-#if defined (UMC_ENABLE_MPEG2_VIDEO_ENCODER)
 
 #ifndef __UMC_MPEG2_ENC_DEFS_H
 #define __UMC_MPEG2_ENC_DEFS_H
 
-#include "ippvc90legacy.h" //#include "ippvc90legacy.h" //#include "ippvc.h"
 #include "vm_semaphore.h"
 #include "vm_event.h"
 #include "vm_thread.h"
 #include "umc_mpeg2_enc.h"
 
 //#define ME_REF_ORIGINAL
+
 #define SCENE_DETECTION
 #define ALIGN_VALUE  16
 
 #if 1
-#define MP2_ALLOC(TYPE, SIZE) ((TYPE*)ippsMalloc_8u(sizeof(TYPE)*(SIZE)))
-#define MP2_FREE(PTR)         ippsFree(PTR)
+#define MP2_ALLOC(TYPE, SIZE) ((TYPE*)ippMalloc(sizeof(TYPE)*(SIZE)))
+#define MP2_FREE(PTR)         ippFree(PTR)
 #else
 #ifdef __cplusplus
 extern "C"
@@ -77,14 +74,6 @@ if (!(value)) { \
 #define ISO_END_CODE       0x1B9L
 #define PACK_START_CODE    0x1BAL
 #define SYSTEM_START_CODE  0x1BBL
-
-/* picture_structure ISO/IEC 13818-2, 6.3.10 table 6-14 */
-enum
-{
-  TOP_FIELD     = 1,
-  BOTTOM_FIELD  = 2,
-  FRAME_PICTURE = 3
-};
 
 /* macroblock type */
 #define MB_INTRA    1
@@ -148,13 +137,13 @@ enum
   {                                                \
     start_y = threadSpec[numTh].start_row;         \
     if(encodeInfo.FieldPicture) start_y >>= 1;     \
-    if (numTh < encodeInfo.numThreads - 1) {       \
+    if (numTh < (Ipp32s)encodeInfo.m_iThreads - 1) {       \
       stop_y = threadSpec[numTh + 1].start_row;    \
       if(encodeInfo.FieldPicture) stop_y >>= 1;    \
     } else {                                       \
-      stop_y = YFrameVSize;                        \
+      stop_y = MBcountV*16;                        \
     }                                              \
-    if (encodeInfo.info.color_format == YUV420) {  \
+    if (encodeInfo.m_info.videoInfo.m_colorFormat == YUV420) {  \
       start_uv = (start_y >> 1);                   \
     } else {                                       \
       start_uv = start_y;                          \
@@ -164,7 +153,7 @@ enum
   else                                             \
   {                                                \
     start_y = start_uv = 0;                        \
-    stop_y = YFrameVSize;                          \
+    stop_y = MBcountV*16;                          \
     k = 0;                                         \
   }
 
@@ -222,9 +211,6 @@ enum
 #define func_getdiffB_field_l ippiGetDiff16x8B_8u16s_C1
 #define func_mc_frame_l  ippiMC16x16_8u_C1
 #define func_mc_field_l  ippiMC16x8_8u_C1
-#define func_mcB_frame_l ippiMC16x16B_8u_C1
-#define func_mcB_field_l ippiMC16x8B_8u_C1
-
 
 #define VARMEAN_FRAME(pDiff, vardiff, meandiff, _vardiff)             \
   ippiVarSum8x8_16s32s_C1R(pDiff    , 32, &vardiff[0], &meandiff[0]); \
@@ -293,7 +279,7 @@ enum
     ippRndZero)
 
 #define GETDIFF_FIELD(X, CC, C, pDiff, DIR)            \
-if (picture_structure == FRAME_PICTURE) {              \
+if (picture_structure == MPS_PROGRESSIVE) {              \
   func_getdiff_field_##C(X##Block,                     \
     2*CC##FrameHSize,                                  \
     X##RecFrame[pMBInfo[k].mv_field_sel[0][DIR]][DIR] +vector[0][DIR].offset_##C, \
@@ -320,7 +306,7 @@ if (picture_structure == FRAME_PICTURE) {              \
                                                        \
   func_getdiff_field_##C(X##Block + (BlkHeight_##C/2)*CC##FrameHSize, \
     CC##FrameHSize,                                    \
-    X##RecFrame[pMBInfo[k].mv_field_sel[1][DIR]][DIR] + vector[1][DIR].offset_##C, \
+    X##RecFrame[pMBInfo[k].mv_field_sel[1][DIR]][DIR] + vector[1][DIR].offset_##C + (BlkHeight_##C/2)*CC##FrameHSize, \
     CC##FrameHSize,                                    \
     pDiff + OFF_##X + (BlkHeight_##C/2)*BlkStride_##C, \
     2*BlkStride_##C,                                   \
@@ -328,7 +314,7 @@ if (picture_structure == FRAME_PICTURE) {              \
 }
 
 #define GETDIFF_FIELD_FB(X, CC, C, pDiff)              \
-if (picture_structure == FRAME_PICTURE) {              \
+if (picture_structure == MPS_PROGRESSIVE) {              \
   func_getdiffB_field_##C(X##Block,                    \
     2*CC##FrameHSize,                                  \
     X##RecFrame[pMBInfo[k].mv_field_sel[0][0]][0] + vector[0][0].offset_##C, \
@@ -368,10 +354,10 @@ if (picture_structure == FRAME_PICTURE) {              \
   func_getdiffB_field_##C(                             \
     X##Block + (BlkHeight_##C/2)*CC##FrameHSize,       \
     CC##FrameHSize,                                    \
-    X##RecFrame[pMBInfo[k].mv_field_sel[1][0]][0] + vector[1][0].offset_##C,  \
+    X##RecFrame[pMBInfo[k].mv_field_sel[1][0]][0] + vector[1][0].offset_##C + (BlkHeight_##C/2)*CC##FrameHSize,  \
     CC##FrameHSize,                                    \
     vector[1][0].mctype_##C,                           \
-    X##RecFrame[pMBInfo[k].mv_field_sel[1][1]][1] + vector[1][1].offset_##C, \
+    X##RecFrame[pMBInfo[k].mv_field_sel[1][1]][1] + vector[1][1].offset_##C + (BlkHeight_##C/2)*CC##FrameHSize, \
     CC##FrameHSize,                                    \
     vector[1][1].mctype_##C,                           \
     pDiff + OFF_##X + (BlkHeight_##C/2)*BlkStride_##C, \
@@ -391,7 +377,7 @@ if (picture_structure == FRAME_PICTURE) {              \
     (IppRoundMode)0 )
 
 #define MC_FIELD_F(X, CC, C, pDiff)                    \
-if (picture_structure == FRAME_PICTURE) {              \
+if (picture_structure == MPS_PROGRESSIVE) {              \
   func_mc_field_##C(                                   \
     X##RecFrame[pMBInfo[k].mv_field_sel[0][0]][0] + vector[0][0].offset_##C, \
     2*CC##FrameHSize,                                  \
@@ -423,7 +409,7 @@ if (picture_structure == FRAME_PICTURE) {              \
     (IppRoundMode)0 );                                 \
                                                        \
   func_mc_field_##C(                                   \
-    X##RecFrame[pMBInfo[k].mv_field_sel[1][0]][0] + vector[1][0].offset_##C, \
+    X##RecFrame[pMBInfo[k].mv_field_sel[1][0]][0] + vector[1][0].offset_##C + (BlkHeight_##C/2)*CC##FrameHSize, \
     CC##FrameHSize,                                    \
     pDiff + OFF_##X + (BlkHeight_##C/2)*BlkStride_##C, \
     2*BlkStride_##C,                                   \
@@ -455,8 +441,8 @@ if (picture_structure == FRAME_PICTURE) {              \
     me_bound_top[DIR] = 0;                                               \
   }                                                                      \
   me_bound_bottom[DIR] = 2*yoff + 2*pMotionData[B_count].searchRange[DIR][1] - 1; \
-  if (me_bound_bottom[DIR] > 2*YFrameVSize - 32) {                       \
-    me_bound_bottom[DIR] = IPP_MAX(2*yoff, 2*YFrameVSize - 32);          \
+  if (me_bound_bottom[DIR] > 2*16*MBcountV - 32) {                       \
+    me_bound_bottom[DIR] = IPP_MAX(2*yoff, 2*16*MBcountV - 32);          \
   }                                                                      \
   me_bound_top[DIR] -= 2*yoff;                                           \
   me_bound_bottom[DIR] -= 2*yoff;
@@ -464,8 +450,8 @@ if (picture_structure == FRAME_PICTURE) {              \
 // internal border for 16x8 prediction
 #define BOUNDS_V_FIELD(DIR, yoff)                                            \
   me_bound_1_bottom[DIR] = 2*yoff + 2*pMotionData[B_count].searchRange[DIR][1] - 1; \
-  if (me_bound_1_bottom[DIR] > 2*YFrameVSize - 2*8) {                        \
-    me_bound_1_bottom[DIR] = IPP_MAX(2*yoff, 2*YFrameVSize - 2*8);           \
+  if (me_bound_1_bottom[DIR] > 2*16*MBcountV - 2*8) {                        \
+    me_bound_1_bottom[DIR] = IPP_MAX(2*yoff, 2*16*MBcountV - 2*8);           \
   }                                                                          \
   me_bound_2_top[DIR] = 2*yoff + 2*8 - 2*pMotionData[B_count].searchRange[DIR][1]; \
   if( me_bound_2_top[DIR] < 0 )                                              \
@@ -507,7 +493,7 @@ if (picture_structure == FRAME_PICTURE) {              \
     i, j,                                                      \
     &pMBInfo[k].mv_field_sel[2][DIR],                          \
     NULL, ipflag);                                             \
-  if(picture_structure != FRAME_PICTURE && !ipflag) {          \
+  if(picture_structure != MPS_PROGRESSIVE && !ipflag) {          \
     MotionEstimation_Frame( pRef[1],                           \
       pRec[1],                                                 \
       YFrameHSize,                                             \
@@ -552,7 +538,7 @@ if (picture_structure == FRAME_PICTURE) {              \
   Ipp32s vardiff_tmp[4], meandiff_tmp[4], _vardiff;            \
   Ipp32s diff_f[2][2]; /* [srcfld][reffld] */                  \
                                                                \
-  if (picture_structure == FRAME_PICTURE) {                    \
+  if (picture_structure == MPS_PROGRESSIVE) {                    \
     diff_f[0][0] = MotionEstimation_Field( pRef[0],            \
       pRec[0],                                                 \
       2*YFrameHSize,                                           \
@@ -703,7 +689,7 @@ if (picture_structure == FRAME_PICTURE) {              \
                      : MV_ZERO,                                \
       &(vector[1][DIR]),                                       \
       &threadSpec[numTh],                                      \
-      i, j + 8,                                                \
+      i, j,                                                    \
       &pMBInfo[k].mv_field_sel[1][DIR],                        \
       NULL, ipflag);                                           \
     if(!ipflag)                                                \
@@ -725,7 +711,7 @@ if (picture_structure == FRAME_PICTURE) {              \
                      : MV_ZERO,                                \
       &(vector[1][DIR]),                                       \
       &threadSpec[numTh],                                      \
-      i, j + 8,                                                \
+      i, j,                                                    \
       &pMBInfo[k].mv_field_sel[1][DIR],                        \
       &diff_f[1][0], 1);                                       \
     vardiff_fld = diff_f[0][0] + diff_f[1][0];                 \
@@ -734,7 +720,7 @@ if (picture_structure == FRAME_PICTURE) {              \
   }                                                            \
   GETDIFF_FIELD(Y, Y, l, pDiff, DIR);                          \
                                                                \
-  if( picture_structure == FRAME_PICTURE ) {                   \
+  if( picture_structure == MPS_PROGRESSIVE ) {                   \
     VARMEAN_FRAME(pDiff, vardiff_tmp, meandiff_tmp, _vardiff); \
     {                                                          \
       Ipp32s var_fld = 0, var = 0;                             \
@@ -863,7 +849,7 @@ if (CodedBlockPattern) { \
 { \
   PUT_MB_TYPE(PictureType, MOTION_TYPE) \
   \
-  if (picture_structure != FRAME_PICTURE) { \
+  if (picture_structure != MPS_PROGRESSIVE) { \
     /* (3 - x) is: MC_FRAME -> MC_FIELD, MC_FIELD -> MC_16X8 */ \
     PUT_BITS_TH(3 - pMBInfo[k].prediction_type, 2); \
   } else \
@@ -879,11 +865,18 @@ if (CodedBlockPattern) { \
 { \
   PUT_MB_TYPE(PictureType, 0) \
   \
-  if (picture_structure == FRAME_PICTURE && !curr_frame_dct) { \
+  if (picture_structure == MPS_PROGRESSIVE && !curr_frame_dct) { \
     PUT_BITS_TH(pMBInfo[k].dct_type, 1); \
   } \
 }
 
-#endif // __UMC_MPEG2_ENC_DEFS_H
+enum MPEGPictureStructure
+{
+    MPS_TOP_FIELD                = 1,
+    MPS_BOTTOM_FIELD             = 2,
+    MPS_PROGRESSIVE              = 3,
+    MPS_TOP_FIELD_FIRST          = 7,
+    MPS_BOTTOM_FIELD_FIRST       = 11
+};
 
-#endif // UMC_ENABLE_MPEG2_VIDEO_ENCODER
+#endif // __UMC_MPEG2_ENC_DEFS_H

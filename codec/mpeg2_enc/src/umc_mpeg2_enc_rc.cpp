@@ -4,14 +4,14 @@
 //  This software is supplied under the terms of a license agreement or
 //  nondisclosure agreement with Intel Corporation and may not be copied
 //  or disclosed except in accordance with the terms of that agreement.
-//      Copyright (c) 2005-2008 Intel Corporation. All Rights Reserved.
+//      Copyright (c) 2005-2012 Intel Corporation. All Rights Reserved.
 //
 //  Purpose
 //    frame adaptive bitrate control
 */
 
-#include "umc_defs.h"
-#if defined (UMC_ENABLE_MPEG2_VIDEO_ENCODER)
+#include "umc_config.h"
+#ifdef UMC_ENABLE_MPEG2_VIDEO_ENCODER
 
 #include "umc_mpeg2_enc_defs.h"
 
@@ -30,20 +30,20 @@ static Ipp32s Val_QScale[2][32] =
 
 Ipp32s MPEG2VideoEncoderBase::PictureRateControl(Ipp64s bits_in_headers)
 {
-  Ipp32s isfield = (picture_structure != FRAME_PICTURE);
+  Ipp32s isfield = (picture_structure != MPS_PROGRESSIVE);
   Ipp64f ip_delay;
   Ipp32s q0, q2, sz1;
 
 
   if(encodeInfo.rc_mode == RC_CBR || vbv_delay != 0xffff) {
-    vbv_delay = (Ipp32s)((rc_vbv_fullness-bits_in_headers) * 90000.0/encodeInfo.info.bitrate);
+    vbv_delay = (Ipp32s)((rc_vbv_fullness-bits_in_headers) * 90000.0/encodeInfo.m_info.iBitrate);
   }
   if(vbv_delay < 0)
     vbv_delay = 0; // for a while
   if(vbv_delay > 0xffff)
     vbv_delay = 0xffff; // for a while
 
-  if(encodeInfo.info.interlace_type == PROGRESSIVE) {
+  if(encodeInfo.m_info.videoInfo.m_picStructure == PS_PROGRESSIVE) {
     rc_delay = rc_ave_frame_bits;
     if(repeat_first_field) rc_delay += rc_ave_frame_bits;
     if(top_field_first) rc_delay += rc_ave_frame_bits;
@@ -126,7 +126,7 @@ Ipp32s MPEG2VideoEncoderBase::PictureRateControl(Ipp64s bits_in_headers)
 //         negative bitcount when vbv underflow, 0 if OK
 Ipp32s MPEG2VideoEncoderBase::PostPictureRateControl(Ipp64s bits_encoded)
 {
-  Ipp32s isfield = (picture_structure != FRAME_PICTURE);
+  Ipp32s isfield = (picture_structure != MPS_PROGRESSIVE);
   Ipp64s vbv_size = encodeInfo.VBV_BufferSize * 16384;
   Ipp32s ret = 0;
   prsize[picture_coding_type-MPEG2_I_PICTURE] = (Ipp32s)(bits_encoded << isfield);
@@ -205,12 +205,12 @@ Ipp32s MPEG2VideoEncoderBase::InitRateControl(Ipp32s BitRate)
   Ipp64f gopw;
   Ipp64f u_len, ip_weight;
 
-  encodeInfo.info.bitrate = BitRate;
+  encodeInfo.m_info.iBitrate = BitRate;
 
-  if (encodeInfo.info.bitrate <= 0) { // no bitrate given - UVBR
+  if (encodeInfo.m_info.iBitrate <= 0) { // no bitrate given - UVBR
     encodeInfo.rc_mode = RC_UVBR;
     // some big value
-    encodeInfo.info.bitrate = encodeInfo.info.clip_info.width*encodeInfo.info.clip_info.height / 8 * 400;
+    encodeInfo.m_info.iBitrate = encodeInfo.m_info.videoInfo.m_iWidth*encodeInfo.m_info.videoInfo.m_iHeight / 8 * 400;
     vbv_delay = 0xffff; // unused
   }
   if(encodeInfo.rc_mode != RC_CBR) {
@@ -223,15 +223,15 @@ Ipp32s MPEG2VideoEncoderBase::InitRateControl(Ipp32s BitRate)
   }
 
   // if 0 - could be no rc
-  rc_ave_frame_bits = encodeInfo.info.bitrate/encodeInfo.info.framerate;
+  rc_ave_frame_bits = encodeInfo.m_info.iBitrate/encodeInfo.m_info.fFramerate;
   rc_ip_delay = rc_ave_frame_bits;
   // we want ideal case - I frame to be centered in vbv buffer, compute start pos
   if(encodeInfo.VBV_BufferSize <= (Ipp32s)(rc_ave_frame_bits / 16384 * 4) ) { // avoid too small
     encodeInfo.VBV_BufferSize = (Ipp32s)(rc_ave_frame_bits / 16384 * 8);
   }
   encodeInfo.VBV_BufferSize = IPP_MIN(encodeInfo.VBV_BufferSize, (encodeInfo.mpeg1 ? 0x3fe : 0x3fffe));
-  encodeInfo.m_SuggestedOutputSize = 2 * encodeInfo.VBV_BufferSize * (16384/8); // in bytes
-  encodeInfo.m_SuggestedOutputSize = align_value<Ipp32u>(encodeInfo.m_SuggestedOutputSize);
+  encodeInfo.m_iSuggestedOutputSize = 2 * encodeInfo.VBV_BufferSize * (16384/8); // in bytes
+  encodeInfo.m_iSuggestedOutputSize = align_value<Ipp32u>(encodeInfo.m_iSuggestedOutputSize);
 
   // one can vary weights, can be added to API
   if(encodeInfo.rc_mode == RC_CBR) {
@@ -253,19 +253,19 @@ Ipp32s MPEG2VideoEncoderBase::InitRateControl(Ipp32s BitRate)
       u_len * ip_weight / 2 +                      // top to center length of I frame
       (encodeInfo.IPDistance-1) * (rc_ave_frame_bits - rc_tagsize[2]); // first gop has no M-1 B frames: add'em
 
-    vbv_delay = (Ipp32s)(rc_vbv_fullness*90000.0/encodeInfo.info.bitrate); // bits to clocks
+    vbv_delay = (Ipp32s)(rc_vbv_fullness*90000.0/encodeInfo.m_info.iBitrate); // bits to clocks
 
     rc_dev = 0; // deviation from ideal bitrate (should be Ipp32f or renewed)
 
     Ipp64f rrel = gopw / (rc_weight[0] * encodeInfo.gopSize);
-    ppb = encodeInfo.info.clip_info.width*encodeInfo.info.clip_info.height*encodeInfo.info.framerate/encodeInfo.info.bitrate * (block_count-2) / (6-2);
+    ppb = encodeInfo.m_info.videoInfo.m_iWidth*encodeInfo.m_info.videoInfo.m_iHeight*encodeInfo.m_info.fFramerate/encodeInfo.m_info.iBitrate * (block_count-2) / (6-2);
 
     qscale[0] = (Ipp32s)(6.0 * rrel * ppb); // numbers are empiric
     qscale[1] = (Ipp32s)(9.0 * rrel * ppb);
     qscale[2] = (Ipp32s)(12.0 * rrel * ppb);
   } else {
     rc_vbv_fullness = encodeInfo.VBV_BufferSize * 16384; // full buffer
-    vbv_delay = (Ipp32s)(rc_vbv_fullness*90000.0/encodeInfo.info.bitrate); // bits to clocks
+    vbv_delay = (Ipp32s)(rc_vbv_fullness*90000.0/encodeInfo.m_info.iBitrate); // bits to clocks
   }
   for(i=0; i<3; i++) {
     if     (qscale[i]< 1) qscale[i]= 1;
@@ -311,11 +311,15 @@ Ipp32s MPEG2VideoEncoderBase::changeQuant(Ipp32s quant_value)
   quantiser_scale_value = Val_QScale[q_scale_type][quantiser_scale_code];
   if(quantiser_scale_value == curq) {
     if(quant_value > curq)
+    {
       if(quantiser_scale_code == 31) return quantiser_scale_value;
       else quantiser_scale_code ++;
+    }
     if(quant_value < curq)
+    {
       if(quantiser_scale_code == 1) return quantiser_scale_value;
       else quantiser_scale_code --;
+    }
     quantiser_scale_value = Val_QScale[q_scale_type][quantiser_scale_code];
   }
 
@@ -326,7 +330,7 @@ Ipp32s MPEG2VideoEncoderBase::changeQuant(Ipp32s quant_value)
   else
     intra_dc_precision = 2;
   // only for High profile
-  if(encodeInfo.profile == 1 && quantiser_scale_value == 1)
+  if(encodeInfo.m_info.iProfile == 1 && quantiser_scale_value == 1)
     intra_dc_precision = 3;
 
   //Ipp32s qq = quantiser_scale_value*quantiser_scale_value;

@@ -4,15 +4,14 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//          Copyright(c) 2002-2008 Intel Corporation. All Rights Reserved.
+//          Copyright(c) 2002-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
-#include "umc_defs.h"
-#if defined (UMC_ENABLE_MPEG2_VIDEO_ENCODER)
+#include "umc_config.h"
+#ifdef UMC_ENABLE_MPEG2_VIDEO_ENCODER
 
 #include <math.h>
-#include "ippi.h"
 #include "umc_mpeg2_enc_defs.h"
 
 using namespace UMC;
@@ -377,11 +376,11 @@ void MPEG2VideoEncoderBase::PutSequenceHeader()
   Ipp32s i;
 
   PUT_START_CODE(SEQ_START_CODE);                // sequence_header_code
-  PUT_BITS((encodeInfo.info.clip_info.width & 0xfff), 12);  // horizontal_size_value
-  PUT_BITS((encodeInfo.info.clip_info.height & 0xfff), 12); // vertical_size_value
+  PUT_BITS((encodeInfo.m_info.videoInfo.m_iWidth & 0xfff), 12);  // horizontal_size_value
+  PUT_BITS((encodeInfo.m_info.videoInfo.m_iHeight & 0xfff), 12); // vertical_size_value
   PUT_BITS(aspectRatio_code, 4);      // aspect_ratio_information
   PUT_BITS(frame_rate_code, 4);                  // frame_rate_code
-  PUT_BITS(((Ipp32s)ceil(encodeInfo.info.bitrate / 400.0) & 0x3ffff), 18); // bit_rate_value
+  PUT_BITS(((Ipp32s)ceil(encodeInfo.m_info.iBitrate / 400.0) & 0x3ffff), 18); // bit_rate_value
   PUT_BITS(1, 1);                                // marker_bit
   PUT_BITS((encodeInfo.VBV_BufferSize & 0x3ff), 10); // vbv_buffer_size_value
   PUT_BITS(0, 1);                                // constrained_parameters_flag
@@ -401,8 +400,8 @@ void MPEG2VideoEncoderBase::PutSequenceHeader()
 void MPEG2VideoEncoderBase::PutSequenceExt()
 {
   Ipp32s chroma_format_code;
-  Ipp32s prog_seq = (encodeInfo.info.interlace_type == PROGRESSIVE) ? 1 : 0;
-  switch(encodeInfo.info.color_format) {
+  Ipp32s prog_seq = (encodeInfo.m_info.videoInfo.m_picStructure == PS_PROGRESSIVE) ? 1 : 0;
+  switch(encodeInfo.m_info.videoInfo.m_colorFormat) {
       case YUV420: chroma_format_code = 1; break;
       case YUV422: chroma_format_code = 2; break;
       case YUV444: chroma_format_code = 3; break;
@@ -410,12 +409,12 @@ void MPEG2VideoEncoderBase::PutSequenceExt()
   }
   PUT_START_CODE(EXT_START_CODE);               // extension_start_code
   PUT_BITS(SEQ_ID, 4);                          // extension_start_code_identifier
-  PUT_BITS(( encodeInfo.profile << 4 ) | encodeInfo.level, 8);    // profile_and_level_indication
+  PUT_BITS(( encodeInfo.m_info.iProfile << 4 ) | encodeInfo.m_info.iLevel, 8);    // profile_and_level_indication
   PUT_BITS(prog_seq, 1);                        // progressive sequence
   PUT_BITS(chroma_format_code, 2);              // chroma_format
-  PUT_BITS(encodeInfo.info.clip_info.width >> 12, 2);      // horizontal_size_extension
-  PUT_BITS(encodeInfo.info.clip_info.height >> 12, 2);     // vertical_size_extension
-  PUT_BITS(((Ipp32s)ceil(encodeInfo.info.bitrate / 400.0)) >> 18, 12);    // bit_rate_extension
+  PUT_BITS(encodeInfo.m_info.videoInfo.m_iWidth >> 12, 2);      // horizontal_size_extension
+  PUT_BITS(encodeInfo.m_info.videoInfo.m_iHeight >> 12, 2);     // vertical_size_extension
+  PUT_BITS(((Ipp32s)ceil(encodeInfo.m_info.iBitrate / 400.0)) >> 18, 12);    // bit_rate_extension
   PUT_BITS(1, 1);                               // marker_bit
   PUT_BITS(encodeInfo.VBV_BufferSize >> 10, 8); // vbv_buffer_size_extension
   PUT_BITS(0, 1);                               // low_delay  (not implemented)
@@ -433,9 +432,9 @@ void MPEG2VideoEncoderBase::PutSequenceDisplayExt()
   PUT_BITS(5, 8);     // colour_primaries
   PUT_BITS(5, 8);     // transfer_characteristics
   PUT_BITS(5, 8);     // matrix_coefficients
-  PUT_BITS(encodeInfo.info.clip_info.width, 14);  // display_horizontal_size
+  PUT_BITS(encodeInfo.m_info.videoInfo.m_iWidth, 14);  // display_horizontal_size
   PUT_BITS(1, 1);                      // marker_bit
-  PUT_BITS(encodeInfo.info.clip_info.height, 14); // display_vertical_size
+  PUT_BITS(encodeInfo.m_info.videoInfo.m_iHeight, 14); // display_vertical_size
 }
 
 // put a zero terminated string as user data (6.2.2.2.2, 6.3.4.1)
@@ -488,7 +487,7 @@ Ipp32s MPEG2VideoEncoderBase::FrameToTimecode(Ipp32s frame)
 {
   Ipp32s fps, pict, sec, minute, hour, tc;
 
-  fps = (Ipp32s)(encodeInfo.info.framerate + 0.5);
+  fps = (Ipp32s)(encodeInfo.m_info.fFramerate + 0.5);
   pict = frame % fps;
   frame = (frame - pict) / fps;
   sec = frame % 60;
@@ -540,7 +539,7 @@ void MPEG2VideoEncoderBase::PutPictureCodingExt()
   }
   PUT_BITS(intra_dc_precision, 2);    // encodeInfo.intra_dc_precision
   PUT_BITS(picture_structure, 2);     // picture_structure
-  actual_tff = (picture_structure == FRAME_PICTURE && encodeInfo.info.interlace_type != PROGRESSIVE ||
+  actual_tff = (picture_structure == MPS_PROGRESSIVE && encodeInfo.m_info.videoInfo.m_picStructure != PS_PROGRESSIVE ||
     repeat_first_field);
   PUT_BITS((actual_tff) ? top_field_first : 0, 1);// top_field_first
   PUT_BITS(encodeInfo.FieldPicture ? 0 : curr_frame_pred, 1);             // frame_pred_frame_dct
@@ -549,10 +548,10 @@ void MPEG2VideoEncoderBase::PutPictureCodingExt()
   PUT_BITS(curr_intra_vlc_format, 1); // intra_vlc_format
   PUT_BITS(curr_scan, 1);             // alternate_scan
   PUT_BITS(repeat_first_field, 1);    // repeat_first_field
-  chroma_420_type = (encodeInfo.info.color_format == YUV420 &&
-                     encodeInfo.info.interlace_type == PROGRESSIVE) ? 1 : 0;
+  chroma_420_type = (encodeInfo.m_info.videoInfo.m_colorFormat == YUV420 &&
+                     encodeInfo.m_info.videoInfo.m_picStructure == PS_PROGRESSIVE) ? 1 : 0;
   PUT_BITS(chroma_420_type, 1);       // chroma_420_type
-  PUT_BITS((encodeInfo.info.interlace_type == PROGRESSIVE ? 1 : 0), 1);  // progressive_frame
+  PUT_BITS((encodeInfo.m_info.videoInfo.m_picStructure == PS_PROGRESSIVE ? 1 : 0), 1);  // progressive_frame
   PUT_BITS(0, 1);                     // composite_display_flag
   // composite display information not implemented yet
 }
@@ -566,7 +565,7 @@ void MPEG2VideoEncoderBase::PutSequenceEnd()
 // slice header (6.2.4)
 void MPEG2VideoEncoderBase::PutSliceHeader(Ipp32s RowNumber, Ipp32s numTh)
 {
-  if( encodeInfo.info.clip_info.height <= 2800 )
+    if( encodeInfo.m_info.videoInfo.m_iHeight <= 2800 )
   {
     PUT_START_CODE_TH(numTh, SLICE_MIN_START + RowNumber); // slice_start_code
   }
@@ -922,7 +921,7 @@ void MPEG2VideoEncoderBase::PutIntraMacroBlock(Ipp32s numTh, Ipp32s k, const Ipp
   //pMBInfo[k].cbp = cbp;
 }
 
-void MPEG2VideoEncoderBase::PutMV_FRAME(Ipp32s numTh, Ipp32s k, IppMotionVector2 *vector, Ipp32s motion_type)
+void MPEG2VideoEncoderBase::PutMV_FRAME(Ipp32s numTh, Ipp32s k, MpegMotionVector2 *vector, Ipp32s motion_type)
 {
   Ipp32s hor_f_code, ver_f_code;
   Ipp32s BW = 0;
@@ -937,7 +936,7 @@ void MPEG2VideoEncoderBase::PutMV_FRAME(Ipp32s numTh, Ipp32s k, IppMotionVector2
   }
 
   if (motion_type) {
-    if (picture_structure != FRAME_PICTURE) {
+    if (picture_structure != MPS_PROGRESSIVE) {
       PUT_BITS_TH(pMBInfo[k].mv_field_sel[2][BW], 1);
     }
     PutMV(
@@ -952,11 +951,11 @@ void MPEG2VideoEncoderBase::PutMV_FRAME(Ipp32s numTh, Ipp32s k, IppMotionVector2
   threadSpec[numTh].PMV[0][BW].y = threadSpec[numTh].PMV[1][BW].y = vector->y;
 }
 
-void MPEG2VideoEncoderBase::PutMV_FIELD(Ipp32s numTh, Ipp32s k, IppMotionVector2 *vector, IppMotionVector2 *vector2, Ipp32s motion_type)
+void MPEG2VideoEncoderBase::PutMV_FIELD(Ipp32s numTh, Ipp32s k, MpegMotionVector2 *vector, MpegMotionVector2 *vector2, Ipp32s motion_type)
 {
   Ipp32s hor_f_code, ver_f_code;
   Ipp32s BW = 0;
-  Ipp32s mv_shift = (picture_structure == FRAME_PICTURE) ? 1 : 0;
+  Ipp32s mv_shift = (picture_structure == MPS_PROGRESSIVE) ? 1 : 0;
 
   if (motion_type == MB_BACKWARD) {
     hor_f_code = mp_f_code[1][0];
@@ -994,8 +993,8 @@ void MPEG2VideoEncoderBase::PrepareBuffers()
 {
   Ipp32s i;
   //DEBUG ippsSet_8u(0xFF, out_pointer, out_buffer_size);
-  thread_buffer_size = (output_buffer_size/encodeInfo.numThreads) &~ 3;
-  for (i = 0; i < encodeInfo.numThreads; i++) {
+  thread_buffer_size = (output_buffer_size/encodeInfo.m_iThreads) &~ 3;
+  for (i = 0; i < (Ipp32s)encodeInfo.m_iThreads; i++) {
     SET_BUFFER(threadSpec[i].bBuf, out_pointer + i*thread_buffer_size, thread_buffer_size)
     //threadSpec[i].bBuf.bit_offset = 32;
     //threadSpec[i].bBuf.start_pointer = out_pointer + i*thread_buffer_size;

@@ -4,12 +4,13 @@
 //     This software is supplied under the terms of a license agreement or
 //     nondisclosure agreement with Intel Corporation and may not be copied
 //     or disclosed except in accordance with the terms of that agreement.
-//          Copyright(c) 2002-2008 Intel Corporation. All Rights Reserved.
+//          Copyright(c) 2002-2012 Intel Corporation. All Rights Reserved.
 //
 */
 
-#include "umc_defs.h"
-#if defined (UMC_ENABLE_MPEG2_VIDEO_ENCODER)
+#ifdef UNIX
+#  include <limits.h>
+#endif
 
 #define ME_NEW
 
@@ -49,7 +50,7 @@ Ipp32s MPEG2VideoEncoderBase::ME_FUNC(ME_PARAMS)
     if (th->me_matrix_buff) MP2_FREE(th->me_matrix_buff);
     th->me_matrix_size = me_matrix_w*me_matrix_h;
     th->me_matrix_buff = MP2_ALLOC(Ipp8u, th->me_matrix_size);
-    ippsZero_8u(th->me_matrix_buff, th->me_matrix_size);
+    ippsSet_8u(0, th->me_matrix_buff, th->me_matrix_size);
     th->me_matrix_id = 0;
   }
   me_matrix = th->me_matrix_buff - limit_top*me_matrix_w - limit_left;
@@ -58,7 +59,7 @@ Ipp32s MPEG2VideoEncoderBase::ME_FUNC(ME_PARAMS)
   /* new ID for matrix of search points */
   me_matrix_id = (me_matrix_id + 1) & 255;
   if (!me_matrix_id) {
-    ippsZero_8u(th->me_matrix_buff, th->me_matrix_size);
+    ippsSet_8u(0, th->me_matrix_buff, th->me_matrix_size);
     me_matrix_id = 1;
   }
   th->me_matrix_id = me_matrix_id;
@@ -100,19 +101,6 @@ Ipp32s MPEG2VideoEncoderBase::ME_FUNC(ME_PARAMS)
     Y = YMIN;
     goto exit_me;
   }
-
-#if 0
-  if (Var[min_index][0] <= varThreshold
-    && Var[min_index][1] <= varThreshold
-#if NUM_BLOCKS == 4
-    && Var[min_index][2] <= varThreshold
-    && Var[min_index][3] <= varThreshold
-#endif /* NUM_BLOCKS == 4 */
-    )
-  {
-    goto exit_me;
-  }
-#endif
 
   if (me_alg_num == 3) { // combined search
     if (/*picture_coding_type != MPEG2_P_PICTURE ||*/ (((i>>4) - (j>>4) ) & 7) != 1 ) {
@@ -315,5 +303,3 @@ end_me:
 }
 
 #endif
-
-#endif // UMC_ENABLE_MPEG2_VIDEO_ENCODER

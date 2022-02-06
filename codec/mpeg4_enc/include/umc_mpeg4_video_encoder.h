@@ -74,6 +74,11 @@ protected:
     Status UnlockBuffers();
 };
 
+VideoEncoder* createMPEG4VideoEncoder() {
+  MPEG4VideoEncoder* ptr = new MPEG4VideoEncoder;
+  return ptr;
+}
+
 } //namespace UMC
 
 #endif /* __UMC_MPEG4_VIDEO_ENCODER_H__ */
