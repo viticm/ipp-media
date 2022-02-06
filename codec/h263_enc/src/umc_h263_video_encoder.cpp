@@ -318,6 +318,7 @@ Status H263VideoEncoder::GetFrame(MediaData* pIn, MediaData* pOut)
   if (pIn) {
     pIn->SetDataSize(0);
     //pOut->SetTime(pIn->GetTime());
+    pOut->m_fPTSStart = pIn->m_fPTSStart;
   }
   if (sts != H263_STS_NODATA)
     m_FrameCount++;

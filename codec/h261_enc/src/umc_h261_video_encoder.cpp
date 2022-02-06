@@ -254,11 +254,12 @@ Status H261VideoEncoder::GetFrame(MediaData* pIn, MediaData* pOut)
     }
     pOut->SetDataSize(h261enc.cBS.mPtr - h261enc.cBS.mBuffer + pOut->GetDataSize());
     //pOut->SetTime(pIn->GetTime());
+    pOut->m_fPTSStart = pIn->m_fPTSStart;
     pIn->SetDataSize(0);
     UnlockBuffers();
   } else {
     //pOut->SetDataSize(0);
-    //pOut->SetTime(-1.0);
+    pOut->m_fPTSStart = -1.0;
     return UMC_ERR_NOT_ENOUGH_DATA;
   }
   return (sts == H261_STS_SKIPPED_FRAME ? UMC_ERR_NOT_ENOUGH_DATA : UMC_OK);
