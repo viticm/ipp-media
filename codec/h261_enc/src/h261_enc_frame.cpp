@@ -12,10 +12,11 @@
 //
 //  References:
 //    Fast ME algorithm
-//        IEEE Transactions on image processing, vol. 9, ¹. 2, Feb 2000
+//        IEEE Transactions on image processing, vol. 9, ? 2, Feb 2000
 //        "A new Diamond Search Algorithm for Fast Block-Matching Motion Estimation"
 //        Shan Zhu and Kai-Kuang Ma
 */
+#include "umc_config.h"
 #include "umc_defs.h"
 
 #if defined (UMC_ENABLE_H261_VIDEO_ENCODER)

@@ -15,6 +15,7 @@
 //                  ExpandFrame
 //
 */
+#include "umc_config.h"
 #include "umc_defs.h"
 
 #if defined (UMC_ENABLE_H263_VIDEO_ENCODER)
@@ -600,9 +601,12 @@ void ippVideoEncoderH263::PostFrameRC()
 
 void ippVideoEncoderH263::ErrorMessage(const vm_char *msg)
 {
+    printf("%s\n", msg);
+    /*
     vm_debug_trace(VM_DEBUG_INFO, __VM_STRING("H.263 encoder error: "));
     vm_debug_trace(VM_DEBUG_INFO, msg);
     vm_debug_trace(VM_DEBUG_INFO, __VM_STRING("\n"));
+    */
 }
 
 static void h263e_ExpandFrameReplicate(Ipp8u *pSrcDstPlane, Ipp32s frameWidth, Ipp32s frameHeight, Ipp32s expandPels, Ipp32s step)

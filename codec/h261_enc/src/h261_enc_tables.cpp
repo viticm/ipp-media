@@ -15,6 +15,7 @@
 //
 */
 
+#include "umc_config.h"
 #include "umc_defs.h"
 
 #if defined (UMC_ENABLE_H261_VIDEO_ENCODER)

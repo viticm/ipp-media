@@ -8,6 +8,7 @@
 //
 */
 
+#include "umc_config.h"
 #include "umc_defs.h"
 
 #if defined (UMC_ENABLE_H261_VIDEO_ENCODER)
@@ -126,22 +127,22 @@ Status H261VideoEncoder::Init(BaseCodecParams* init)
   }
   if (VideoParams) {
     h261Params = &m_Param.m_Param;
-    h261Params->Width = VideoParams->info.clip_info.width;
-    h261Params->Height = VideoParams->info.clip_info.height;
-    if (VideoParams->info.bitrate > 0) {
+    h261Params->Width = VideoParams->m_info.videoInfo.m_iWidth;
+    h261Params->Height = VideoParams->m_info.videoInfo.m_iHeight;
+    if (VideoParams->m_info.iBitrate > 0) {
       h261Params->RateControl = 1;
-      h261Params->BitRate = VideoParams->info.bitrate;
+      h261Params->BitRate = VideoParams->m_info.iBitrate;
     }
 
-    while ((Ipp32s)((Ipp64f)30000 / VideoParams->info.framerate) > h261Params->frameInterval*1001 + 1001/2) {
+    while ((Ipp32s)((Ipp64f)30000 / VideoParams->m_info.fFramerate) > h261Params->frameInterval*1001 + 1001/2) {
       h261Params->frameInterval++;
     }
     //h261Params->NumOfFrames = VideoParams->numFramesToEncode;
 
-    m_Param.info.bitrate = h261Params->BitRate;
-    m_Param.info.framerate = ((Ipp64f)30000 / 1001) / h261Params->frameInterval;
-    m_Param.info.clip_info.width = h261Params->Width;
-    m_Param.info.clip_info.height = h261Params->Height;
+    m_Param.m_info.iBitrate = h261Params->BitRate;
+    m_Param.m_info.fFramerate = ((Ipp64f)30000 / 1001) / h261Params->frameInterval;
+    m_Param.m_info.videoInfo.m_iWidth = h261Params->Width;
+    m_Param.m_info.videoInfo.m_iHeight = h261Params->Height;
     //    h261Params->numThreads     = VideoParams->numThreads;
   } else
     return UMC_ERR_NULL_PTR;
@@ -156,8 +157,8 @@ Status H261VideoEncoder::Init(BaseCodecParams* init)
     return UMC_ERR_ALLOC;
 //  m_FrameCount = 0;
 
-  if (VideoParams->info.color_format != YUV420) {
-    vm_debug_trace(VM_DEBUG_WARNING, VM_STRING("Invalid color format: only YUV420 supported\n"));
+  if (VideoParams->m_info.videoInfo.m_colorFormat != YUV420) {
+    //vm_debug_trace(VM_DEBUG_WARNING, VM_STRING("Invalid color format: only YUV420 supported\n"));
     return UMC_ERR_INVALID_PARAMS;
   }
 
@@ -185,20 +186,22 @@ Status H261VideoEncoder::GetInfo(BaseCodecParams* info)
   } else if (!VideoParams)
     return UMC_ERR_NULL_PTR;
 
-  VideoParams->info.clip_info.width = m_Param.m_Param.Width;
-  VideoParams->info.clip_info.height = m_Param.m_Param.Height;
-  VideoParams->info.framerate = ((Ipp64f)30000 / 1001) /  m_Param.m_Param.frameInterval;
+  VideoParams->m_info.videoInfo.m_iWidth = m_Param.m_Param.Width;
+  VideoParams->m_info.videoInfo.m_iHeight = m_Param.m_Param.Height;
+  VideoParams->m_info.fFramerate = ((Ipp64f)30000 / 1001) /  m_Param.m_Param.frameInterval;
   if (m_Param.m_Param.RateControl)
-    VideoParams->info.bitrate = m_Param.m_Param.BitRate;
+    VideoParams->m_info.iBitrate = m_Param.m_Param.BitRate;
   else
-    VideoParams->info.bitrate = 0;
+    VideoParams->m_info.iBitrate = 0;
   //VideoParams->numFramesToEncode = m_Param.m_Param.NumOfFrames;
-  VideoParams->numEncodedFrames = h261enc.mFrameCount;
+  //VideoParams->numEncodedFrames = h261enc.mFrameCount;
+  VideoParams->m_iFramesCounter = h261enc.mFrameCount;
 
-  VideoParams->info.aspect_ratio_width = 4;
-  VideoParams->info.aspect_ratio_height = 3;
-  VideoParams->info.color_format = YUV420;
-  VideoParams->info.stream_type = H261_VIDEO;
+
+  VideoParams->m_info.videoInfo.m_iWidth = 4;
+  VideoParams->m_info.videoInfo.m_iWidth = 3;
+  VideoParams->m_info.videoInfo.m_colorFormat = YUV420;
+  VideoParams->m_info.streamType = H261_VIDEO;
 
   return UMC_OK;
 }
@@ -233,24 +236,24 @@ Status H261VideoEncoder::GetFrame(MediaData* pIn, MediaData* pOut)
     h261enc.cBS.mBuffer = (Ipp8u*)pOut->GetDataPointer() + pOut->GetDataSize();
     h261enc.cBS.mBuffSize = (Ipp8u*)pOut->GetBufferPointer() - (Ipp8u*)pOut->GetDataPointer() +
                               pOut->GetBufferSize() - pOut->GetDataSize();
-    // max bitrate = 30*64 kbps, framerate = 29.97
+    // max bitrate = 30*64 kbps, fFramerate = 29.97
     h261enc.cBS.mPtr = h261enc.cBS.mBuffer;
     // copy YUV to internal frame
     h261enc.GetCurrentFrameInfo(&pY, &pU, &pV, &stepL, &stepC);
     roi.width = h261enc.mSourceWidth;
     roi.height = h261enc.mSourceHeight;
-    ippiCopy_8u_C1R((Ipp8u*)pVideoDataIn->GetPlanePointer(0), pVideoDataIn->GetPlanePitch(0), pY, stepL, roi);
+    ippiCopy_8u_C1R((Ipp8u*)pVideoDataIn->GetPlaneDataPtr(0), pVideoDataIn->GetPlanePitch(0), pY, stepL, roi);
     roi.width >>= 1;
     roi.height >>= 1;
-    ippiCopy_8u_C1R((Ipp8u*)pVideoDataIn->GetPlanePointer(1), pVideoDataIn->GetPlanePitch(1), pU, stepC, roi);
-    ippiCopy_8u_C1R((Ipp8u*)pVideoDataIn->GetPlanePointer(2), pVideoDataIn->GetPlanePitch(2), pV, stepC, roi);
+    ippiCopy_8u_C1R((Ipp8u*)pVideoDataIn->GetPlaneDataPtr(1), pVideoDataIn->GetPlanePitch(1), pU, stepC, roi);
+    ippiCopy_8u_C1R((Ipp8u*)pVideoDataIn->GetPlaneDataPtr(2), pVideoDataIn->GetPlanePitch(2), pV, stepC, roi);
     sts = h261enc.EncodeFrame();
     if (sts == H261_STS_ERR_BUFOVER) {
       UnlockBuffers();
       return UMC_ERR_NOT_ENOUGH_BUFFER;
     }
     pOut->SetDataSize(h261enc.cBS.mPtr - h261enc.cBS.mBuffer + pOut->GetDataSize());
-    pOut->SetTime(pIn->GetTime());
+    //pOut->SetTime(pIn->GetTime());
     pIn->SetDataSize(0);
     UnlockBuffers();
   } else {
@@ -274,7 +277,7 @@ Status H261EncoderParams::ReadParamFile(const vm_char *FileName)
 
   InputFile = vm_file_open(FileName, VM_STRING("rt"));
   if (!InputFile) {
-    vm_debug_trace1(VM_DEBUG_INFO,__VM_STRING("Error: Couldn't open file '%s'\n"), FileName);
+    //vm_debug_trace1(VM_DEBUG_INFO,__VM_STRING("Error: Couldn't open file '%s'\n"), FileName);
     return UMC_ERR_FAILED;
   }
   vm_file_gets(str, STR_LEN, InputFile);
@@ -314,13 +317,13 @@ Status H261EncoderParams::ReadParamFile(const vm_char *FileName)
   m_Param.bsBuffer = (Ipp8u*)1;
   m_Param.bsBuffSize = 1; // encoder will not allocate buffer
 
-  info.clip_info.width = m_Param.Width;
-  info.clip_info.height = m_Param.Height;
-  info.framerate = (((Ipp64f)30000)/1001)/m_Param.frameInterval;
+  m_info.videoInfo.m_iWidth = m_Param.Width;
+  m_info.videoInfo.m_iHeight = m_Param.Height;
+  m_info.fFramerate = (((Ipp64f)30000)/1001)/m_Param.frameInterval;
   if (m_Param.RateControl)
-    info.bitrate = m_Param.BitRate;
+    m_info.iBitrate = m_Param.BitRate;
   else
-    info.bitrate = 0;
+    m_info.iBitrate = 0;
   //numFramesToEncode = m_Param.NumOfFrames;
 
   return UMC_OK;

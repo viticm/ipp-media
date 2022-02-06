@@ -16,6 +16,7 @@
 //
 */
 
+#include "umc_config.h"
 #include "umc_defs.h"
 
 #if defined (UMC_ENABLE_H261_VIDEO_ENCODER)
@@ -61,27 +62,27 @@ Ipp32s ippVideoEncoderH261::Init(h261_Param *par)
 {
   // check parameters correctness
   if (!((par->Width == 176 && par->Height == 144) || (par->Width == 352 && par->Height == 288))) {
-      ErrorMessage(__VM_STRING("Size of picture is incorrect"));
+      ErrorMessage(VM_STRING("Size of picture is incorrect"));
       return H261_STS_ERR_PARAM;
   }
   if (!par->RateControl && (par->quantIFrame < 1 || par->quantIFrame > 31)) {
-      ErrorMessage(__VM_STRING("quantIFrame must be between 1 and 31"));
+      ErrorMessage(VM_STRING("quantIFrame must be between 1 and 31"));
       return H261_STS_ERR_PARAM;
   }
   if (!par->RateControl && (par->quantPFrame < 1 || par->quantPFrame > 31)) {
-      ErrorMessage(__VM_STRING("quantPFrame must be between 1 and 31"));
+      ErrorMessage(VM_STRING("quantPFrame must be between 1 and 31"));
       return H261_STS_ERR_PARAM;
   }
   if (par->IFramedist < 1) {
-      ErrorMessage(__VM_STRING("IFramedist must be positive"));
+      ErrorMessage(VM_STRING("IFramedist must be positive"));
       return H261_STS_ERR_PARAM;
   }
   if (par->PFramesearchWidth < 1 || par->PFramesearchWidth > 15) {
-      ErrorMessage(__VM_STRING("PFramesearchWidth must be between 1 and 15"));
+      ErrorMessage(VM_STRING("PFramesearchWidth must be between 1 and 15"));
       return H261_STS_ERR_PARAM;
   }
   if (par->PFramesearchHeight < 1 || par->PFramesearchHeight > 15) {
-      ErrorMessage(__VM_STRING("PFramesearchHeight must be between 1 and 15"));
+      ErrorMessage(VM_STRING("PFramesearchHeight must be between 1 and 15"));
       return H261_STS_ERR_PARAM;
   }
   Close();
@@ -198,7 +199,7 @@ Ipp32s ippVideoEncoderH261::Init(h261_Param *par)
   if (!cBS.mBuffer || !MBinfo || !mMEfastSAD ||
     (!mRTPdata.GOBN_MBAP || !mRTPdata.MBpredMV || !mRTPdata.MBquant || !mRTPdata.MBpos)) {
     Close();
-    ErrorMessage(__VM_STRING("Not enough memory"));
+    ErrorMessage(VM_STRING("Not enough memory"));
     return  H261_STS_ERR_NOMEM;
   }
   memset(mRTPdata.GOBN_MBAP, -1, mNumMacroBlockPerFrame * sizeof(Ipp16u));
@@ -278,9 +279,12 @@ Ipp32s ippVideoEncoderH261::GetCurrentFrameInfo(Ipp8u **pY, Ipp8u **pU, Ipp8u **
 
 void ippVideoEncoderH261::ErrorMessage(vm_char *msg)
 {
-  vm_debug_trace(VM_DEBUG_INFO, __VM_STRING("H.261 encoder error: "));
+  printf("%s\n", msg);
+  /*
+  vm_debug_trace(VM_DEBUG_INFO, VM_STRING("H.261 encoder error: "));
   vm_debug_trace(VM_DEBUG_INFO, msg);
-  vm_debug_trace(VM_DEBUG_INFO, __VM_STRING("\n"));
+  vm_debug_trace(VM_DEBUG_INFO, VM_STRING("\n"));
+  */
 }
 #endif  //defined (UMC_ENABLE_H261_VIDEO_ENCODER)
 
